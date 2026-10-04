@@ -1,0 +1,10 @@
+vivi
+Copyright 2026 ayayaQ
+
+Extracted and generalized from Bot Commander Desktop by ayayaQ.
+Source: src/main/services/agentService.ts
+Commit: 943e3f84f67e4415a899da8921db84639843c625
+https://github.com/ayayaQ/bot-commander-desktop
+
+This extracted core is released separately under Apache License 2.0 with the copyright owner's
+authorization. The upstream desktop application's GPLv3 license remains unchanged.

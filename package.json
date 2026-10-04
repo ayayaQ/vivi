@@ -1,0 +1,43 @@
+{
+  "name": "@vivi/agent-core",
+  "version": "0.1.0",
+  "description": "A small headless, provider-neutral tool-calling agent loop",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "ayayaQ",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayayaQ/vivi.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/cjs/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist", "src", "examples", "scripts/finish-build.mjs", "tsconfig.json", "tsconfig.cjs.json",
+    "LICENSE", "NOTICE", "ATTRIBUTION.md", "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "npm test && npm run example && npm run test:package",
+    "example": "npm run build && node examples/inventory.mjs",
+    "test:package": "npm run build && node scripts/test-package.mjs"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
