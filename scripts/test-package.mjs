@@ -7,11 +7,15 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
+const sourceManifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
 const temporary = await mkdtemp(join(tmpdir(), 'vivi-consumer-'))
-const cache = process.env.npm_config_cache ?? join(tmpdir(), 'vivi-npm-cache')
+const cache = process.env.VIVI_TEST_NPM_CACHE ?? join(tmpdir(), 'vivi-npm-cache')
 
 function run(command, arguments_, cwd = root) {
-  const result = spawnSync(command, arguments_, { cwd, encoding: 'utf8' })
+  const result = spawnSync(command, arguments_, {
+    cwd, encoding: 'utf8',
+    env: { ...process.env, npm_config_cache: cache, npm_config_update_notifier: 'false' }
+  })
   if (result.error || result.status !== 0) {
     throw new Error(`${command} failed: ${result.error?.message ?? ''}\n${result.stdout}\n${result.stderr}`)
   }
@@ -21,7 +25,7 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
-  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/package.json']) {
+  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert([...paths].every((path) => !path.includes('node_modules') && !path.startsWith('test/')))
@@ -33,8 +37,8 @@ try {
   const installed = join(temporary, 'node_modules/@ayayaq/vivi')
   const manifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'))
   assert.equal(manifest.name, '@ayayaq/vivi')
-  assert.equal(manifest.version, '0.1.0')
-  assert.equal(packed.filename, 'ayayaq-vivi-0.1.0.tgz')
+  assert.equal(manifest.version, sourceManifest.version)
+  assert.equal(packed.filename, `ayayaq-vivi-${sourceManifest.version}.tgz`)
   assert.equal(manifest.publishConfig.access, 'public')
   assert.equal(manifest.license, 'Apache-2.0')
   assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0)
@@ -74,8 +78,31 @@ const { runAgent } = require('@ayayaq/vivi')
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `)
   run(process.execPath, ['consumer.cjs'], temporary)
+  await writeFile(join(temporary, 'providers.mjs'), `
+import assert from 'node:assert/strict'
+import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
+import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
+const openai = createOpenAIProvider({ apiKey: 'fake', model: 'fake', fetch: async () => new Response(JSON.stringify({ status:'completed', output:[{type:'message',id:'msg-1',role:'assistant',content:[{type:'output_text',text:'OpenAI',annotations:[]}]}] })) })
+const router = createOpenRouterProvider({ apiKey: 'fake', model: 'fake', fetch: async () => new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'OpenRouter'}}]})) })
+assert.equal((await openai.generate({messages:[],tools:[]},new AbortController().signal)).content,'OpenAI')
+assert.equal((await router.generate({messages:[],tools:[]},new AbortController().signal)).content,'OpenRouter')
+`)
+  run(process.execPath, ['providers.mjs'], temporary)
+  await writeFile(join(temporary, 'providers.cjs'), `
+const assert = require('node:assert/strict')
+const { createOpenAIProvider } = require('@ayayaq/vivi/providers/openai')
+const { createOpenRouterProvider } = require('@ayayaq/vivi/providers/openrouter')
+assert.equal(typeof createOpenAIProvider({apiKey:'fake',model:'fake'}).generate,'function')
+assert.equal(typeof createOpenRouterProvider({apiKey:'fake',model:'fake'}).generate,'function')
+`)
+  run(process.execPath, ['providers.cjs'], temporary)
   await writeFile(join(temporary, 'consumer.ts'), `
 import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@ayayaq/vivi'
+import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
+import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
+const openai: ModelProvider = createOpenAIProvider({apiKey:'fake',model:'fake',reasoning:{mode:'default'}})
+const router: ModelProvider = createOpenRouterProvider({apiKey:'fake',model:'fake',stream:true})
+void openai; void router
 const parameters: JsonObject = { type: 'object' }
 const tools: ToolDefinition[] = [{ name: 'inventory', description: 'Stock', parameters }]
 const messages: HistoryMessage[] = [{ kind: 'message', role: 'user', content: 'Stock?' }]
@@ -92,6 +119,10 @@ console.log(result.status)
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', 'consumer.ts'], temporary)
   await writeFile(join(temporary, 'consumer.cts'), `
 import core = require('@ayayaq/vivi')
+import openai = require('@ayayaq/vivi/providers/openai')
+import router = require('@ayayaq/vivi/providers/openrouter')
+const shared: core.ModelProvider[] = [openai.createOpenAIProvider({apiKey:'fake',model:'fake'}),router.createOpenRouterProvider({apiKey:'fake',model:'fake'})]
+void shared
 const provider: core.ModelProvider = { async generate() { return { content: 'CommonJS declarations work', toolCalls: [] } } }
 const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: [], tools: [], async executeTool() { return { content: '' } } })
 void result

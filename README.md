@@ -4,39 +4,28 @@ A small, headless TypeScript tool-calling loop. `@ayayaq/vivi` has no runtime de
 requires Node.js 22 or newer. It supports ESM and CommonJS. It knows about messages, providers, and tool calls;
 your host owns the application, network access, approvals, and storage.
 
-## Install and build
+## Published core and development version
 
-vivi is not published to the npm registry yet. `@ayayaq/vivi` is the configured package name for
-its first release under the `ayayaq` account's scope. Use the local archive route below until a
-registry release has been published and verified. Release preparation is documented in
-[RELEASING.md](RELEASING.md).
-
-Build and verify a local package from this repository:
+The published `@ayayaq/vivi@0.1.0` contains the provider-neutral core only:
 
 ```sh
-git clone https://github.com/ayayaQ/vivi.git
-cd vivi
+npm install @ayayaq/vivi@0.1.0
+```
+
+The provider factories, progress events and history helpers described below are **unreleased**
+in this development branch (`0.2.0-dev.0`). They are not available in npm `0.1.0`.
+Build and verify this branch locally:
+
+```sh
 npm ci
 npm run check
 npm pack
 ```
 
-This creates `ayayaq-vivi-0.1.0.tgz`. From your own project, install that archive using its
-relative path. For a project beside the `vivi` checkout:
-
-```sh
-npm install ../vivi/ayayaq-vivi-0.1.0.tgz
-```
-
-The archive contains built ESM and CommonJS, TypeScript declarations, and source. Installing it
-does not run build scripts. Consumers can use `import { runAgent } from '@ayayaq/vivi'` or
-`const { runAgent } = require('@ayayaq/vivi')`. CommonJS uses its own build and does not rely on
-Node's newer `require(ESM)` interoperability.
-
-`check` builds, runs fake-provider tests and the inventory example, then packs and installs the
-actual tarball into a temporary consumer. That check verifies source/license inclusion, ESM/CommonJS
-exports, zero runtime dependencies, and both module formats' declaration consumption. TypeScript is the sole development
-dependency. The tests use Node's built-in test runner. No test uses a real model or credentials.
+Install the resulting `ayayaq-vivi-0.2.0-dev.0.tgz` archive in a consumer project. The archive
+contains ESM and CommonJS libraries, declarations and source. Installing
+it does not run build scripts. Core and adapters have zero runtime dependencies; TypeScript is the sole development dependency. Tests use fake providers/HTTP and the built-in
+Node test runner, never model credentials. See [RELEASING.md](RELEASING.md) before any release.
 
 ## Small host integration
 
@@ -96,7 +85,9 @@ from that accepted round are resolved first.
 Messages and tool schemas are JSON-compatible plain data. Numbers must be finite; cycles,
 undefined, sparse arrays, functions, symbols, accessors, and class instances are rejected. Optional
 JSON fields should be omitted, rather than set to undefined. Core validates envelope shapes and
-call identity, not JSON Schema or application argument semantics. The host must validate arguments
+call identity, not JSON Schema or application argument semantics. `validateHistory(value)` makes the
+same canonical-history checks available without a model request; it throws on malformed or
+incomplete history. The host must validate arguments
 against its schemas and domain constraints before acting.
 
 Advertising a tool enables dispatch; it does not authorize an action. Core is not an approval
@@ -125,12 +116,12 @@ An assistant can carry `providerState: { provider: string, items: JsonValue[] }`
 this opaque JSON in history. It does not interpret or merge native reasoning/assistant items.
 The matching adapter must replay its native items correctly, avoid double-inserting canonical
 text/calls, and ignore states belonging to other adapters. Switching adapters may lose native
-reasoning continuity and is a host decision. SDKs, provider-specific HTTP and wire formats belong
-in adapters, outside this package. Existing desktop adapters remain in the desktop project.
+reasoning continuity and is a host decision. Provider-specific HTTP and wire formats belong in optional adapter subpaths. Importing the root
+entry point does not import a provider transport or CLI.
 
 ## Events, errors, and cancellation
 
-`onEvent` is optional, ordered, and awaited. Events are:
+`onEvent` is optional, ordered, and awaited. Completed-round events are:
 
 1. `assistant` with the accepted `message`
 2. `tool_started` with a `call`
@@ -144,7 +135,8 @@ results are added to the returned transcript for any accepted pending calls, so 
 used on the next turn. Reconcile the final returned history when persisting: the event stream
 alone can be incomplete after cancellation or a hook failure.
 
-The same `AbortSignal` reaches providers and tools. Aborting ends an outstanding provider, tool,
+The caller's abort reaches providers and tools. Each provider round also has a derived signal so a failed
+progress hook can terminate its transport. Aborting ends an outstanding provider, tool,
 approval, or hook wait promptly even if the host promise never settles. Core starts no further
 work or events after it observes the abort and ignores late settlements. Every accepted pending
 call receives a `cancelled` tool result in the returned transcript. Cancellation is a terminal
@@ -158,11 +150,75 @@ mutation. Never commit a delayed approval after cancellation. Event callbacks sh
 late writes once their signal/session has become stale. Keep persistence and approval transactions
 inside the host's own consistency boundary.
 
+## Shared provider factories (unreleased)
+
+```ts
+import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
+import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
+
+const provider = createOpenAIProvider({
+  apiKey: process.env.OPENAI_API_KEY!,
+  model: 'your-model-id',
+  reasoning: { mode: 'default' },
+  timeoutMs: 60_000,
+  stream: true
+})
+```
+
+Both factories implement the same `ModelProvider` contract. OpenAI uses Responses; OpenRouter
+uses Chat Completions. Configuration contains a model, a key (or async key supplier), optional
+reasoning, request timeout, streaming flag and injectable fetch. OpenRouter can receive optional
+host attribution; no Discord branding, desktop settings or moderation key is built in.
+
+Reasoning has three explicit modes: `default` omits the provider setting, `disabled` requests
+reasoning off, and `effort` supplies a named effort. Nondefault choices require the host to declare
+`supportedReasoningEfforts` for its selected model; include `none` only when disabling is supported.
+This is a host capability assertion, not automatic model discovery. Changing provider or model
+can discard native reasoning continuity; the CLI requires a new session for such a change.
+OpenRouter retains returned reasoning state for tool continuation while displaying only answer text.
+
+HTTP/provider failures are sanitized and never include raw response bodies. Requests have an
+explicit finite end-to-end timeout, covering credential resolution, request preparation, body
+reading, parsing, and awaited progress hooks. Synchronous JavaScript cannot be interrupted;
+elapsed time is checked at boundaries to reject overdue results and suppress later HTTP requests,
+progress, and tool calls as soon as that work returns. There are no automatic retries.
+Hosts decide whether a new turn is appropriate;
+never replay a mutation because a response or stream failed. Native state is tagged by exact
+provider/model, validated, and replayed only when consistent with canonical messages.
+
+With streaming enabled, adapters accumulate complete validated responses before returning any
+tool call. `generate(input, signal, { onProgress })` can send ordered `text_delta` progress and
+`runAgent` exposes it through `onEvent`. Partial text is display-only, absent from history and
+usage until a response is accepted. Interrupted/failed streams commit no partial call. Hosts clear
+partial display at an accepted assistant or terminal result. Late callbacks are ignored; throwing
+progress hooks end the run with `event_error` and cancel the provider round.
+
+## Shared history recovery (unreleased)
+
+`closeInterruptedHistory(messages)` copies and validates persisted canonical history, then fills
+missing trailing results with `interrupted` errors. Such a tool's outcome may be unknown: read
+current state before retrying. Recovery does not execute any historical tool, even if a mutation
+was approved before the crash. It preserves completed results and rejects orphaned, reordered,
+duplicate or malformed tool exchanges. Hosts still own session versions, storage, bounds, legacy
+migration and policy.
+
+## Separate CLI reference host
+
+The generic CLI is a separate project at [ayayaQ/vivi-cli](https://github.com/ayayaQ/vivi-cli),
+using these exact adapters and core as a dependency. It is not included in this package and does
+not copy the agent loop or provider protocol. Its first development version uses a pinned local
+archive until a new vivi registry release is approved and published. npm `0.1.0` does not contain
+the new adapter/history exports needed by that CLI.
+
 ## Deliberately outside the core
 
+The [shared-use audit](REUSE_AUDIT.md) records what was extracted and why the remaining
+validation, context, policy, persistence and domain components stay in their hosts.
+
 Domain prompts and tools, manual/automatic/planning modes, approval UI, revision-aware mutation
-commits, persistence, memory policy, result truncation, model selection, authentication, provider
-SDKs, retry policy, compaction, routing, Electron, and any application UI remain host concerns.
+commits, persistence, memory policy, result truncation, model selection, credential acquisition, retry policy, compaction, routing, Electron, and any
+application UI remain host concerns. Optional provider adapters perform only protocol translation
+and bounded HTTP requests; the CLI is a separate reference host.
 
 ## License and origin
 

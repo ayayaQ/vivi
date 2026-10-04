@@ -62,8 +62,20 @@ export interface ProviderResult {
 export interface ModelProvider {
   generate(
     input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
-    signal: AbortSignal
+    signal: AbortSignal,
+    options?: ProviderGenerateOptions
   ): Promise<ProviderResult>
+}
+
+/** Display-only provider progress. It is never a committed assistant message. */
+export interface ProviderProgress {
+  type: 'text_delta'
+  text: string
+}
+
+export interface ProviderGenerateOptions {
+  /** Awaited in order. Providers must not call this after generation settles. */
+  onProgress?(event: ProviderProgress): void | Promise<void>
 }
 
 export interface ToolResult {
@@ -72,6 +84,7 @@ export interface ToolResult {
 }
 
 export type AgentEvent =
+  | ProviderProgress
   | { type: 'assistant'; message: AssistantMessage }
   | { type: 'tool_started'; call: ToolCall }
   | { type: 'tool_completed'; message: ToolResultMessage }
