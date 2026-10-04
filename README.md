@@ -153,7 +153,7 @@ mutation. Never commit a delayed approval after cancellation. Event callbacks sh
 late writes once their signal/session has become stale. Keep persistence and approval transactions
 inside the host's own consistency boundary.
 
-## Shared provider factories (0.2.0)
+## Shared provider factories
 
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
@@ -179,6 +179,19 @@ reasoning off, and `effort` supplies a named effort. Nondefault choices require 
 This is a host capability assertion, not automatic model discovery. Changing provider or model
 can discard native reasoning continuity; the CLI requires a new session for such a change.
 OpenRouter retains returned reasoning state for tool continuation while displaying only answer text.
+
+For OpenRouter, `requireSupportedParameters: true` (added in the planned `0.2.1` release) sends
+`provider.require_parameters: true`, restricting routing to endpoints that support every supplied
+parameter. Use it when the host relies on declared tool or reasoning capabilities. The option
+defaults to false and is omitted from the request unless enabled, preserving OpenRouter's default
+routing. It does not discover capabilities or guarantee endpoint availability; a request with no
+eligible endpoint can fail normally. See [OpenRouter's routing documentation](https://openrouter.ai/docs/guides/routing/provider-selection#requiring-providers-to-support-all-parameters).
+
+Both adapters omit tool parameters when the host supplies no tools. OpenRouter also omits the
+redundant `tool_choice: 'auto'` when tools are present, using its documented automatic default.
+This allows strict routing to endpoints that support tools without requiring separate
+`tool_choice` support. See [OpenRouter's tool choice documentation](https://openrouter.ai/docs/guides/features/tool-calling#tool-choice-configuration).
+OpenAI retains automatic tool choice when tools are present.
 
 HTTP/provider failures are sanitized and never include raw response bodies. Requests have an
 explicit finite end-to-end timeout, covering credential resolution, request preparation, body
