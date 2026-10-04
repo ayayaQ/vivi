@@ -21,7 +21,7 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
-  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/package.json']) {
+  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/package.json']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert([...paths].every((path) => !path.includes('node_modules') && !path.startsWith('test/')))
@@ -30,8 +30,12 @@ try {
   const sha256 = createHash('sha256').update(bytes).digest('hex')
   await writeFile(join(temporary, 'package.json'), JSON.stringify({ private: true, type: 'module' }))
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--cache', cache, tarball], temporary)
-  const installed = join(temporary, 'node_modules/@vivi/agent-core')
+  const installed = join(temporary, 'node_modules/@ayayaq/vivi')
   const manifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'))
+  assert.equal(manifest.name, '@ayayaq/vivi')
+  assert.equal(manifest.version, '0.1.0')
+  assert.equal(packed.filename, 'ayayaq-vivi-0.1.0.tgz')
+  assert.equal(manifest.publishConfig.access, 'public')
   assert.equal(manifest.license, 'Apache-2.0')
   assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0)
   assert.deepEqual(await readFile(join(installed, 'LICENSE')), await readFile(join(root, 'LICENSE')))
@@ -39,7 +43,7 @@ try {
   assert((await readFile(join(installed, 'ATTRIBUTION.md'), 'utf8')).includes('943e3f84f67e4415a899da8921db84639843c625'))
   await writeFile(join(temporary, 'consumer.mjs'), `
 import assert from 'node:assert/strict'
-import { runAgent } from '@vivi/agent-core'
+import { runAgent } from '@ayayaq/vivi'
 let calls = 0
 const result = await runAgent({
   provider: { async generate({ messages }) {
@@ -59,7 +63,7 @@ assert.equal(result.rounds, 2)
   run(process.execPath, ['consumer.mjs'], temporary)
   await writeFile(join(temporary, 'consumer.cjs'), `
 const assert = require('node:assert/strict')
-const { runAgent } = require('@vivi/agent-core')
+const { runAgent } = require('@ayayaq/vivi')
 ;(async () => {
   const result = await runAgent({
     provider: { async generate() { return { content: 'CommonJS works', toolCalls: [] } } },
@@ -71,7 +75,7 @@ const { runAgent } = require('@vivi/agent-core')
 `)
   run(process.execPath, ['consumer.cjs'], temporary)
   await writeFile(join(temporary, 'consumer.ts'), `
-import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@vivi/agent-core'
+import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@ayayaq/vivi'
 const parameters: JsonObject = { type: 'object' }
 const tools: ToolDefinition[] = [{ name: 'inventory', description: 'Stock', parameters }]
 const messages: HistoryMessage[] = [{ kind: 'message', role: 'user', content: 'Stock?' }]
@@ -87,7 +91,7 @@ console.log(result.status)
 `)
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', 'consumer.ts'], temporary)
   await writeFile(join(temporary, 'consumer.cts'), `
-import core = require('@vivi/agent-core')
+import core = require('@ayayaq/vivi')
 const provider: core.ModelProvider = { async generate() { return { content: 'CommonJS declarations work', toolCalls: [] } } }
 const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: [], tools: [], async executeTool() { return { content: '' } } })
 void result

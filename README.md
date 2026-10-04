@@ -1,29 +1,37 @@
 # vivi
 
-A small, headless TypeScript tool-calling loop. `@vivi/agent-core` has no runtime dependencies and
+A small, headless TypeScript tool-calling loop. `@ayayaq/vivi` has no runtime dependencies and
 requires Node.js 22 or newer. It supports ESM and CommonJS. It knows about messages, providers, and tool calls;
 your host owns the application, network access, approvals, and storage.
 
 ## Install and build
 
-```sh
-npm install @vivi/agent-core
-```
+vivi is not published to the npm registry yet. `@ayayaq/vivi` is the configured package name for
+its first release under the `ayayaq` account's scope. Use the local archive route below until a
+registry release has been published and verified. Release preparation is documented in
+[RELEASING.md](RELEASING.md).
 
-The package contains built ESM and CommonJS, TypeScript declarations, and source. Installation does
-not run build scripts. Consumers can use `import { runAgent } from '@vivi/agent-core'` or
-`const { runAgent } = require('@vivi/agent-core')`. CommonJS uses its own build and does not rely on
-Node's newer `require(ESM)` interoperability.
-
-For this repository:
+Build and verify a local package from this repository:
 
 ```sh
+git clone https://github.com/ayayaQ/vivi.git
+cd vivi
 npm ci
-npm run build
-npm test
-npm run example
 npm run check
+npm pack
 ```
+
+This creates `ayayaq-vivi-0.1.0.tgz`. From your own project, install that archive using its
+relative path. For a project beside the `vivi` checkout:
+
+```sh
+npm install ../vivi/ayayaq-vivi-0.1.0.tgz
+```
+
+The archive contains built ESM and CommonJS, TypeScript declarations, and source. Installing it
+does not run build scripts. Consumers can use `import { runAgent } from '@ayayaq/vivi'` or
+`const { runAgent } = require('@ayayaq/vivi')`. CommonJS uses its own build and does not rely on
+Node's newer `require(ESM)` interoperability.
 
 `check` builds, runs fake-provider tests and the inventory example, then packs and installs the
 actual tarball into a temporary consumer. That check verifies source/license inclusion, ESM/CommonJS
@@ -33,7 +41,7 @@ dependency. The tests use Node's built-in test runner. No test uses a real model
 ## Small host integration
 
 ```ts
-import { runAgent, type ModelProvider } from '@vivi/agent-core'
+import { runAgent, type ModelProvider } from '@ayayaq/vivi'
 
 const provider: ModelProvider = {
   async generate({ messages }, signal) {

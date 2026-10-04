@@ -1,10 +1,14 @@
 {
-  "name": "@vivi/agent-core",
+  "name": "@ayayaq/vivi",
   "version": "0.1.0",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",
   "author": "ayayaQ",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ayayaQ/vivi.git"
@@ -28,7 +32,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist", "src", "examples", "scripts/finish-build.mjs", "tsconfig.json", "tsconfig.cjs.json",
-    "LICENSE", "NOTICE", "ATTRIBUTION.md", "README.md"
+    "LICENSE", "NOTICE", "ATTRIBUTION.md", "README.md", "RELEASING.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
