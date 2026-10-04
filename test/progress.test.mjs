@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 import assert from 'node:assert/strict'
+import { getEventListeners } from 'node:events'
 import { test } from 'node:test'
 import { runAgent } from '../dist/index.js'
+import { ProviderRequestError } from '../dist/providers/openai.js'
 
 const answer = (content = 'Done') => ({ content, toolCalls: [] })
 const options = (extras) => ({ messages: [], tools: [], executeTool: async () => { throw new Error('unused') }, ...extras })
 const tick = () => new Promise(resolve => setImmediate(resolve))
+const deferred = () => {
+  let resolve, reject
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail })
+  return { promise, resolve, reject }
+}
 
 test('progress is ordered, immutable, display-only and precedes committed assistant', async () => {
   const events = []
@@ -104,4 +111,98 @@ test('obsolete callback cannot emit after completion or into a later provider ro
   await oldCallback({ type: 'text_delta', text: 'late' })
   assert.equal(result.status, 'completed')
   assert(!events.includes('text_delta'))
+})
+
+test('timed-out rounds release hanging progress waits and leave late or queued callbacks inert', { timeout: 1000 }, async () => {
+  const controller = new AbortController()
+  // Reuse the caller signal: detached hook waits must not accumulate listeners across runs.
+  for (const settlement of ['never', 'resolve', 'reject']) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const entered = deferred()
+      const hook = deferred()
+      const failure = deferred()
+      const events = []
+      const progress = []
+      let callback, providerSignal
+      const run = runAgent(options({
+        signal: controller.signal,
+        provider: { generate(_input, signal, { onProgress }) {
+          providerSignal = signal
+          callback = onProgress
+          progress.push(onProgress({ type: 'text_delta', text: 'first' }))
+          progress.push(onProgress({ type: 'text_delta', text: 'queued' }))
+          return failure.promise
+        } },
+        onEvent(event) { events.push(event); entered.resolve(); return hook.promise }
+      }))
+      await entered.promise
+      failure.reject(new ProviderRequestError('OpenAI', 'timeout', 'OpenAI request timed out'))
+      const result = await run
+      assert.equal(result.status, 'error')
+      assert.deepEqual(result.error, { code: 'provider_error', message: 'OpenAI request timed out' })
+      assert.deepEqual(result.history, [])
+      assert.deepEqual(result.usage, { inputTokens: 0, outputTokens: 0, totalTokens: 0 })
+      assert.equal(result.rounds, 0)
+      assert.equal(result.content, '')
+      assert.equal(providerSignal.aborted, true)
+      assert.equal(getEventListeners(controller.signal, 'abort').length, 0)
+      assert.equal(getEventListeners(providerSignal, 'abort').length, 0)
+      await Promise.allSettled(progress)
+      if (settlement === 'resolve') hook.resolve()
+      if (settlement === 'reject') hook.reject(new Error('late hook rejection'))
+      await callback({ type: 'text_delta', text: 'late' })
+      assert.deepEqual(events, [{ type: 'text_delta', text: 'first' }])
+      assert.deepEqual(result.error, { code: 'provider_error', message: 'OpenAI request timed out' })
+    }
+  }
+})
+
+test('caller cancellation releases an outstanding progress hook wait with cancelled status', { timeout: 1000 }, async () => {
+  const controller = new AbortController()
+  const entered = deferred()
+  let progress, callback, providerSignal
+  const events = []
+  const run = runAgent(options({
+    signal: controller.signal,
+    provider: { generate(_input, signal, { onProgress }) {
+      providerSignal = signal
+      callback = onProgress
+      progress = onProgress({ type: 'text_delta', text: 'first' })
+      return new Promise(() => {})
+    } },
+    onEvent(event) { events.push(event); entered.resolve(); return new Promise(() => {}) }
+  }))
+  await entered.promise
+  controller.abort()
+  const result = await run
+  await Promise.allSettled([progress])
+  assert.equal(result.status, 'cancelled')
+  assert.deepEqual(result.history, [])
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 0)
+  assert.equal(getEventListeners(providerSignal, 'abort').length, 0)
+  await callback({ type: 'text_delta', text: 'late' })
+  assert.deepEqual(events, [{ type: 'text_delta', text: 'first' }])
+})
+
+test('cleanup of a pending hook cannot replace an invalid progress failure', { timeout: 1000 }, async () => {
+  const controller = new AbortController()
+  const entered = deferred()
+  let callback, progress
+  const run = runAgent(options({
+    signal: controller.signal,
+    provider: { generate(_input, _signal, { onProgress }) {
+      callback = onProgress
+      progress = onProgress({ type: 'text_delta', text: 'first' })
+      return new Promise(() => {})
+    } },
+    onEvent() { entered.resolve(); return new Promise(() => {}) }
+  }))
+  await entered.promise
+  await assert.rejects(callback({ type: 'tool_started', text: 'invalid' }))
+  const result = await run
+  await Promise.allSettled([progress])
+  assert.equal(result.status, 'error')
+  assert.equal(result.error.code, 'invalid_provider_output')
+  assert.deepEqual(result.history, [])
+  assert.equal(getEventListeners(controller.signal, 'abort').length, 0)
 })

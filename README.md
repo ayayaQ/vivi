@@ -178,7 +178,11 @@ can discard native reasoning continuity; the CLI requires a new session for such
 OpenRouter retains returned reasoning state for tool continuation while displaying only answer text.
 
 HTTP/provider failures are sanitized and never include raw response bodies. Requests have an
-explicit finite timeout and no automatic retries. Hosts decide whether a new turn is appropriate;
+explicit finite end-to-end timeout, covering credential resolution, request preparation, body
+reading, parsing, and awaited progress hooks. Synchronous JavaScript cannot be interrupted;
+elapsed time is checked at boundaries to reject overdue results and suppress later HTTP requests,
+progress, and tool calls as soon as that work returns. There are no automatic retries.
+Hosts decide whether a new turn is appropriate;
 never replay a mutation because a response or stream failed. Native state is tagged by exact
 provider/model, validated, and replayed only when consistent with canonical messages.
 

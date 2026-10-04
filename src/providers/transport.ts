@@ -17,7 +17,7 @@ export interface ProviderOptions<E extends EnabledReasoningEffort = EnabledReaso
   reasoning?: ReasoningSelection<E>
   /** Explicit model capabilities. Include 'none' only if this model supports disabling reasoning. */
   supportedReasoningEfforts?: readonly (E | 'none')[]
-  /** End-to-end deadline, including credential resolution and body reading. Default 60 seconds. */
+  /** End-to-end deadline, checked after synchronous work; default 60 seconds. */
   timeoutMs?: number
   /** Default false. Only text/refusal progress is emitted, never partial function calls. */
   stream?: boolean
@@ -139,6 +139,7 @@ export async function request<T>(
   progress: ProgressOptions | undefined,
   operation: (context: RequestContext, key: string) => Promise<T>
 ): Promise<T> {
+  const startedAt = performance.now()
   const controller = new AbortController()
   let active = true
   let timedOut = false
@@ -146,16 +147,25 @@ export async function request<T>(
     config.provider, timedOut ? 'timeout' : 'aborted',
     `${config.provider} request ${timedOut ? 'timed out' : 'cancelled'}`
   )
+  const abort = (): void => controller.abort()
   const check = (): void => {
     if (!active || controller.signal.aborted) throw abortError()
+    // Timers cannot run while synchronous callbacks/parsing occupy the event loop.
+    // Use monotonic elapsed time at boundaries so their late output is never accepted.
+    if (performance.now() - startedAt >= config.timeoutMs) {
+      timedOut = true
+      abort()
+      throw abortError()
+    }
   }
-  const abort = (): void => controller.abort()
   let rejectAborted: (reason: unknown) => void = () => {}
   const aborted = new Promise<never>((_, reject) => { rejectAborted = reject })
   const onAbort = (): void => rejectAborted(abortError())
   controller.signal.addEventListener('abort', onAbort, { once: true })
   signal.addEventListener('abort', abort, { once: true })
-  const timer = setTimeout(() => { timedOut = true; abort() }, config.timeoutMs)
+  const timer = setTimeout(() => {
+    if (!controller.signal.aborted) { timedOut = true; abort() }
+  }, config.timeoutMs)
   if (signal.aborted) abort()
   const context: RequestContext = {
     signal: controller.signal,
@@ -178,12 +188,14 @@ export async function request<T>(
       try {
         key = typeof config.apiKey === 'function' ? await config.apiKey() : config.apiKey
       } catch {
+        check()
         throw new ProviderRequestError(config.provider, 'configuration', `${config.provider} credential resolution failed`)
       }
       check()
       if (typeof key !== 'string' || !key.trim() || /[\r\n]/.test(key)) {
         throw new ProviderRequestError(config.provider, 'configuration', `${config.provider} API key is not configured`)
       }
+      check()
       const result = await operation(context, key)
       check()
       return result
@@ -191,8 +203,8 @@ export async function request<T>(
     return await Promise.race([work, aborted])
   } catch (error) {
     if (error instanceof CallbackFailure) throw error.original
+    check()
     if (error instanceof ProviderRequestError) throw error
-    if (controller.signal.aborted) throw abortError()
     throw new ProviderRequestError(config.provider, 'transport', `${config.provider} request failed`)
   } finally {
     active = false
@@ -209,10 +221,12 @@ export async function post(
   extraHeaders: Record<string, string> = {}
 ): Promise<Response> {
   context.check()
+  const headers = { ...extraHeaders, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+  const serializedBody = JSON.stringify(body)
+  context.check()
   const response = await config.fetch(config.endpoint, {
     method: 'POST', signal: context.signal, redirect: 'error',
-    headers: { ...extraHeaders, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    headers, body: serializedBody
   })
   try { context.check() } catch (error) {
     if (response.body) void response.body.cancel().catch(() => {})
@@ -268,9 +282,13 @@ export async function readJson(response: Response, context: RequestContext, prov
   })
   text += decoder.decode()
   context.check()
-  try { return JSON.parse(text) as unknown } catch {
+  let value: unknown
+  try { value = JSON.parse(text) as unknown } catch {
+    context.check()
     throw new ProviderRequestError(provider, 'invalid_response', `${provider} response was not valid JSON`)
   }
+  context.check()
+  return value
 }
 
 export interface ServerEvent { event: string; data: string }
@@ -290,13 +308,16 @@ export async function readSse<T>(
   let hasData = false
   let precedingCR = false
   const processLine = async (): Promise<T | undefined> => {
+    context.check()
     const value = line
     line = ''
     if (!value) {
       if (!hasData) { event = ''; return undefined }
       const frame = { event: event || 'message', data: data.slice(0, -1) }
       event = ''; data = ''; hasData = false
-      return onEvent(frame)
+      const terminal = await onEvent(frame)
+      context.check()
+      return terminal
     }
     if (value.startsWith(':')) return undefined
     const colon = value.indexOf(':')
@@ -331,6 +352,7 @@ export async function readSse<T>(
   })
   // SSE discards an unterminated frame at EOF. A provider must have sent its terminal frame.
   decoder.decode()
+  context.check()
   if (terminal === undefined) {
     throw new ProviderRequestError(provider, 'invalid_response', `${provider} stream ended before completion`)
   }

@@ -177,11 +177,11 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     const onEvent = options.onEvent
 
     const checkAbort = (): void => { if (signal.aborted) throw new Cancelled() }
-    const emit = async (event: AgentEvent): Promise<void> => {
+    const emit = async (event: AgentEvent, waitSignal = signal): Promise<void> => {
       checkAbort()
       if (!onEvent) return
       try {
-        await wait(() => onEvent(snapshot(event)), signal)
+        await wait(() => onEvent(snapshot(event)), waitSignal)
         checkAbort()
       } catch (error) {
         if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
@@ -224,9 +224,11 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         }
         const operation = progressTail.then(async () => {
           if (!roundLive || signal.aborted) return
-          await emit(captured)
+          await emit(captured, roundController.signal)
         })
         progressTail = operation.catch((error: unknown) => {
+          // Round cleanup cancels detached progress waits; it must not replace its outcome.
+          if (!roundLive) return
           progressError = error
           acceptingProgress = roundLive = false
           roundController.abort()
