@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (prepared, awaiting npm publication)
+## 0.2.0 (2026-10-04)
 
 - Add provider-neutral OpenAI Responses and OpenRouter Chat Completions factories with
   injectable HTTP transport, sanitized failures, finite end-to-end timeouts and no automatic retries
@@ -14,8 +14,9 @@
 - Keep application policy, approvals, credentials, storage and UI host-owned; zero runtime dependencies
 
 The reviewed implementation is merged on vivi main at
-`063b84a009d8cc9c553f508e8d3cfece59fe0b1a`. This release preparation changes version metadata
-and documentation only. Registry availability and archive integrity must be verified separately.
+`063b84a009d8cc9c553f508e8d3cfece59fe0b1a`. Release preparation changed version metadata
+and documentation only. The public npm archive was verified byte-for-byte against the reviewed
+artifact; see [RELEASING.md](RELEASING.md) for its immutable hash record.
 
 ## 0.1.0
 

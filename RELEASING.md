@@ -1,13 +1,27 @@
-# Release preparation
+# Release workflow
 
 `@ayayaq/vivi@0.1.0` is published and immutable. Its reviewed archive SHA-256 is
 `9f5faecf9959f722bfa799efa8b0610b383b3d888bc13659b73be37306b6e2f6`.
 
-This checkout prepares stable **`@ayayaq/vivi@0.2.0`**, Apache-2.0, from the reviewed shared
+Stable **`@ayayaq/vivi@0.2.0`** is published on npm, Apache-2.0, from the reviewed shared
 implementation merged at `063b84a009d8cc9c553f508e8d3cfece59fe0b1a`. See [CHANGELOG.md](CHANGELOG.md).
-It is staged for user publication; local checks do not establish registry availability.
+The account holder published the reviewed archive; its registry bytes and integrity were verified.
 No release or authentication step is automated by this repository. Never publish new bytes as
 `0.1.0`, and never substitute a newly packed working directory for a reviewed archive.
+
+## Verified 0.2.0 archive
+
+- Archive: `ayayaq-vivi-0.2.0.tgz`
+- SHA-256: `aab013aef6ae939dba5f07391358b3fa4c5cc83b7f5b6a9f520ed8d8c76dd9a9`
+- SHA-1: `9d9ddc7f9e07d7fba878b260931da06d81abc714`
+- Integrity: `sha512-4qxPGSjhKgJKx01fV18V4qvzlVQxkhyiXhPX+KpnbevDYFMilAlnlhx7JIPyWZENG6zUOYSRB6xnQkTT0K1usw==`
+- Reviewed source tree: `692d9fc00412ebcf0c36843390c5714f4ed52a63`
+
+The registry download and all 96 installed files matched the frozen archive. Clean registry
+ESM/CommonJS core/history/provider consumers and strict NodeNext declarations passed. `latest`
+was verified as `0.2.0`. These docs record publication after the archive was frozen; do not
+repack this checkout to replace the existing release. For a future version, select a new
+version and repeat preparation, review, user-only publication and registry verification.
 
 ## Prepare and review without signing in
 

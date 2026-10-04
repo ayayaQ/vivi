@@ -4,38 +4,31 @@ A small, headless TypeScript tool-calling loop. `@ayayaq/vivi` has no runtime de
 requires Node.js 22 or newer. It supports ESM and CommonJS. It knows about messages, providers, and tool calls;
 your host owns the application, network access, approvals, and storage.
 
-## Published core and prepared 0.2.0 release
+## Install
 
-The published `@ayayaq/vivi@0.1.0` contains the provider-neutral core only:
-
-```sh
-npm install @ayayaq/vivi@0.1.0
-```
-
-This checkout prepares `@ayayaq/vivi@0.2.0`. The provider factories, streaming progress,
-canonical-history helpers and deadline fixes below require `0.2.0`; they are absent from npm
-`0.1.0`. The new version is staged for publication. Verify its registry name, version and
-archive integrity using [RELEASING.md](RELEASING.md) before installing it from npm.
-
-Build and verify the candidate locally:
-
-```sh
-npm ci
-npm run check
-npm pack
-```
-
-Install the resulting `ayayaq-vivi-0.2.0.tgz` archive in a consumer project. The archive contains
-ESM and CommonJS libraries, declarations, source and [release notes](CHANGELOG.md). Installing
-it does not run build scripts. Core and adapters have zero runtime dependencies; TypeScript
-is the sole development dependency. Tests use fake providers/HTTP and the built-in Node test
-runner, never model credentials.
-
-After publication and integrity verification, consumers can pin the exact registry version:
+The published `@ayayaq/vivi@0.2.0` includes the core, shared OpenAI/OpenRouter provider
+factories, streaming progress, canonical-history helpers and deadline fixes:
 
 ```sh
 npm install --save-exact @ayayaq/vivi@0.2.0
 ```
+
+The public registry archive was verified byte-for-byte against the reviewed release. See
+[CHANGELOG.md](CHANGELOG.md) for changes and [RELEASING.md](RELEASING.md) for its immutable
+archive hashes and release workflow. The earlier `0.1.0` release contains the core only.
+
+Build and verify the source checkout locally:
+
+```sh
+npm ci
+npm run check
+```
+
+The package contains ESM and CommonJS libraries, declarations and source. Installing it does
+not run build scripts. Core and adapters have zero runtime dependencies; TypeScript is the
+sole development dependency. Tests use fake providers/HTTP and the built-in Node test runner,
+never model credentials. `npm pack` produces a local test archive; do not commit pack outputs
+or substitute new bytes for an already published version.
 
 ## Small host integration
 
@@ -216,9 +209,8 @@ migration and policy.
 
 The generic CLI is a separate project at [ayayaQ/vivi-cli](https://github.com/ayayaQ/vivi-cli),
 using these exact adapters and core as a dependency. It is not included in this package and does
-not copy the agent loop or provider protocol. Its first development version uses a pinned local
-archive until a new vivi registry release is approved and published. npm `0.1.0` does not contain
-the new adapter/history exports needed by that CLI.
+not copy the agent loop or provider protocol. The CLI registry transition pins shared vivi `0.2.0`. npm `0.1.0` does not contain the new
+adapter/history exports needed by that CLI.
 
 ## Deliberately outside the core
 
