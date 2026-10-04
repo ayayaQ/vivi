@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 (unreleased)
+
+- Add opt-in `requireSupportedParameters` to the OpenRouter adapter, mapping to
+  `provider.require_parameters: true` so hosts can require endpoint support for supplied parameters
+- Preserve default OpenRouter routing unless the new option is enabled
+- Omit tool fields in both adapters when no tools are supplied; use OpenRouter's automatic tool
+  choice default without requiring the optional `tool_choice` capability
+- Validate the routing option before requests and retain existing timeout, cancellation and
+  sanitized-error behavior; verify mock streaming/nonstreaming requests and packaged consumers
+
 ## 0.2.0 (2026-10-04)
 
 - Add provider-neutral OpenAI Responses and OpenRouter Chat Completions factories with

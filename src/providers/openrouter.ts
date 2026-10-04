@@ -13,6 +13,8 @@ export { ProviderRequestError } from './transport.js'
 export type { ReasoningEffort, EnabledReasoningEffort, ReasoningSelection } from './transport.js'
 export interface OpenRouterProviderOptions extends ProviderOptions {
   attribution?: { referer?: string; title?: string }
+  /** Opt in to routing only to endpoints that support every supplied parameter. Default false. */
+  requireSupportedParameters?: boolean
 }
 
 function result(value: unknown, model: string, messages: readonly HistoryMessage[]): ProviderResult {
@@ -159,6 +161,10 @@ class ChatStream {
 export function createOpenRouterProvider(options: OpenRouterProviderOptions): ModelProvider {
   const config = configure(options, 'OpenRouter', 'https://openrouter.ai/api/v1', 'chat/completions',
     ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
+  if (options.requireSupportedParameters !== undefined && typeof options.requireSupportedParameters !== 'boolean') {
+    throw new ProviderRequestError('OpenRouter', 'configuration', 'OpenRouter requireSupportedParameters must be a boolean')
+  }
+  const requireSupportedParameters = options.requireSupportedParameters === true
   const headers: Record<string, string> = {}
   if (options.attribution !== undefined && (!options.attribution ||
       typeof options.attribution !== 'object' || Array.isArray(options.attribution))) {
@@ -176,13 +182,17 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions): Mo
   return {
     generate(input, signal, progress?: ProgressOptions) {
       return request(config, signal, progress, async (context, key) => {
+        // OpenRouter defaults to automatic tool choice. Omit that optional parameter so
+        // strict routing does not require tool_choice support in addition to tools support.
         const body: JsonObject = {
           model: config.model, messages: projectOpenRouterHistory(input.messages, config.model),
-          tools: input.tools.map((tool) => ({ type: 'function', function: {
+          ...(input.tools.length ? { tools: input.tools.map((tool) => ({ type: 'function', function: {
             name: tool.name, description: tool.description, parameters: tool.parameters
-          } })), tool_choice: 'auto', stream: config.stream,
+          } })) } : {}),
+          stream: config.stream,
           ...(config.stream ? { stream_options: { include_usage: true } } : {}),
-          ...(config.reasoning ? { reasoning: config.reasoning } : {})
+          ...(config.reasoning ? { reasoning: config.reasoning } : {}),
+          ...(requireSupportedParameters ? { provider: { require_parameters: true } } : {})
         }
         const response = await post(config, context, key, body, headers)
         if (!config.stream) return result(await readJson(response, context, 'OpenRouter'), config.model, input.messages)

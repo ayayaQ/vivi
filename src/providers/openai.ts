@@ -40,8 +40,10 @@ export function createOpenAIProvider(options: OpenAIProviderOptions): ModelProvi
       return request(config, signal, progress, async (context, key) => {
         const body: JsonObject = {
           model: config.model, input: projectOpenAiHistory(input.messages, config.model),
-          tools: input.tools.map((tool) => ({ type: 'function', ...tool, strict: false })),
-          tool_choice: 'auto', store: false, include: ['reasoning.encrypted_content'],
+          ...(input.tools.length ? {
+            tools: input.tools.map((tool) => ({ type: 'function', ...tool, strict: false })), tool_choice: 'auto'
+          } : {}),
+          store: false, include: ['reasoning.encrypted_content'],
           stream: config.stream, ...(config.reasoning ? { reasoning: config.reasoning } : {})
         }
         const response = await post(config, context, key, body)

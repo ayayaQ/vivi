@@ -25,7 +25,7 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
-  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json']) {
+  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert([...paths].every((path) => !path.includes('node_modules') && !path.startsWith('test/')))
@@ -83,7 +83,16 @@ import assert from 'node:assert/strict'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
 const openai = createOpenAIProvider({ apiKey: 'fake', model: 'fake', fetch: async () => new Response(JSON.stringify({ status:'completed', output:[{type:'message',id:'msg-1',role:'assistant',content:[{type:'output_text',text:'OpenAI',annotations:[]}]}] })) })
-const router = createOpenRouterProvider({ apiKey: 'fake', model: 'fake', fetch: async () => new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'OpenRouter'}}]})) })
+const router = createOpenRouterProvider({ apiKey: 'fake', model: 'fake', requireSupportedParameters: true,
+  reasoning: {mode:'effort',effort:'high'}, supportedReasoningEfforts:['high'],
+  fetch: async (_url, init) => {
+    const body = JSON.parse(init.body)
+    assert.deepEqual(body.provider, {require_parameters:true})
+    assert.deepEqual(body.reasoning, {effort:'high',exclude:false})
+    assert.equal(Object.hasOwn(body,'tools'), false)
+    assert.equal(Object.hasOwn(body,'tool_choice'), false)
+    return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'OpenRouter'}}]}))
+  } })
 assert.equal((await openai.generate({messages:[],tools:[]},new AbortController().signal)).content,'OpenAI')
 assert.equal((await router.generate({messages:[],tools:[]},new AbortController().signal)).content,'OpenRouter')
 `)
@@ -94,14 +103,30 @@ const { createOpenAIProvider } = require('@ayayaq/vivi/providers/openai')
 const { createOpenRouterProvider } = require('@ayayaq/vivi/providers/openrouter')
 assert.equal(typeof createOpenAIProvider({apiKey:'fake',model:'fake'}).generate,'function')
 assert.equal(typeof createOpenRouterProvider({apiKey:'fake',model:'fake'}).generate,'function')
+;(async () => {
+  const provider = createOpenRouterProvider({apiKey:'fake',model:'fake',requireSupportedParameters:true,
+    fetch: async (_url, init) => {
+      const body = JSON.parse(init.body)
+      assert.deepEqual(body.provider,{require_parameters:true})
+      assert.equal(Object.hasOwn(body,'tool_choice'),false)
+      assert.deepEqual(body.tools,[{type:'function',function:{name:'fixture',description:'Fixture',parameters:{type:'object'}}}])
+      return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'CommonJS routing'}}]}))
+    }})
+  assert.equal((await provider.generate({messages:[],tools:[{name:'fixture',description:'Fixture',parameters:{type:'object'}}]},new AbortController().signal)).content,'CommonJS routing')
+})().catch(error => { console.error(error); process.exitCode = 1 })
 `)
   run(process.execPath, ['providers.cjs'], temporary)
   await writeFile(join(temporary, 'consumer.ts'), `
 import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@ayayaq/vivi'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
-import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
+import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayayaq/vivi/providers/openrouter'
 const openai: ModelProvider = createOpenAIProvider({apiKey:'fake',model:'fake',reasoning:{mode:'default'}})
-const router: ModelProvider = createOpenRouterProvider({apiKey:'fake',model:'fake',stream:true})
+const routerOptions: OpenRouterProviderOptions = {apiKey:'fake',model:'fake',stream:true,requireSupportedParameters:true}
+const router: ModelProvider = createOpenRouterProvider(routerOptions)
+// @ts-expect-error routing requires a boolean
+createOpenRouterProvider({apiKey:'fake',model:'fake',requireSupportedParameters:'true'})
+// @ts-expect-error OpenRouter routing is not an OpenAI option
+createOpenAIProvider({apiKey:'fake',model:'fake',requireSupportedParameters:true})
 void openai; void router
 const parameters: JsonObject = { type: 'object' }
 const tools: ToolDefinition[] = [{ name: 'inventory', description: 'Stock', parameters }]
@@ -121,7 +146,10 @@ console.log(result.status)
 import core = require('@ayayaq/vivi')
 import openai = require('@ayayaq/vivi/providers/openai')
 import router = require('@ayayaq/vivi/providers/openrouter')
-const shared: core.ModelProvider[] = [openai.createOpenAIProvider({apiKey:'fake',model:'fake'}),router.createOpenRouterProvider({apiKey:'fake',model:'fake'})]
+const options: router.OpenRouterProviderOptions = {apiKey:'fake',model:'fake',requireSupportedParameters:true}
+const shared: core.ModelProvider[] = [openai.createOpenAIProvider({apiKey:'fake',model:'fake'}),router.createOpenRouterProvider(options)]
+// @ts-expect-error routing requires a boolean
+router.createOpenRouterProvider({apiKey:'fake',model:'fake',requireSupportedParameters:1})
 void shared
 const provider: core.ModelProvider = { async generate() { return { content: 'CommonJS declarations work', toolCalls: [] } } }
 const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: [], tools: [], async executeTool() { return { content: '' } } })

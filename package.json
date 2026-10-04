@@ -1,6 +1,6 @@
 {
   "name": "@ayayaq/vivi",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",

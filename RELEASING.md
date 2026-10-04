@@ -23,6 +23,14 @@ was verified as `0.2.0`. These docs record publication after the archive was fro
 repack this checkout to replace the existing release. For a future version, select a new
 version and repeat preparation, review, user-only publication and registry verification.
 
+## Planned 0.2.1 release (not published)
+
+This checkout prepares the backward-compatible OpenRouter routing option and tool-parameter fixes
+for `@ayayaq/vivi@0.2.1`. npm `latest` remains `0.2.0` until the account holder publishes the
+reviewed `0.2.1` archive. Do not update consumer registry dependencies before that publication
+and the verification below. A draft PR, local package check or archive preparation is not a
+release. Existing `0.2.0` bytes and the historical hash record above remain unchanged.
+
 ## Prepare and review without signing in
 
 Use Node.js 22 or newer and the locked development dependency:
@@ -31,8 +39,9 @@ Use Node.js 22 or newer and the locked development dependency:
 npm ci
 npm run check
 npm pack --dry-run --json
-npm pack --json
-shasum -a 256 ayayaq-vivi-0.2.0.tgz
+RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
+npm pack --json --pack-destination "$RELEASE_DIR"
+shasum -a 256 "$RELEASE_DIR/ayayaq-vivi-0.2.1.tgz"
 ```
 
 Save the release source commit, source tree, archive SHA-256, SHA-1 and npm's SHA-512 integrity
@@ -40,6 +49,7 @@ in the release record. Inspect the pack file list: it must include ESM/CommonJS 
 declarations, source/build configuration, README, changelog, this guide, LICENSE, NOTICE and
 attribution. Exclude credentials, private data, tests, old archives and node_modules.
 `check` installs a generated archive into clean runtime and TypeScript consumers.
+Keep archives outside the repository; never commit a release tarball or a vendor archive.
 
 Freeze the reviewed archive. Any source, metadata, documentation or archive change requires a
 new pack, hash and focused review. A local archive can be used for prepublication testing, but
@@ -69,7 +79,7 @@ Check whether the target version already exists:
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
 ```
 
-If `0.2.0` exists, stop and compare its integrity to the frozen release record. Do not attempt
+If `0.2.1` exists, stop and compare its integrity to the frozen release record. Do not attempt
 an overwrite or change versions without another review. npm package name/version pairs are
 immutable, including after unpublication.
 
@@ -77,11 +87,11 @@ Check the approved archive's SHA-256 against the supplied release record, then p
 file as public, with the `latest` tag:
 
 ```sh
-shasum -a 256 ./ayayaq-vivi-0.2.0.tgz
-npm publish ./ayayaq-vivi-0.2.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+shasum -a 256 ./ayayaq-vivi-0.2.1.tgz
+npm publish ./ayayaq-vivi-0.2.1.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This makes all archive contents public and updates `latest` to `0.2.0`. `publishConfig` also
+This makes all archive contents public and updates `latest` to `0.2.1`. `publishConfig` also
 selects the public npm registry and public access. The [npm publish reference](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
 explains tarball publication, immutable versions, tags and authentication challenges. Complete
 any sign-in or security challenge yourself. If publication fails, retain the same reviewed
@@ -91,18 +101,18 @@ upload. Do not publish different bytes under the same version.
 ## Verify the actual release and switch consumers
 
 ```sh
-npm view @ayayaq/vivi@0.2.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.2.1 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 ```
 
 Confirm name/version, SHA-512 integrity and SHA-1 match the frozen archive, and `latest` is
-`0.2.0`. Download the actual registry archive and compare its SHA-256 and bytes to the reviewed
+`0.2.1`. Download the actual registry archive and compare its SHA-256 and bytes to the reviewed
 file. Install the exact registry version into a clean consumer and repeat ESM/CommonJS runtime
 and declaration checks. Only then advertise the new version as available from npm.
 
-In both vivi-cli and Bot Commander Desktop, replace the development archive dependency with
-exact `"@ayayaq/vivi": "0.2.0"`, regenerate package-lock.json using npm against the verified
-public registry, and remove obsolete tracked vendor archives/provenance. Retain dependency
+For authorized consumer updates, set exact `"@ayayaq/vivi": "0.2.1"`, regenerate package-lock.json
+using npm against the verified public registry, and remove any obsolete tracked vendor
+archives/provenance. Retain dependency
 license/notice/attribution records in installed and packaged outputs. Keep the CLI private unless
 separately approving a CLI release. Rerun all host tests, type checks and package checks, including
 a fresh desktop unpacked package. Changing the shared dependency does not publish either app.

@@ -146,7 +146,8 @@ test('OpenRouter sends chat HTTP, attribution, retained reasoning, and normalize
     { role: 'system', content: 'Inspect carefully' }, { role: 'user', content: 'Inspect state' },
   ]);
   assert.deepEqual(body.tools, [{ type: 'function', function: definitions[0] }]);
-  assert.equal(body.tool_choice, 'auto');
+  assert.equal(Object.hasOwn(body, 'tool_choice'), false);
+  assert.equal(Object.hasOwn(body, 'provider'), false);
   assert.deepEqual(body.reasoning, { effort: 'high', exclude: false });
   assert.equal(body.stream ?? false, false);
   assert.deepEqual(turn.usage, { inputTokens: 50, outputTokens: 8, totalTokens: 58 });
@@ -158,6 +159,14 @@ for (const kind of ['openai', 'openrouter']) {
     const h = harness(kind, [response], { baseURL: 'https://provider.example.test/api/v1/' });
     await h.run();
     assert.equal(h.requests[0].url, `https://provider.example.test/api/v1/${kind === 'openai' ? 'responses' : 'chat/completions'}`);
+  });
+
+  test(`${kind} omits tool parameters when the host supplies no tools`, async () => {
+    const response = kind === 'openai' ? aiResponse() : routerResponse();
+    const h = harness(kind, [response]);
+    await h.run(seed, []);
+    assert.equal(Object.hasOwn(h.requests[0].body, 'tools'), false);
+    assert.equal(Object.hasOwn(h.requests[0].body, 'tool_choice'), false);
   });
 
   test(`${kind} default reasoning omits overrides and disabled reasoning is explicit`, async () => {
