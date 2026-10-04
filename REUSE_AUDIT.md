@@ -1,7 +1,7 @@
 # Shared-use audit
 
 This audit covers the desktop agent loop, provider adapter, tool executor, history, memory,
-documentation policy, session service and renderer boundary. The unreleased development branch
+documentation policy, session service and renderer boundary. The published `0.2.0` release
 has two real hosts: desktop and CLI. Shared components are kept small and provider/domain neutral.
 
 ## Extracted
@@ -19,7 +19,7 @@ has two real hosts: desktop and CLI. Shared components are kept small and provid
 
 The root entry point remains free of provider transport, filesystem, terminal and app imports.
 Provider-specific entry points stay in the shared library package. The CLI is a separate simple
-project, consuming a pinned archive until the next shared-library release. It does not copy the
+project, consuming the exact shared-library npm release. It does not copy the
 loop or provider protocol. There are no runtime dependencies.
 
 ## Reviewed and kept host-owned
