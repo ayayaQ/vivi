@@ -6,6 +6,7 @@ import type {
   AssistantMessage,
   HistoryMessage,
   ProviderResult,
+  ProviderProgress,
   RunAgentOptions,
   ToolCall,
   ToolDefinition,
@@ -13,6 +14,7 @@ import type {
   ToolResultMessage,
   Usage
 } from './types.js'
+import { assert, assertCall, assertHistory, assertJson, assertProviderState, identifier, record } from './validation.js'
 
 class RunFailure extends Error {
   constructor(readonly code: AgentError['code'], message: string) {
@@ -38,67 +40,6 @@ function detail(error: unknown): string {
   } catch {
     return 'Unprintable thrown value'
   }
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) throw new Error(message)
-}
-
-/** Reject values JSON cannot round-trip, including accessors and sparse arrays. */
-function assertJson(value: unknown, ancestors = new Set<object>()): void {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return
-  if (typeof value === 'number') {
-    assert(Number.isFinite(value), 'JSON numbers must be finite')
-    return
-  }
-  assert(typeof value === 'object' && value !== null, 'Expected JSON data')
-  assert(!ancestors.has(value), 'JSON data must not contain cycles')
-  assert(
-    Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype ||
-      Object.getPrototypeOf(value) === null,
-    'JSON objects must be plain objects'
-  )
-  ancestors.add(value)
-  try {
-    const descriptors = Object.getOwnPropertyDescriptors(value)
-    assert(Object.getOwnPropertySymbols(value).length === 0, 'JSON data must not contain symbols')
-    if (Array.isArray(value)) {
-      for (let index = 0; index < value.length; index++) {
-        assert(Object.hasOwn(descriptors, String(index)), 'JSON arrays must not be sparse')
-      }
-    }
-    for (const [key, descriptor] of Object.entries(descriptors)) {
-      if (Array.isArray(value) && key === 'length') continue
-      assert(descriptor.enumerable && 'value' in descriptor, 'JSON data must use enumerable values')
-      if (Array.isArray(value)) {
-        assert(/^(0|[1-9]\d*)$/.test(key) && Number(key) < value.length, 'Invalid JSON array property')
-      }
-      assertJson(descriptor.value, ancestors)
-    }
-  } finally {
-    ancestors.delete(value)
-  }
-}
-
-function identifier(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value === value.trim()
-}
-
-function assertCall(value: unknown): asserts value is ToolCall {
-  assert(record(value), 'Tool call must be an object')
-  assert(identifier(value.id), 'Tool call id must be a nonempty, trimmed string')
-  assert(identifier(value.name), 'Tool call name must be a nonempty, trimmed string')
-  assert(record(value.arguments), 'Tool call arguments must be a JSON object')
-}
-
-function assertProviderState(value: unknown): void {
-  assert(record(value), 'Provider state must be an object')
-  assert(identifier(value.provider), 'Provider state must identify its adapter')
-  assert(Array.isArray(value.items), 'Provider state items must be an array')
 }
 
 function assertUsage(value: unknown): asserts value is Usage {
@@ -130,41 +71,6 @@ function assertToolResult(value: unknown): asserts value is ToolResult {
   assert(record(value), 'Tool result must be an object')
   assert(typeof value.content === 'string', 'Tool result content must be a string')
   if ('isError' in value) assert(typeof value.isError === 'boolean', 'Tool isError must be boolean')
-}
-
-function assertHistory(messages: unknown): asserts messages is HistoryMessage[] {
-  assertJson(messages)
-  assert(Array.isArray(messages), 'Messages must be an array')
-  const seenIds = new Set<string>()
-  let pending: ToolCall[] = []
-  for (const message of messages) {
-    assert(record(message), 'History message must be an object')
-    assert(typeof message.content === 'string', 'History content must be a string')
-    if (message.kind === 'tool_result') {
-      const expected = pending.shift()
-      assert(expected, 'Tool result has no pending call')
-      assert(message.callId === expected.id && message.name === expected.name,
-        'Tool result must match the next pending call id and name')
-      if ('isError' in message) assert(typeof message.isError === 'boolean', 'Tool isError must be boolean')
-      continue
-    }
-    assert(pending.length === 0, 'History contains unanswered tool calls')
-    if (message.kind === 'message') {
-      assert(message.role === 'user' || message.role === 'system', 'Invalid message role')
-    } else if (message.kind === 'assistant') {
-      assert(Array.isArray(message.toolCalls), 'Assistant toolCalls must be an array')
-      for (const call of message.toolCalls) {
-        assertCall(call)
-        assert(!seenIds.has(call.id), `Duplicate tool call id: ${call.id}`)
-        seenIds.add(call.id)
-      }
-      if ('providerState' in message) assertProviderState(message.providerState)
-      pending = message.toolCalls.slice()
-    } else {
-      throw new Error('Invalid history message kind')
-    }
-  }
-  assert(pending.length === 0, 'History contains unanswered tool calls')
 }
 
 function assertTools(tools: unknown): asserts tools is ToolDefinition[] {
@@ -286,8 +192,56 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     for (let round = 0; round < maxRounds; round++) {
       checkAbort()
       let turn: ProviderResult
+      const roundController = new AbortController()
+      const abortRound = (): void => roundController.abort()
+      signal.addEventListener('abort', abortRound, { once: true })
+      let acceptingProgress = true
+      let roundLive = true
+      let progressTail: Promise<void> = Promise.resolve()
+      let progressError: unknown
+      let rejectProgress!: (error: unknown) => void
+      const progressFailure = new Promise<never>((_resolve, reject) => { rejectProgress = reject })
+      // Observe the rejection even if a provider fails before it joins the race.
+      void progressFailure.catch(() => {})
+      const onProgress = (event: ProviderProgress): Promise<void> => {
+        // Ignore callbacks from an obsolete generation, including uncooperative providers.
+        if (!acceptingProgress || !roundLive || signal.aborted) return Promise.resolve()
+        let captured: ProviderProgress
+        try {
+          assertJson(event)
+          assert(record(event) && event.type === 'text_delta' && typeof event.text === 'string',
+            'Provider progress must be a text_delta with string text')
+          captured = snapshot({ type: 'text_delta', text: event.text })
+        } catch (error) {
+          const failure = new RunFailure('invalid_provider_output', detail(error))
+          progressError = failure
+          acceptingProgress = roundLive = false
+          roundController.abort()
+          rejectProgress(failure)
+          const rejected = Promise.reject<void>(failure)
+          void rejected.catch(() => {})
+          return rejected
+        }
+        const operation = progressTail.then(async () => {
+          if (!roundLive || signal.aborted) return
+          await emit(captured)
+        })
+        progressTail = operation.catch((error: unknown) => {
+          progressError = error
+          acceptingProgress = roundLive = false
+          roundController.abort()
+          rejectProgress(error)
+        })
+        return operation
+      }
       try {
-        const output: unknown = await wait(() => generate(snapshot({ messages: history, tools }), signal), signal)
+        const output: unknown = await wait(() => Promise.race([
+          generate(snapshot({ messages: history, tools }), roundController.signal, Object.freeze({ onProgress })),
+          progressFailure
+        ]), signal)
+        acceptingProgress = false
+        await wait(() => progressTail, signal)
+        if (progressError !== undefined) throw progressError
         checkAbort()
         try {
           assertProviderResult(output, seenIds)
@@ -305,6 +259,10 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
         if (error instanceof RunFailure) throw error
         throw new RunFailure('provider_error', detail(error))
+      } finally {
+        acceptingProgress = roundLive = false
+        signal.removeEventListener('abort', abortRound)
+        roundController.abort()
       }
 
       checkAbort()

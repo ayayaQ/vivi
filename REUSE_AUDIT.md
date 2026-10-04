@@ -1,0 +1,58 @@
+# Shared-use audit
+
+This audit covers the desktop agent loop, provider adapter, tool executor, history, memory,
+documentation policy, session service and renderer boundary. The unreleased development branch
+has two real hosts: desktop and CLI. Shared components are kept small and provider/domain neutral.
+
+## Extracted
+
+- Core loop: canonical messages, sequential complete tool execution, usage accounting, bounded
+  rounds, cancellation, immutable events and complete returned transcripts
+- Provider adapters: HTTP configuration/timeouts, safe error reporting, completed-output parsing,
+  native provider/model continuation, history projection and spec-framed streaming
+- Canonical-history validation: the core and hosts can enforce the same ordered, unique tool-call
+  exchange without running a provider
+- Crash recovery: both hosts close missing results with unknown-outcome errors, never replaying
+  historical calls or restoring an old approval as new permission
+- Display-only progress contract: both hosts consume text deltas without committing partial
+  assistant text or dispatching incomplete calls
+
+The root entry point remains free of provider transport, filesystem, terminal and app imports.
+Provider-specific entry points stay in the shared library package. The CLI is a separate simple
+project, consuming a pinned archive until the next shared-library release. It does not copy the
+loop or provider protocol. There are no runtime dependencies.
+
+## Reviewed and kept host-owned
+
+- Tool argument validation: core checks the JSON envelope; calculator/notes and bot resources
+  need different semantic constraints. A generic schema engine would add weight without replacing
+  either host's domain checks. Advertising a tool never authorizes it
+- Structured results and result limits: core-generated failures already share a stable JSON error
+  shape. Desktop truncation and documentation quotas are application-specific; bounded CLI tools
+  produce small results. No common result-truncation policy is imposed
+- Context selection/compaction: tool groups must stay paired, and native continuation must remain
+  consistent. Neither host had a duplicated general compactor to extract. The CLI enforces bounds
+  rather than silently dropping history; hosts choose future summarization policy
+- Sessions and persistence: CLI files and Electron's app session store have different ownership,
+  versioning, migration, locking and consistency boundaries. Only process-neutral recovery is shared
+- Approvals/revisions: desktop manual/auto/planning modes and resource transactions stay in the
+  desktop host; opt-in notes use their own explicit approval and revision check
+- Memory and documentation: desktop memory policy, search budgeting, bot documentation and prompts
+  remain domain-specific
+- Moderation/model selection: app moderation requirements, settings, model capabilities and
+  attribution stay in the host. Shared OpenRouter configuration requires only its own credential
+- UI/IPC: terminal rendering and Electron/Svelte events have separate host lifecycles. They reuse
+  the progress contract, not a common UI framework
+
+## Verification boundary
+
+Tests exercise fake HTTP for both provider protocols, native tool-result continuation, fragmented
+streams, failures, cancellation and deadlines. Core/host tests cover approvals, revisions,
+checkpoint recovery and final transcript reconciliation. Packaging tests install a real archive
+and check ESM/CommonJS libraries and TypeScript declarations. The separate CLI validates its
+installed executable and dependency packaging.
+No test requires a live model, credentials, a user computer or GUI automation.
+
+The desktop app's GPLv3 license is unchanged. vivi's shared extraction and generic CLI remain
+Apache-2.0 under the copyright owner's authorization. Development artifacts do not alter or replace
+the published `0.1.0` release.

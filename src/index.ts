@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 export { runAgent } from './run-agent.js'
+export { closeInterruptedHistory, validateHistory } from './history.js'
 export type {
   AgentError,
   AgentEvent,
@@ -11,6 +12,8 @@ export type {
   Message,
   ModelProvider,
   ProviderResult,
+  ProviderGenerateOptions,
+  ProviderProgress,
   ProviderState,
   RunAgentOptions,
   ToolCall,
