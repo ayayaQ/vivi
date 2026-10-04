@@ -4,7 +4,7 @@ A small, headless TypeScript tool-calling loop. `@ayayaq/vivi` has no runtime de
 requires Node.js 22 or newer. It supports ESM and CommonJS. It knows about messages, providers, and tool calls;
 your host owns the application, network access, approvals, and storage.
 
-## Published core and development version
+## Published core and prepared 0.2.0 release
 
 The published `@ayayaq/vivi@0.1.0` contains the provider-neutral core only:
 
@@ -12,9 +12,12 @@ The published `@ayayaq/vivi@0.1.0` contains the provider-neutral core only:
 npm install @ayayaq/vivi@0.1.0
 ```
 
-The provider factories, progress events and history helpers described below are **unreleased**
-in this development branch (`0.2.0-dev.0`). They are not available in npm `0.1.0`.
-Build and verify this branch locally:
+This checkout prepares `@ayayaq/vivi@0.2.0`. The provider factories, streaming progress,
+canonical-history helpers and deadline fixes below require `0.2.0`; they are absent from npm
+`0.1.0`. The new version is staged for publication. Verify its registry name, version and
+archive integrity using [RELEASING.md](RELEASING.md) before installing it from npm.
+
+Build and verify the candidate locally:
 
 ```sh
 npm ci
@@ -22,10 +25,17 @@ npm run check
 npm pack
 ```
 
-Install the resulting `ayayaq-vivi-0.2.0-dev.0.tgz` archive in a consumer project. The archive
-contains ESM and CommonJS libraries, declarations and source. Installing
-it does not run build scripts. Core and adapters have zero runtime dependencies; TypeScript is the sole development dependency. Tests use fake providers/HTTP and the built-in
-Node test runner, never model credentials. See [RELEASING.md](RELEASING.md) before any release.
+Install the resulting `ayayaq-vivi-0.2.0.tgz` archive in a consumer project. The archive contains
+ESM and CommonJS libraries, declarations, source and [release notes](CHANGELOG.md). Installing
+it does not run build scripts. Core and adapters have zero runtime dependencies; TypeScript
+is the sole development dependency. Tests use fake providers/HTTP and the built-in Node test
+runner, never model credentials.
+
+After publication and integrity verification, consumers can pin the exact registry version:
+
+```sh
+npm install --save-exact @ayayaq/vivi@0.2.0
+```
 
 ## Small host integration
 
@@ -150,7 +160,7 @@ mutation. Never commit a delayed approval after cancellation. Event callbacks sh
 late writes once their signal/session has become stale. Keep persistence and approval transactions
 inside the host's own consistency boundary.
 
-## Shared provider factories (unreleased)
+## Shared provider factories (0.2.0)
 
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
@@ -193,7 +203,7 @@ usage until a response is accepted. Interrupted/failed streams commit no partial
 partial display at an accepted assistant or terminal result. Late callbacks are ignored; throwing
 progress hooks end the run with `event_error` and cancel the provider round.
 
-## Shared history recovery (unreleased)
+## Shared history recovery (0.2.0)
 
 `closeInterruptedHistory(messages)` copies and validates persisted canonical history, then fills
 missing trailing results with `interrupted` errors. Such a tool's outcome may be unknown: read

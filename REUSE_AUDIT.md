@@ -1,7 +1,7 @@
 # Shared-use audit
 
 This audit covers the desktop agent loop, provider adapter, tool executor, history, memory,
-documentation policy, session service and renderer boundary. The unreleased development branch
+documentation policy, session service and renderer boundary. The prepared `0.2.0` release
 has two real hosts: desktop and CLI. Shared components are kept small and provider/domain neutral.
 
 ## Extracted
