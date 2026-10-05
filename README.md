@@ -15,11 +15,11 @@ npm install --save-exact @ayayaq/vivi@0.3.0
 `0.3.0` adds trusted tool extensions and optional cache usage counts. Its registry bytes and
 clean ESM/CommonJS consumers were verified; see [RELEASING.md](RELEASING.md).
 
-## Next development: optional model capabilities
+## Prepared 0.4.0: optional model capabilities
 
-This branch is unpublished `0.4.0-dev.0`. Its new `@ayayaq/vivi/providers/models` subpath is absent
-from registry `0.3.0`; do not switch a host dependency until a separate module-containing release
-is published and verified.
+This checkout prepares stable `0.4.0`, which is not yet published. Its optional
+`@ayayaq/vivi/providers/models` subpath is absent from registry `0.3.0`; host adoption waits for
+the account holder to publish the reviewed archive and for registry-byte verification.
 
 ```js
 import { normalizeModelCapabilities, reasoningSelectionSupport } from '@ayayaq/vivi/providers/models'

@@ -1,7 +1,7 @@
 # Shared-use audit
 
 This audit covers the desktop agent loop, provider adapter, tool executor, history, memory,
-documentation policy, session service and renderer boundary. The published `0.2.0` release
+documentation policy, session service and renderer boundary. Published stable `0.3.0`
 has two real hosts: desktop and CLI. Shared components are kept small and provider/domain neutral.
 
 ## Extracted
@@ -40,7 +40,7 @@ loop or provider protocol. There are no runtime dependencies.
 - Memory and documentation: desktop memory policy, search budgeting, bot documentation and prompts
   remain domain-specific
 - Moderation/model selection: app moderation requirements, settings, model capabilities and
-  attribution stay in the host. The unpublished optional `providers/models` subpath shares only
+  attribution stay in the host. The prepared `0.4.0` optional `providers/models` subpath shares only
   pure documented capability interpretation and exact endpoint-aware identities, with unknown
   facts preserved. Catalog fetching/cache, account visibility, model choices, defaults, routing,
   legacy-setting migration and moderation remain host-owned. Shared OpenRouter configuration
@@ -48,9 +48,9 @@ loop or provider protocol. There are no runtime dependencies.
 - UI/IPC: terminal rendering and Electron/Svelte events have separate host lifecycles. They reuse
   the progress contract, not a common UI framework
 
-## Extension foundation under review
+## Published extension foundation
 
-The unreleased optional `extensions` subpath shares only trusted tool definitions, explicit
+The `0.3.0` optional `extensions` subpath shares only trusted tool definitions, explicit
 argument validators and executors. One registry captures frozen definitions and fixed callbacks
 for one turn; registration rejects collisions with all reserved host tools. There is no loader,
 marketplace, installer, filesystem discovery, permission broker, lifecycle-hook system or sandbox.
@@ -62,9 +62,9 @@ desktop executes inside its existing runTool lifecycle and reserves all built-in
 disabled mutation tools. Desktop MCP/domain tool definitions are unchanged. Host approvals,
 redaction, result bounds, persistence and resources remain host-owned.
 
-Consumer prototypes stay uncommitted until a reviewed core release is published and verified.
-Their current manifests/lockfiles retain their existing published dependency pins. Temporary
-local pack installation tests the seam without pretending the unpublished API exists on npm.
+The extension prototypes proved the shared seam before `0.3.0` was published and both hosts
+integrated its verified registry bytes. The later capability module needs the same separate
+publication and host-adoption gate; a temporary local pack does not establish registry adoption.
 
 ## Verification boundary
 

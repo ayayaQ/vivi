@@ -1,8 +1,9 @@
-# Endpoint-aware capability contract (CORE-03 preparation)
+# Endpoint-aware capability contract (CORE-03)
 
-This optional `@ayayaq/vivi/providers/models` module is unpublished development for a separately
-reviewed release after stable `0.3.0`. The branch declares `0.4.0-dev.0`. It is absent from the
-published, immutable `0.3.0` archive. No root export, provider request, or host integration changes.
+This optional `@ayayaq/vivi/providers/models` module is included in prepared stable `0.4.0`,
+which is not yet published. It is absent from the published, immutable `0.3.0` archive. Host
+adoption waits for publication and exact registry-byte verification. Root exports and provider
+requests are unchanged; this release does not integrate either host.
 
 `src/providers/models.ts` is a pure per-entry normalizer. It has no runtime imports, HTTP, cache,
 credential handling, catalog selection, moderation, storage, UI, or agent-loop behavior.
@@ -41,7 +42,7 @@ When a later host maps this contract into the existing provider factories, their
 `supportedReasoningEfforts` option also uses `none` as the explicit-disable capability sentinel.
 For an optional OpenRouter token-budget model, `disable` can be supported while `efforts` is
 empty. A host must map that separate fact to the sentinel explicitly; blindly passing
-`reasoning.efforts` would lose disable support. This preparation changes neither factory.
+`reasoning.efforts` would lose disable support. This release changes neither factory.
 
 ## Verified exact OpenAI facts
 
@@ -51,6 +52,13 @@ registry proves the contract and real host differences; it does not replace the 
 registry. Other models and versions remain unknown until reviewed. Before CLI adoption, retain
 its existing coverage or separately review and extend these rows; wholesale replacement today
 would reduce that coverage.
+
+At the pinned CLI commit below, its host registry contains 52 documented conversation/tool IDs
+and 72 task-specific exclusions; this seed covers only 10 and 1 respectively. Adoption must
+retain documented host coverage and exclusions when the shared result is unknown. Use reviewed,
+endpoint-specific shared facts as enrichment or an explicit correction, not a wholesale catalog
+replacement. Adoption tests must assert that existing eligible IDs, documented capability choices,
+and unsupported exclusions are preserved; intentional semantic corrections need paired evidence.
 
 - [GPT-5](https://developers.openai.com/api/docs/models/gpt-5): `gpt-5` and
   `gpt-5-2025-08-07`; text conversation, functions, and streaming; accepted efforts are
@@ -73,6 +81,8 @@ would reduce that coverage.
 
 The ordinary GPT-5/GPT-5.1/GPT-4.1 rows apply to both covered conversational protocols;
 the pro rows' explicit Responses-only restriction does not leak into Chat Completions.
+The [official API changelog](https://developers.openai.com/api/docs/changelog) also records both
+conversational endpoints for GPT-4.1 (2025-04-14), GPT-5 (2025-08-07), and GPT-5.1 (2025-11-13).
 OpenAI's [model-list schema](https://developers.openai.com/api/reference/resources/models/methods/list)
 does not carry capability or effort metadata. Account visibility, names, permissions,
 fine-tune base names, and unknown suffixes cannot supply those facts.
@@ -150,7 +160,7 @@ no runtime transport imports.
 
 ## Optional export and release gate
 
-This development branch adds one optional export, includes this document in package files,
+This release adds one optional export, includes this document in package files,
 and verifies new-subpath ESM/CommonJS runtime and strict NodeNext declarations in real installed
 archives. Existing root and provider/extension exports are unchanged:
 
