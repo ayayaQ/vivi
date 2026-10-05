@@ -16,6 +16,15 @@ same desktop integration. The copyright owner authorized this further shared ext
 Domain tools, approvals, planning, desktop persistence and UI are deliberately not included.
 The CLI is a separate generic reference host, not the desktop application.
 
+The optional calculator extension reuses the bounded arithmetic parser from the Apache-2.0
+vivi CLI, `src/tools.ts` at commit `ad31098bd6947411b659f57c0bb85cb129dfb894`:
+
+https://github.com/ayayaQ/vivi-cli/blob/ad31098bd6947411b659f57c0bb85cb129dfb894/src/tools.ts
+
+Its tool name, argument schema, arithmetic bounds, and JSON result shape are preserved so the
+CLI can consume the same pure implementation as other hosts. Note storage and approvals stay
+in the CLI. The trusted in-process registry is new shared code, not a desktop plugin sandbox.
+
 vivi is released under the Apache License, Version 2.0, with the copyright owner's authorization
 to release this extracted core separately. Bot Commander Desktop's existing GNU General Public
 License, version 3, remains unchanged; this release does not relicense the upstream desktop

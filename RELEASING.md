@@ -1,5 +1,23 @@
 # Release workflow
 
+## Extension foundation under review
+
+This checkout is **unpublished `0.3.0-dev.0`**. Its extension subpaths are absent from published
+`0.2.1`; local implementation and package checks do not authorize publication. Choose the final
+release version separately, then rerun all checks and review its exact source and archive. Never
+publish these new bytes as any existing version.
+
+Release order: review and approve the core change, prepare and independently review the new
+version/archive, publish through the account holder, and verify actual registry bytes and clean
+ESM/CommonJS consumers. Only then update CLI/desktop imports and exact registry dependencies,
+regenerate their lockfiles from npm, and run their checks. Local consumer prototypes may install
+a temporary pack with `--no-save --package-lock=false`; keep archives outside repositories and
+never commit those prototype dependency paths or fabricated registry integrity records.
+
+The existing release record/workflow below predates this extension preparation. It remains
+historical context; its `0.2.1` commands are not instructions to publish this checkout.
+
+
 `@ayayaq/vivi@0.1.0` is published and immutable. Its reviewed archive SHA-256 is
 `9f5faecf9959f722bfa799efa8b0610b383b3d888bc13659b73be37306b6e2f6`.
 

@@ -44,6 +44,24 @@ loop or provider protocol. There are no runtime dependencies.
 - UI/IPC: terminal rendering and Electron/Svelte events have separate host lifecycles. They reuse
   the progress contract, not a common UI framework
 
+## Extension foundation under review
+
+The unreleased optional `extensions` subpath shares only trusted tool definitions, explicit
+argument validators and executors. One registry captures frozen definitions and fixed callbacks
+for one turn; registration rejects collisions with all reserved host tools. There is no loader,
+marketplace, installer, filesystem discovery, permission broker, lifecycle-hook system or sandbox.
+The bounded calculator parser is extracted from the Apache-2.0 CLI (see `ATTRIBUTION.md`).
+
+Local consumer proofs replace the CLI's calculator implementation with that shared pack and
+append the same pack to desktop agent runs. The CLI captures registration before persistence;
+desktop executes inside its existing runTool lifecycle and reserves all built-in names, including
+disabled mutation tools. Desktop MCP/domain tool definitions are unchanged. Host approvals,
+redaction, result bounds, persistence and resources remain host-owned.
+
+Consumer prototypes stay uncommitted until a reviewed core release is published and verified.
+Their current manifests/lockfiles retain their existing published dependency pins. Temporary
+local pack installation tests the seam without pretending the unpublished API exists on npm.
+
 ## Verification boundary
 
 Tests exercise fake HTTP for both provider protocols, native tool-result continuation, fragmented
