@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0-dev.0 (unreleased)
+
+- Add optional trusted in-process tool extension registration, fixed per-turn definitions and
+  executable snapshots, argument validation, collision checks, and ordinary tool error results
+- Add a shared bounded calculator pack for CLI and desktop reuse, preserving the CLI tool name
+  and result shape; keep approvals, storage, credentials, and resource ownership in each host
+- Verify ESM/CommonJS extension exports and declarations in clean packed consumers; leave the
+  existing agent runner and provider behavior unchanged
+
+
 ## 0.2.1 (unreleased)
 
 - Add opt-in `requireSupportedParameters` to the OpenRouter adapter, mapping to

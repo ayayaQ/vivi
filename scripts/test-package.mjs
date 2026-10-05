@@ -25,7 +25,7 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
-  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json']) {
+  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'src/extensions.ts', 'src/extensions/calculator.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json', 'dist/extensions.js', 'dist/extensions.d.ts', 'dist/extensions/calculator.js', 'dist/extensions/calculator.d.ts', 'dist/cjs/extensions.js', 'dist/cjs/extensions.d.ts', 'dist/cjs/extensions/calculator.js', 'dist/cjs/extensions/calculator.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert([...paths].every((path) => !path.includes('node_modules') && !path.startsWith('test/')))
@@ -78,6 +78,35 @@ const { runAgent } = require('@ayayaq/vivi')
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `)
   run(process.execPath, ['consumer.cjs'], temporary)
+  await writeFile(join(temporary, 'extensions.mjs'), `
+import assert from 'node:assert/strict'
+import { runAgent } from '@ayayaq/vivi'
+import { createToolRegistry } from '@ayayaq/vivi/extensions'
+import { calculatorExtension } from '@ayayaq/vivi/extensions/calculator'
+const registry = createToolRegistry([calculatorExtension])
+const output = await registry.executeTool({id:'calc',name:'calculate',arguments:{expression:'2*(3+4)'}},{signal:new AbortController().signal})
+assert.deepEqual(JSON.parse(output.content),{result:14})
+const result = await runAgent({provider:{async generate({messages}){
+ return messages.some(message=>message.kind==='tool_result')
+  ? {content:'14',toolCalls:[]}
+  : {content:'',toolCalls:[{id:'calc',name:'calculate',arguments:{expression:'2*(3+4)'}}]}
+}},messages:[],tools:registry.tools,executeTool:registry.executeTool})
+assert.equal(result.status,'completed')
+assert.equal(result.content,'14')
+`)
+  run(process.execPath, ['extensions.mjs'], temporary)
+  await writeFile(join(temporary, 'extensions.cjs'), `
+const assert = require('node:assert/strict')
+const {createToolRegistry} = require('@ayayaq/vivi/extensions')
+const {calculatorExtension,calculate} = require('@ayayaq/vivi/extensions/calculator')
+assert.equal(calculate('4/2'),2)
+;(async()=>{
+ const registry=createToolRegistry([calculatorExtension])
+ const result=await registry.executeTool({id:'calc',name:'calculate',arguments:{expression:'4/2'}},{signal:new AbortController().signal})
+ assert.equal(result.content,'{"result":2}')
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+  run(process.execPath, ['extensions.cjs'], temporary)
   await writeFile(join(temporary, 'providers.mjs'), `
 import assert from 'node:assert/strict'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
@@ -120,6 +149,14 @@ assert.equal(typeof createOpenRouterProvider({apiKey:'fake',model:'fake'}).gener
 import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@ayayaq/vivi'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayayaq/vivi/providers/openrouter'
+import { createToolRegistry, type ToolExtension, type ToolRegistry } from '@ayayaq/vivi/extensions'
+import { calculatorExtension, calculate } from '@ayayaq/vivi/extensions/calculator'
+const pack: ToolExtension = calculatorExtension
+const registry: ToolRegistry = createToolRegistry([pack], {reservedNames:['host_tool']})
+const extensionRun: Promise<AgentResult> = runAgent({provider:{async generate(){return {content:String(calculate('1+1')),toolCalls:[]}}},messages:[],tools:registry.tools,executeTool:registry.executeTool})
+// @ts-expect-error only extension API version 1 is supported
+createToolRegistry([{...pack,apiVersion:2}])
+void extensionRun
 const openai: ModelProvider = createOpenAIProvider({apiKey:'fake',model:'fake',reasoning:{mode:'default'}})
 const routerOptions: OpenRouterProviderOptions = {apiKey:'fake',model:'fake',stream:true,requireSupportedParameters:true}
 const router: ModelProvider = createOpenRouterProvider(routerOptions)
@@ -146,6 +183,11 @@ console.log(result.status)
 import core = require('@ayayaq/vivi')
 import openai = require('@ayayaq/vivi/providers/openai')
 import router = require('@ayayaq/vivi/providers/openrouter')
+import extensions = require('@ayayaq/vivi/extensions')
+import calculator = require('@ayayaq/vivi/extensions/calculator')
+const registry: extensions.ToolRegistry = extensions.createToolRegistry([calculator.calculatorExtension])
+const extensionRun: Promise<core.AgentResult> = core.runAgent({provider:{async generate(){return {content:'CJS extensions',toolCalls:[]}}},messages:[],tools:registry.tools,executeTool:registry.executeTool})
+void extensionRun
 const options: router.OpenRouterProviderOptions = {apiKey:'fake',model:'fake',requireSupportedParameters:true}
 const shared: core.ModelProvider[] = [openai.createOpenAIProvider({apiKey:'fake',model:'fake'}),router.createOpenRouterProvider(options)]
 // @ts-expect-error routing requires a boolean

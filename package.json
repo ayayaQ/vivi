@@ -1,6 +1,6 @@
 {
   "name": "@ayayaq/vivi",
-  "version": "0.2.1",
+  "version": "0.3.0-dev.0",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",
@@ -46,6 +46,26 @@
       "require": {
         "types": "./dist/cjs/providers/openrouter.d.ts",
         "default": "./dist/cjs/providers/openrouter.js"
+      }
+    },
+    "./extensions": {
+      "import": {
+        "types": "./dist/extensions.d.ts",
+        "default": "./dist/extensions.js"
+      },
+      "require": {
+        "types": "./dist/cjs/extensions.d.ts",
+        "default": "./dist/cjs/extensions.js"
+      }
+    },
+    "./extensions/calculator": {
+      "import": {
+        "types": "./dist/extensions/calculator.d.ts",
+        "default": "./dist/extensions/calculator.js"
+      },
+      "require": {
+        "types": "./dist/cjs/extensions/calculator.d.ts",
+        "default": "./dist/cjs/extensions/calculator.js"
       }
     }
   },

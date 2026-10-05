@@ -63,6 +63,50 @@ console.log(result.status, result.content)
 The independent [inventory example](examples/inventory.mjs) also demonstrates host-owned mutation
 denial and revision checking. It runs entirely locally with a fake provider.
 
+## Trusted tool extensions (unreleased)
+
+The optional `@ayayaq/vivi/extensions` subpath registers explicitly imported, trusted in-process
+code. It adds no loader, installation flow, permissions, sandbox, UI, or runtime dependencies.
+The core runner is unchanged. This API is under review in `0.3.0-dev.0`; it is not in the
+published `0.2.1` package.
+
+```ts
+import { runAgent } from '@ayayaq/vivi'
+import { createToolRegistry } from '@ayayaq/vivi/extensions'
+import { calculatorExtension } from '@ayayaq/vivi/extensions/calculator'
+
+// Build once per turn; reserve every host tool name, including temporarily disabled tools.
+const registry = createToolRegistry([calculatorExtension], { reservedNames: ['host_tool'] })
+const result = await runAgent({
+  provider, messages, tools: registry.tools, executeTool: registry.executeTool
+})
+```
+
+A `ToolExtension` has an `id`, `apiVersion: 1`, and `tools`. Each tool contains a normal
+`definition`, a synchronous `validateArguments(arguments)` assertion, and
+`execute(call, { signal })`, returning a `ToolResult` or promise. Callbacks are invoked without
+`this`; capture any trusted dependencies explicitly. The calculator pack contains the bounded
+`calculate` tool, accepting `{ expression: string }` and returning `{"result": number}`.
+
+- Registration throws for malformed contracts, unsupported API versions, duplicate extension IDs,
+  duplicate tool names, or reserved host-name collisions
+- The registry captures validator/executor references and deeply copies/freezes definitions.
+  Later edits to source objects cannot change that snapshot. Pair its advertised tools and
+  executor for the entire turn; create another registry between turns to change registration
+- Calls and arguments are cloned/frozen once before validation and execution. Invalid arguments
+  return `isError: true` with JSON error code `invalid_arguments`; missing tools return
+  `unavailable_tool`; execution failures or invalid results return `tool_error`. Malformed call
+  envelopes and contexts throw before callbacks. Schemas describe arguments; validators enforce them
+- The same signal reaches execution. Abort before validation, before execution, or before accepting
+  a result throws the signal's reason. `runAgent` supplies prompt cancellation even if an async
+  executor ignores abort; direct registry calls must cooperate to settle promptly. In-process code
+  cannot be forcibly stopped or have side effects undone
+- There are no activation/disposal hooks or managed resources. The host owns registry lifetime,
+  approvals, credentials, redaction, persistence, and any captured resources. Registry checks are
+  correctness checks, not security isolation. Tool errors may include thrown messages
+
+See [the registry tests](test/extensions.test.mjs) for snapshot and cancellation behavior.
+
 ## Contracts
 
 - `ToolDefinition`: `{ name, description, parameters: JsonObject }`
