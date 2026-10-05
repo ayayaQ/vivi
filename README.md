@@ -6,20 +6,18 @@ storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS; no runtime de
 
 ## Install
 
-The latest verified npm release is `0.2.1`:
+The latest verified npm release is `0.3.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.2.1
+npm install --save-exact @ayayaq/vivi@0.3.0
 ```
 
-This checkout prepares stable `0.3.0`, adding trusted tool extensions and optional cache usage
-counts. It is not published yet. Follow [RELEASING.md](RELEASING.md) before using `0.3.0` as a
-registry dependency. Existing stable versions remain immutable.
+`0.3.0` adds trusted tool extensions and optional cache usage counts. Its registry bytes and
+clean ESM/CommonJS consumers were verified; see [RELEASING.md](RELEASING.md).
 
 ## Small headless example
 
-Run this against the prepared `0.3.0` package. It needs no terminal framework, app, provider key,
-or network request:
+This example needs no terminal framework, app, provider key, or network request:
 
 ```js
 import { runAgent } from '@ayayaq/vivi'

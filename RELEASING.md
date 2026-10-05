@@ -2,14 +2,32 @@
 
 ## Current status
 
-This checkout prepares **`@ayayaq/vivi@0.3.0`** for CORE-02. A stable version in package.json
-is release metadata, not proof of publication. As checked on 2026-10-05, npm `latest` is `0.2.1`
-and `0.3.0` is absent. Extensions and cache usage are new in this candidate. The later capability
-normalization module is outside this release.
+**`@ayayaq/vivi@0.3.0` is published and verified**, with npm `latest` set to `0.3.0` on
+2026-10-05. The account holder published the exact independently reviewed archive. This record
+was added after the archive was frozen; do not repack this documentation checkout to replace it.
 
-Publication remains an npm account-holder step. First merge the independently reviewed release
-change after final-head CI passes, then publish the exact frozen archive and verify registry bytes.
-Do not upgrade CLI/desktop registry dependencies or advertise `0.3.0` as available before that gate.
+- Merged release source: `19be05db50c8f9c53f6296d01ffa34b95391d522`
+- Reviewed source commit: `bc09df9e3e027240bcbdacb3d7b7060cef0e108e`
+- Source tree: `9f6bbcc958af6adc8b74985860f522cb888f8166`
+- Archive: `ayayaq-vivi-0.3.0.tgz` (116 files, 88474 bytes)
+- SHA-256: `114013f3f0067fc9d956e6699770548894cf58323f303bac12d1fac4cb264eb7`
+- SHA-1: `cde1eabd39392ea7f2030c20a635b7bc492b2690`
+- Integrity: `sha512-9Evt8vBmwyGQEQG5eowb3R1onJCyEru4pqqVwzGA4TX9sgaWE2p7AdcDAtVTt6wDERFiM0yXNUwQAVPK2TSz3A==`
+
+The actual registry archive matched the frozen archive byte-for-byte. Clean registry installs
+on Node 22.23.3 and 24.19.0 matched all 116 installed files and passed core/history/provider/
+extension/calculator ESM/CommonJS runtime, streamed/nonstreamed cache usage, installed headless
+example and strict NodeNext ESM/CommonJS declarations. npm-generated locks contained the real
+registry URL and matching integrity. No live provider calls or credentials were used.
+
+Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm and run their final
+checks. This verification does not establish host integration or native platform readiness.
+The later capability normalization module is outside `0.3.0`.
+
+The remaining workflow is the historical `0.3.0` example. For a future release, select a new
+version, update package/lock metadata and substitute that version in every archive and registry
+command below, then repeat independent review and verification. Never publish new bytes as
+`0.3.0` or another existing stable version.
 
 ## Prepare and independently review
 
