@@ -1,6 +1,6 @@
 {
   "name": "@ayayaq/vivi",
-  "version": "0.3.0",
+  "version": "0.4.0-dev.0",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",
@@ -67,6 +67,16 @@
         "types": "./dist/cjs/extensions/calculator.d.ts",
         "default": "./dist/cjs/extensions/calculator.js"
       }
+    },
+    "./providers/models": {
+      "import": {
+        "types": "./dist/providers/models.d.ts",
+        "default": "./dist/providers/models.js"
+      },
+      "require": {
+        "types": "./dist/cjs/providers/models.d.ts",
+        "default": "./dist/cjs/providers/models.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
@@ -84,13 +94,14 @@
     "README.md",
     "CHANGELOG.md",
     "RELEASING.md",
-    "REUSE_AUDIT.md"
+    "REUSE_AUDIT.md",
+    "CAPABILITIES.md"
   ],
   "scripts": {
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs",
+    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs",
     "test:package": "npm run build && node scripts/test-package.mjs"
   },
   "devDependencies": {

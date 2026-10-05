@@ -1,5 +1,13 @@
 # Release workflow
 
+## Next development branch
+
+This checkout declares **unpublished `0.4.0-dev.0`**, with the optional `providers/models` module.
+Its development packs are separate from the immutable published `0.3.0` archive recorded below.
+No stable `0.4.0` version is selected or published by this preparation. Review the schema and exact
+source first, then choose and independently verify a new module-containing release before any
+CLI or desktop dependency adoption. Never repack or publish these changed bytes as `0.3.0`.
+
 ## Current status
 
 **`@ayayaq/vivi@0.3.0` is published and verified**, with npm `latest` set to `0.3.0` on

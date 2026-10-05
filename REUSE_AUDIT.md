@@ -40,7 +40,11 @@ loop or provider protocol. There are no runtime dependencies.
 - Memory and documentation: desktop memory policy, search budgeting, bot documentation and prompts
   remain domain-specific
 - Moderation/model selection: app moderation requirements, settings, model capabilities and
-  attribution stay in the host. Shared OpenRouter configuration requires only its own credential
+  attribution stay in the host. The unpublished optional `providers/models` subpath shares only
+  pure documented capability interpretation and exact endpoint-aware identities, with unknown
+  facts preserved. Catalog fetching/cache, account visibility, model choices, defaults, routing,
+  legacy-setting migration and moderation remain host-owned. Shared OpenRouter configuration
+  requires only its own credential
 - UI/IPC: terminal rendering and Electron/Svelte events have separate host lifecycles. They reuse
   the progress contract, not a common UI framework
 

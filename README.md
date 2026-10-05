@@ -15,6 +15,32 @@ npm install --save-exact @ayayaq/vivi@0.3.0
 `0.3.0` adds trusted tool extensions and optional cache usage counts. Its registry bytes and
 clean ESM/CommonJS consumers were verified; see [RELEASING.md](RELEASING.md).
 
+## Next development: optional model capabilities
+
+This branch is unpublished `0.4.0-dev.0`. Its new `@ayayaq/vivi/providers/models` subpath is absent
+from registry `0.3.0`; do not switch a host dependency until a separate module-containing release
+is published and verified.
+
+```js
+import { normalizeModelCapabilities, reasoningSelectionSupport } from '@ayayaq/vivi/providers/models'
+
+const capabilities = normalizeModelCapabilities({
+  apiVersion: 1,
+  provider: 'openai',
+  protocol: 'responses',
+  model: { id: 'gpt-5.1' }
+})
+console.log(capabilities.tools) // supported
+console.log(reasoningSelectionSupport(capabilities, { mode: 'disabled' })) // supported
+```
+
+Normalization is pure and endpoint-aware. It preserves exact IDs and supported/unsupported/unknown
+states, including separate reasoning, effort selection, explicit disable, and mandatory status.
+Default means no override, independently of explicit disable. No models are fetched or selected,
+and no request is changed. Hosts retain credentials, catalog fetching/cache, defaults, moderation,
+and access policy. The [contract and provenance](CAPABILITIES.md) explains the bounded seed registry,
+paired host evidence, and the release/adoption gate.
+
 ## Small headless example
 
 This example needs no terminal framework, app, provider key, or network request:
