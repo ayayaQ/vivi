@@ -1,12 +1,28 @@
 # Release workflow
 
-## Prepared stable 0.4.0
+## Published stable 0.4.0
 
-This checkout selects **stable `0.4.0`, not yet published**, with the optional `providers/models`
-module. The release preparation changes version metadata and documentation only. Build and
-independently verify a new archive from the final merged source; development packs are not release
-artifacts. The account holder publishes the reviewed archive. CLI and desktop adoption waits for
-exact registry-byte verification and separate host changes. Never publish these bytes as `0.3.0`.
+**`@ayayaq/vivi@0.4.0` is published and verified**, with npm `latest` set to `0.4.0` on
+2026-10-05. The account holder published the exact independently reviewed archive. This record
+was added after the archive was frozen; do not repack this documentation checkout to replace it.
+
+- Merged release source: `c0d6ccbc29afb3c225992dd94a39d773b9d1630a`
+- Reviewed source commit: `4e3306d3157ced581e029fd4b11b18106b44724d`
+- Source tree: `8f000650674e80e8a8a51cc82526aafbbb9d1e13`
+- Archive: `ayayaq-vivi-0.4.0.tgz` (127 files, 104088 bytes)
+- SHA-256: `459a1df0677aeabbb3516dfd93cc0cc8c62d5ebad9aa1bdf8990342b45009107`
+- SHA-1: `bf70f0e91b90cadb712dccbd6565de0877eb62b2`
+- Integrity: `sha512-dejKuQcP5YxHuiqL16Vbg7h36mNkruZhEOyyt4ErjOAKxL/Cr9DXjvr+rPDvcjcASWYJ0/jzRpWCbt/eeQkglg==`
+
+The actual registry archive matched the frozen archive byte-for-byte. Clean registry installs
+on Node 22.23.3 and 24.19.0 matched all 127 installed files and passed core/history/provider/
+extension/calculator/model-capability ESM/CommonJS runtime, streamed/nonstreamed cache usage,
+installed headless example and strict NodeNext ESM/CommonJS declarations. npm-generated locks
+contained the real registry URL and matching integrity. No live provider calls or credentials
+were used. The published `0.3.0` archive and its record below are unchanged.
+
+Hosts may integrate exact registry `0.4.0`, regenerate lockfiles with npm and run their final
+checks. Publication does not establish host integration or native platform readiness.
 
 The capability contract is deliberately bounded: unreviewed OpenAI IDs and OpenRouter Responses
 remain unknown, and gateway metadata does not establish routed/account support. Hosts must retain
@@ -37,8 +53,10 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The workflow below targets prepared `0.4.0`. Keep every published record and archive immutable;
-any later release needs a new version and independent verification.
+The workflow below is the historical `0.4.0` example. For a future release, select a new version,
+update package/lock metadata and substitute that version in every archive and registry command,
+then repeat independent review and verification. Never publish new bytes as `0.4.0` or any
+earlier version; all published records and archives remain immutable.
 
 ## Prepare and independently review
 

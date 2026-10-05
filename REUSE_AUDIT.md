@@ -40,7 +40,7 @@ loop or provider protocol. There are no runtime dependencies.
 - Memory and documentation: desktop memory policy, search budgeting, bot documentation and prompts
   remain domain-specific
 - Moderation/model selection: app moderation requirements, settings, model capabilities and
-  attribution stay in the host. The prepared `0.4.0` optional `providers/models` subpath shares only
+  attribution stay in the host. The published `0.4.0` optional `providers/models` subpath shares only
   pure documented capability interpretation and exact endpoint-aware identities, with unknown
   facts preserved. Catalog fetching/cache, account visibility, model choices, defaults, routing,
   legacy-setting migration and moderation remain host-owned. Shared OpenRouter configuration

@@ -6,20 +6,21 @@ storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS; no runtime de
 
 ## Install
 
-The latest verified npm release is `0.3.0`:
+The latest verified npm release is `0.4.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.3.0
+npm install --save-exact @ayayaq/vivi@0.4.0
 ```
 
-`0.3.0` adds trusted tool extensions and optional cache usage counts. Its registry bytes and
-clean ESM/CommonJS consumers were verified; see [RELEASING.md](RELEASING.md).
+`0.4.0` includes trusted tool extensions, optional cache usage counts, and the optional model
+capability module. Registry bytes and clean ESM/CommonJS consumers were verified; see
+[RELEASING.md](RELEASING.md).
 
-## Prepared 0.4.0: optional model capabilities
+## Optional model capabilities
 
-This checkout prepares stable `0.4.0`, which is not yet published. Its optional
-`@ayayaq/vivi/providers/models` subpath is absent from registry `0.3.0`; host adoption waits for
-the account holder to publish the reviewed archive and for registry-byte verification.
+The optional `@ayayaq/vivi/providers/models` subpath is published in verified registry `0.4.0`
+and absent from immutable `0.3.0`. Hosts can adopt it through separate reviewed changes that
+preserve their documented capability coverage and selection behavior.
 
 ```js
 import { normalizeModelCapabilities, reasoningSelectionSupport } from '@ayayaq/vivi/providers/models'
