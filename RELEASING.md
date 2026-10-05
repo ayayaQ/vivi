@@ -1,14 +1,19 @@
 # Release workflow
 
-## Next development branch
+## Prepared stable 0.4.0
 
-This checkout declares **unpublished `0.4.0-dev.0`**, with the optional `providers/models` module.
-Its development packs are separate from the immutable published `0.3.0` archive recorded below.
-No stable `0.4.0` version is selected or published by this preparation. Review the schema and exact
-source first, then choose and independently verify a new module-containing release before any
-CLI or desktop dependency adoption. Never repack or publish these changed bytes as `0.3.0`.
+This checkout selects **stable `0.4.0`, not yet published**, with the optional `providers/models`
+module. The release preparation changes version metadata and documentation only. Build and
+independently verify a new archive from the final merged source; development packs are not release
+artifacts. The account holder publishes the reviewed archive. CLI and desktop adoption waits for
+exact registry-byte verification and separate host changes. Never publish these bytes as `0.3.0`.
 
-## Current status
+The capability contract is deliberately bounded: unreviewed OpenAI IDs and OpenRouter Responses
+remain unknown, and gateway metadata does not establish routed/account support. Hosts must retain
+existing coverage, fetching and fallback policy, distinguish default from explicit disable, and
+map OpenRouter disable separately from named efforts. See [CAPABILITIES.md](CAPABILITIES.md).
+
+## Published 0.3.0 record
 
 **`@ayayaq/vivi@0.3.0` is published and verified**, with npm `latest` set to `0.3.0` on
 2026-10-05. The account holder published the exact independently reviewed archive. This record
@@ -32,10 +37,8 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The remaining workflow is the historical `0.3.0` example. For a future release, select a new
-version, update package/lock metadata and substitute that version in every archive and registry
-command below, then repeat independent review and verification. Never publish new bytes as
-`0.3.0` or another existing stable version.
+The workflow below targets prepared `0.4.0`. Keep every published record and archive immutable;
+any later release needs a new version and independent verification.
 
 ## Prepare and independently review
 
@@ -47,7 +50,7 @@ npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
 npm pack --json --pack-destination "$RELEASE_DIR"
-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.3.0.tgz"
+sha256sum "$RELEASE_DIR/ayayaq-vivi-0.4.0.tgz"
 git rev-parse HEAD HEAD^{tree}
 git status --short
 ```
@@ -66,7 +69,7 @@ Any source, metadata, documentation or archive change requires a new pack, hash 
 
 ## Account-holder publication
 
-Use the exact approved `ayayaq-vivi-0.3.0.tgz` and its supplied release record on your trusted
+Use the exact approved `ayayaq-vivi-0.4.0.tgz` and its supplied release record on your trusted
 computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
 Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
 or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
@@ -77,18 +80,18 @@ If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm
 npm login --auth-type=web --registry=https://registry.npmjs.org/
 npm whoami --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
-sha256sum ./ayayaq-vivi-0.3.0.tgz
+sha256sum ./ayayaq-vivi-0.4.0.tgz
 ```
 
-Match SHA-256 to the approved release record. If `0.3.0` already exists, stop and compare registry
+Match SHA-256 to the approved release record. If `0.4.0` already exists, stop and compare registry
 integrity and bytes before taking another action. Name/version pairs are immutable even after
 unpublication. Do not change the version or archive without another review.
 
 ```sh
-npm publish ./ayayaq-vivi-0.3.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+npm publish ./ayayaq-vivi-0.4.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This publishes all archive contents and updates `latest` to `0.3.0`. See
+This publishes all archive contents and updates `latest` to `0.4.0`. See
 [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
 A client-side failure can follow a successful upload; inspect the registry before retrying,
 and never substitute a newly packed working directory for the reviewed archive.
@@ -96,19 +99,19 @@ and never substitute a newly packed working directory for the reviewed archive.
 ## Verify registry bytes and integrate hosts
 
 ```sh
-npm view @ayayaq/vivi@0.3.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.4.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
-npm pack @ayayaq/vivi@0.3.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
-cmp ./ayayaq-vivi-0.3.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.3.0.tgz"
+npm pack @ayayaq/vivi@0.4.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+cmp ./ayayaq-vivi-0.4.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.4.0.tgz"
 ```
 
 Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
-`@ayayaq/vivi@0.3.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+`@ayayaq/vivi@0.4.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
 NodeNext declaration, extension/cache and headless-example checks. Record the verified release
 without repacking or replacing published bytes.
 
-Only then set exact `"@ayayaq/vivi": "0.3.0"` in authorized CLI/desktop changes and regenerate
+Only then set exact `"@ayayaq/vivi": "0.4.0"` in authorized CLI/desktop changes and regenerate
 lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
 preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
 Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local

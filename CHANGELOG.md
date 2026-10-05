@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0-dev.0 (unpublished)
+## 0.4.0 (prepared, not yet published)
 
 - Add the optional pure `providers/models` subpath for versioned, exact-ID, endpoint-aware model
   capability normalization; keep the root, provider transports, and agent loop unchanged
@@ -9,7 +9,8 @@
 - Include officially reviewed seed facts and conservative gateway metadata interpretation, paired
   CLI/desktop fixtures, and real packed ESM/CommonJS runtime and NodeNext declaration checks
 - Keep host fetching/cache, credentials, choices, defaults, moderation, UI, and routing policy
-  outside core. Published `0.3.0` bytes are unchanged; consumer adoption requires a later release
+  outside core. Published `0.3.0` bytes are unchanged; consumer adoption requires verified `0.4.0`
+  registry bytes and separate host changes that preserve existing capability coverage
 
 ## 0.3.0 (2026-10-05)
 
