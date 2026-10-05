@@ -1,9 +1,9 @@
 # Endpoint-aware capability contract (CORE-03)
 
-This optional `@ayayaq/vivi/providers/models` module is included in prepared stable `0.4.0`,
-which is not yet published. It is absent from the published, immutable `0.3.0` archive. Host
-adoption waits for publication and exact registry-byte verification. Root exports and provider
-requests are unchanged; this release does not integrate either host.
+This optional `@ayayaq/vivi/providers/models` module is published in stable `0.4.0`, with exact
+registry bytes and clean consumers verified. It is absent from immutable `0.3.0`. Host adoption
+remains a separate reviewed change that preserves the coverage and semantics below. Root exports
+and provider requests are unchanged; publication does not integrate either host.
 
 `src/providers/models.ts` is a pure per-entry normalizer. It has no runtime imports, HTTP, cache,
 credential handling, catalog selection, moderation, storage, UI, or agent-loop behavior.
@@ -177,6 +177,7 @@ archives. Existing root and provider/extension exports are unchanged:
 }
 ```
 
-Only after that separate module-containing release is published and its registry bytes are
-verified should CLI or desktop adopt the subpath. Local packed proofs do not satisfy that
-publication gate, and no source archive belongs in either consumer repository.
+Registry `0.4.0` satisfies the publication and byte-verification gate. CLI and desktop adoption
+still need separate reviewed changes and host coverage/semantics checks. Local packed proofs
+alone do not establish registry integration, and no source archive belongs in either consumer
+repository.

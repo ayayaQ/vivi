@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 (prepared, not yet published)
+## 0.4.0 (2026-10-05)
 
 - Add the optional pure `providers/models` subpath for versioned, exact-ID, endpoint-aware model
   capability normalization; keep the root, provider transports, and agent loop unchanged
