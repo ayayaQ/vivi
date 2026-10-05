@@ -145,8 +145,56 @@ assert.equal(typeof createOpenRouterProvider({apiKey:'fake',model:'fake'}).gener
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `)
   run(process.execPath, ['providers.cjs'], temporary)
+  const cacheConsumer = `
+const baseUsage = {inputTokens:12,outputTokens:4,totalTokens:19}
+const cacheUsage = {...baseUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
+const legacy = await runAgent({provider:{async generate(){return {content:'Legacy',toolCalls:[],usage:baseUsage}}},
+  messages:[],tools:[],async executeTool(){throw Error('Unexpected tool')}})
+assert.deepEqual(legacy.usage,baseUsage)
+for (const [kind, factory] of [['openai',createOpenAIProvider],['openrouter',createOpenRouterProvider]]) {
+  for (const stream of [false,true]) {
+    const usage = kind === 'openai'
+      ? {input_tokens:12,output_tokens:4,total_tokens:19,input_tokens_details:{cached_tokens:7,cache_write_tokens:0}}
+      : {prompt_tokens:12,completion_tokens:4,total_tokens:19,prompt_tokens_details:{cached_tokens:7,cache_write_tokens:0}}
+    const output = [{type:'message',id:'msg-1',role:'assistant',content:[{type:'output_text',text:'Cache',annotations:[]}]}]
+    const body = kind === 'openai' ? {status:'completed',output,usage}
+      : {choices:[{finish_reason:'stop',message:{role:'assistant',content:'Cache'}}],usage}
+    const frame = value => 'data: ' + JSON.stringify(value) + '\\n\\n'
+    const events = []
+    const provider = factory({apiKey:'fake',model:'fake',stream,fetch:async () => {
+      if (!stream) return new Response(JSON.stringify(body))
+      const text = kind === 'openai' ? frame({type:'response.completed',response:body})
+        : frame({choices:[{index:0,delta:{role:'assistant',content:'Cache'},finish_reason:'stop'}]}) +
+          frame({choices:[],usage}) + 'data: [DONE]\\n\\n'
+      return new Response(text,{headers:{'content-type':'text/event-stream'}})
+    }})
+    const turn = await provider.generate({messages:[],tools:[]},new AbortController().signal)
+    assert.deepEqual(turn.usage,cacheUsage)
+    const result = await runAgent({provider,messages:[],tools:[],async executeTool(){throw Error('Unexpected tool')},
+      onEvent(event){if(event.type === 'round_completed') events.push(event.usage)}})
+    assert.equal(result.status,'completed')
+    assert.deepEqual(result.usage,cacheUsage)
+    assert.deepEqual(events,[cacheUsage])
+  }
+}
+`
+  await writeFile(join(temporary, 'cache-consumer.mjs'), `
+import assert from 'node:assert/strict'
+import { runAgent } from '@ayayaq/vivi'
+import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
+import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
+${cacheConsumer}`)
+  run(process.execPath, ['cache-consumer.mjs'], temporary)
+  await writeFile(join(temporary, 'cache-consumer.cjs'), `
+const assert = require('node:assert/strict')
+const { runAgent } = require('@ayayaq/vivi')
+const { createOpenAIProvider } = require('@ayayaq/vivi/providers/openai')
+const { createOpenRouterProvider } = require('@ayayaq/vivi/providers/openrouter')
+;(async () => {${cacheConsumer}})().catch(error => {console.error(error);process.exitCode = 1})
+`)
+  run(process.execPath, ['cache-consumer.cjs'], temporary)
   await writeFile(join(temporary, 'consumer.ts'), `
-import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition } from '@ayayaq/vivi'
+import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition, type Usage } from '@ayayaq/vivi'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayayaq/vivi/providers/openrouter'
 import { createToolRegistry, type ToolExtension, type ToolRegistry } from '@ayayaq/vivi/extensions'
@@ -168,14 +216,29 @@ void openai; void router
 const parameters: JsonObject = { type: 'object' }
 const tools: ToolDefinition[] = [{ name: 'inventory', description: 'Stock', parameters }]
 const messages: HistoryMessage[] = [{ kind: 'message', role: 'user', content: 'Stock?' }]
+const legacyUsage: Usage = {inputTokens:12,outputTokens:4,totalTokens:19}
+const cacheUsage: Usage = {...legacyUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
+// @ts-expect-error cache counters must be numbers
+const invalidUsage: Usage = {...legacyUsage,cachedInputTokens:'7'}
+void invalidUsage
 const provider: ModelProvider = { async generate(input, signal) {
   signal.throwIfAborted()
-  return { content: String(input.messages.length), toolCalls: [], providerState: { provider: 'fake', items: [{ type: 'reasoning', content: 'opaque' }] } }
+  return { content: String(input.messages.length), toolCalls: [], usage: cacheUsage, providerState: { provider: 'fake', items: [{ type: 'reasoning', content: 'opaque' }] } }
 } }
 const result: AgentResult = await runAgent({ provider, tools, messages,
   async executeTool(call: ToolCall, { signal }) { signal.throwIfAborted(); return { content: call.name } },
-  onEvent(event: AgentEvent) { if (event.type === 'assistant') console.log(event.message.content) }
+  onEvent(event: AgentEvent) {
+    if (event.type === 'assistant') console.log(event.message.content)
+    if (event.type === 'round_completed') {
+      const read: number | undefined = event.usage?.cachedInputTokens
+      const write: number | undefined = event.usage?.cacheWriteInputTokens
+      void read; void write
+    }
+  }
 })
+const read: number | undefined = result.usage.cachedInputTokens
+const write: number | undefined = result.usage.cacheWriteInputTokens
+void read; void write
 console.log(result.status)
 `)
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', 'consumer.ts'], temporary)
@@ -194,6 +257,23 @@ const shared: core.ModelProvider[] = [openai.createOpenAIProvider({apiKey:'fake'
 router.createOpenRouterProvider({apiKey:'fake',model:'fake',requireSupportedParameters:1})
 void shared
 const provider: core.ModelProvider = { async generate() { return { content: 'CommonJS declarations work', toolCalls: [] } } }
+const legacyUsage: core.Usage = {inputTokens:12,outputTokens:4,totalTokens:19}
+const cacheUsage: core.Usage = {...legacyUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
+// @ts-expect-error cache counters must be numbers
+const invalidUsage: core.Usage = {...legacyUsage,cacheWriteInputTokens:'0'}
+void invalidUsage
+const cacheProvider: core.ModelProvider = {async generate(){return {content:'Cache',toolCalls:[],usage:cacheUsage}}}
+const cacheResult: Promise<core.AgentResult> = core.runAgent({provider:cacheProvider,messages:[],tools:[],async executeTool(){return {content:''}},
+  onEvent(event: core.AgentEvent){if(event.type === 'round_completed'){
+    const read: number | undefined = event.usage?.cachedInputTokens
+    const write: number | undefined = event.usage?.cacheWriteInputTokens
+    void read; void write
+  }}})
+void cacheResult.then(result => {
+  const read: number | undefined = result.usage.cachedInputTokens
+  const write: number | undefined = result.usage.cacheWriteInputTokens
+  void read; void write
+})
 const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: [], tools: [], async executeTool() { return { content: '' } } })
 void result
 `)

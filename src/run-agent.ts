@@ -24,6 +24,8 @@ class RunFailure extends Error {
 
 class Cancelled extends Error {}
 
+const cacheUsageKeys = ['cachedInputTokens', 'cacheWriteInputTokens'] as const
+
 function detail(error: unknown): string {
   // Thrown values can have no prototype or hostile coercion/message accessors. Formatting
   // must not replace the original provider/tool/hook failure with a second exception.
@@ -44,7 +46,8 @@ function detail(error: unknown): string {
 
 function assertUsage(value: unknown): asserts value is Usage {
   assert(record(value), 'Usage must be an object')
-  for (const key of ['inputTokens', 'outputTokens', 'totalTokens']) {
+  for (const key of ['inputTokens', 'outputTokens', 'totalTokens',
+    ...cacheUsageKeys.filter((key) => key in value)]) {
     const count = value[key]
     assert(typeof count === 'number' && Number.isSafeInteger(count) && count >= 0,
       `Usage ${key} must be a nonnegative safe integer`)
@@ -252,6 +255,12 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
             for (const key of ['inputTokens', 'outputTokens', 'totalTokens'] as const) {
               assert(Number.isSafeInteger(usage[key] + output.usage[key]), 'Aggregate usage exceeds safe integer range')
             }
+            for (const key of cacheUsageKeys) {
+              const count = output.usage[key]
+              if (count !== undefined && (rounds === 0 || usage[key] !== undefined)) {
+                assert(Number.isSafeInteger((usage[key] ?? 0) + count), 'Aggregate usage exceeds safe integer range')
+              }
+            }
           }
           turn = structuredClone(output)
         } catch (error) {
@@ -281,6 +290,15 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         usage.inputTokens += turn.usage.inputTokens
         usage.outputTokens += turn.usage.outputTokens
         usage.totalTokens += turn.usage.totalTokens
+      }
+      for (const key of cacheUsageKeys) {
+        const count = turn.usage?.[key]
+        // Once a committed round omits a field, the complete aggregate is unknown.
+        if (count !== undefined && (rounds === 1 || usage[key] !== undefined)) {
+          usage[key] = (usage[key] ?? 0) + count
+        } else {
+          delete usage[key]
+        }
       }
       pending = assistant.toolCalls.slice()
       for (const call of pending) seenIds.add(call.id)

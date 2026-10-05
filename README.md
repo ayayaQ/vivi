@@ -114,7 +114,8 @@ See [the registry tests](test/extensions.test.mjs) for snapshot and cancellation
 - `HistoryMessage`: a user/system `message`, an `assistant` with `content` and `toolCalls`, or a
   `tool_result` with `callId`, `name`, `content`, and optional `isError`
 - `ModelProvider.generate({ messages, tools }, signal)`: returns `{ content, toolCalls }` with optional
-  `usage: { inputTokens, outputTokens, totalTokens }` and `providerState`
+  `usage: { inputTokens, outputTokens, totalTokens, cachedInputTokens?, cacheWriteInputTokens? }`
+  and `providerState`
 - `runAgent({ provider, messages, tools, executeTool, signal?, maxRounds?, onEvent? })`: returns
   `{ status, history, content, rounds, usage, error? }`
 
@@ -124,6 +125,20 @@ responses, including a final text-only response. Usage sums accepted responses; 
 adds zero. Counts must be nonnegative safe integers. Provider total counts are preserved even
 when they differ from input plus output counts. `content` is the latest accepted assistant text,
 including empty text. The result's history includes the initial messages.
+
+Cache counts are input-token breakdowns, never added again to input or total counts. Omission
+means unreported; explicit zero is preserved. Each aggregate cache field is included only when
+every accepted round reports it, independently of the other cache field. Otherwise it is omitted,
+while `round_completed` events retain each round's reported counts. Cancelled/error results sum
+only accepted responses; an unfinished response contributes nothing. Supplied history has no usage
+and is not included in a new run's aggregate.
+
+Both streaming and nonstreaming adapters map `cached_tokens` and `cache_write_tokens` from
+OpenAI Responses `usage.input_tokens_details` or OpenRouter Chat `usage.prompt_tokens_details`.
+Missing/null details or counters are unreported; other malformed detail objects or counters are
+rejected like existing usage. See [OpenAI cache usage](https://developers.openai.com/api/docs/guides/prompt-caching#monitor-cache-performance)
+and [OpenRouter usage accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting).
+This telemetry does not change caching configuration, routing, request defaults, or pricing.
 
 `maxRounds` defaults to 25 and must be an integer from 1 to 1000. A final response must fit within
 that limit. Reaching the limit after a tool round returns an error with code `max_rounds`; tools
