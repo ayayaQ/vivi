@@ -50,6 +50,10 @@ export interface Usage {
   inputTokens: number
   outputTokens: number
   totalTokens: number
+  /** Input tokens read from cache, already included in inputTokens; omitted when unreported. */
+  cachedInputTokens?: number
+  /** Input tokens written to cache, already included in inputTokens; omitted when unreported. */
+  cacheWriteInputTokens?: number
 }
 
 export interface ProviderResult {
@@ -117,6 +121,7 @@ export interface AgentResult {
   history: HistoryMessage[]
   content: string
   rounds: number
+  /** Sums committed rounds. Each cache count is included only if every such round reports it. */
   usage: Usage
   error?: AgentError
 }

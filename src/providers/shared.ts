@@ -109,9 +109,25 @@ export function usage(value: unknown, provider: Provider): NonNullable<ProviderR
     counts[provider === 'OpenAI' ? 'output_tokens' : 'completion_tokens'],
     provider
   )
+  const details = counts[provider === 'OpenAI' ? 'input_tokens_details' : 'prompt_tokens_details']
+  if (details !== undefined && details !== null && !isRecord(details)) {
+    fail(provider, 'input token details must be an object')
+  }
+  const cacheCounts: Pick<NonNullable<ProviderResult['usage']>, 'cachedInputTokens' | 'cacheWriteInputTokens'> = {}
+  if (isRecord(details)) {
+    for (const [source, target] of [
+      ['cached_tokens', 'cachedInputTokens'], ['cache_write_tokens', 'cacheWriteInputTokens']
+    ] as const) {
+      // Missing/null details are unreported, not a measured zero.
+      if (details[source] !== undefined && details[source] !== null) {
+        cacheCounts[target] = tokenCount(details[source], provider)
+      }
+    }
+  }
   return {
     inputTokens,
     outputTokens,
+    ...cacheCounts,
     totalTokens:
       counts.total_tokens === undefined || counts.total_tokens === null
         ? tokenCount(inputTokens + outputTokens, provider)

@@ -2,12 +2,16 @@
 
 ## 0.3.0-dev.0 (unreleased)
 
+- Add optional cache-read/write input token counts to provider results, round events, and agent
+  aggregates; omit each aggregate cache count unless every accepted round reports it
+- Parse OpenAI Responses and OpenRouter Chat cache usage in streaming and nonstreaming responses,
+  preserving explicit zero without changing caching configuration or request defaults
 - Add optional trusted in-process tool extension registration, fixed per-turn definitions and
   executable snapshots, argument validation, collision checks, and ordinary tool error results
 - Add a shared bounded calculator pack for CLI and desktop reuse, preserving the CLI tool name
   and result shape; keep approvals, storage, credentials, and resource ownership in each host
-- Verify ESM/CommonJS extension exports and declarations in clean packed consumers; leave the
-  existing agent runner and provider behavior unchanged
+- Verify ESM/CommonJS core, provider, and extension exports and declarations in clean packed
+  consumers
 
 
 ## 0.2.1 (unreleased)
