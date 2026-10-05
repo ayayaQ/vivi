@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0-dev.0 (unreleased)
+## 0.3.0 (prepared, not published)
 
 - Add optional cache-read/write input token counts to provider results, round events, and agent
   aggregates; omit each aggregate cache count unless every accepted round reports it
@@ -14,7 +14,7 @@
   consumers
 
 
-## 0.2.1 (unreleased)
+## 0.2.1 (published)
 
 - Add opt-in `requireSupportedParameters` to the OpenRouter adapter, mapping to
   `provider.require_parameters: true` so hosts can require endpoint support for supplied parameters
