@@ -1,6 +1,6 @@
 {
   "name": "@ayayaq/vivi",
-  "version": "0.3.0-dev.0",
+  "version": "0.3.0",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",
@@ -73,6 +73,7 @@
   "files": [
     "dist",
     "src",
+    "docs",
     "examples",
     "scripts",
     "tsconfig.json",

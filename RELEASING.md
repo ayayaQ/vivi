@@ -1,55 +1,17 @@
 # Release workflow
 
-## Extension foundation under review
+## Current status
 
-This checkout is **unpublished `0.3.0-dev.0`**. Its extension subpaths are absent from published
-`0.2.1`; local implementation and package checks do not authorize publication. Choose the final
-release version separately, then rerun all checks and review its exact source and archive. Never
-publish these new bytes as any existing version.
+This checkout prepares **`@ayayaq/vivi@0.3.0`** for CORE-02. A stable version in package.json
+is release metadata, not proof of publication. As checked on 2026-10-05, npm `latest` is `0.2.1`
+and `0.3.0` is absent. Extensions and cache usage are new in this candidate. The later capability
+normalization module is outside this release.
 
-Release order: review and approve the core change, prepare and independently review the new
-version/archive, publish through the account holder, and verify actual registry bytes and clean
-ESM/CommonJS consumers. Only then update CLI/desktop imports and exact registry dependencies,
-regenerate their lockfiles from npm, and run their checks. Local consumer prototypes may install
-a temporary pack with `--no-save --package-lock=false`; keep archives outside repositories and
-never commit those prototype dependency paths or fabricated registry integrity records.
+Publication remains an npm account-holder step. First merge the independently reviewed release
+change after final-head CI passes, then publish the exact frozen archive and verify registry bytes.
+Do not upgrade CLI/desktop registry dependencies or advertise `0.3.0` as available before that gate.
 
-The existing release record/workflow below predates this extension preparation. It remains
-historical context; its `0.2.1` commands are not instructions to publish this checkout.
-
-
-`@ayayaq/vivi@0.1.0` is published and immutable. Its reviewed archive SHA-256 is
-`9f5faecf9959f722bfa799efa8b0610b383b3d888bc13659b73be37306b6e2f6`.
-
-Stable **`@ayayaq/vivi@0.2.0`** is published on npm, Apache-2.0, from the reviewed shared
-implementation merged at `063b84a009d8cc9c553f508e8d3cfece59fe0b1a`. See [CHANGELOG.md](CHANGELOG.md).
-The account holder published the reviewed archive; its registry bytes and integrity were verified.
-No release or authentication step is automated by this repository. Never publish new bytes as
-`0.1.0`, and never substitute a newly packed working directory for a reviewed archive.
-
-## Verified 0.2.0 archive
-
-- Archive: `ayayaq-vivi-0.2.0.tgz`
-- SHA-256: `aab013aef6ae939dba5f07391358b3fa4c5cc83b7f5b6a9f520ed8d8c76dd9a9`
-- SHA-1: `9d9ddc7f9e07d7fba878b260931da06d81abc714`
-- Integrity: `sha512-4qxPGSjhKgJKx01fV18V4qvzlVQxkhyiXhPX+KpnbevDYFMilAlnlhx7JIPyWZENG6zUOYSRB6xnQkTT0K1usw==`
-- Reviewed source tree: `692d9fc00412ebcf0c36843390c5714f4ed52a63`
-
-The registry download and all 96 installed files matched the frozen archive. Clean registry
-ESM/CommonJS core/history/provider consumers and strict NodeNext declarations passed. `latest`
-was verified as `0.2.0`. These docs record publication after the archive was frozen; do not
-repack this checkout to replace the existing release. For a future version, select a new
-version and repeat preparation, review, user-only publication and registry verification.
-
-## Planned 0.2.1 release (not published)
-
-This checkout prepares the backward-compatible OpenRouter routing option and tool-parameter fixes
-for `@ayayaq/vivi@0.2.1`. npm `latest` remains `0.2.0` until the account holder publishes the
-reviewed `0.2.1` archive. Do not update consumer registry dependencies before that publication
-and the verification below. A draft PR, local package check or archive preparation is not a
-release. Existing `0.2.0` bytes and the historical hash record above remain unchanged.
-
-## Prepare and review without signing in
+## Prepare and independently review
 
 Use Node.js 22 or newer and the locked development dependency:
 
@@ -59,78 +21,91 @@ npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
 npm pack --json --pack-destination "$RELEASE_DIR"
-shasum -a 256 "$RELEASE_DIR/ayayaq-vivi-0.2.1.tgz"
+sha256sum "$RELEASE_DIR/ayayaq-vivi-0.3.0.tgz"
+git rev-parse HEAD HEAD^{tree}
+git status --short
 ```
 
-Save the release source commit, source tree, archive SHA-256, SHA-1 and npm's SHA-512 integrity
-in the release record. Inspect the pack file list: it must include ESM/CommonJS builds and
-declarations, source/build configuration, README, changelog, this guide, LICENSE, NOTICE and
-attribution. Exclude credentials, private data, tests, old archives and node_modules.
-`check` installs a generated archive into clean runtime and TypeScript consumers.
-Keep archives outside the repository; never commit a release tarball or a vendor archive.
+The final source checkout must be clean. Save the commit, tree, archive SHA-256, SHA-1 and
+SHA-512 integrity in a separate release record. Inspect the archive file list and independently
+check its source, version, exports, declarations and licenses. Verify ESM, CommonJS, strict
+NodeNext consumers and the installed headless example on Node 22 and 24. Core checks use mock
+providers only; no provider credentials are needed.
 
-Freeze the reviewed archive. Any source, metadata, documentation or archive change requires a
-new pack, hash and focused review. A local archive can be used for prepublication testing, but
-consumer lockfiles must be generated by npm from the actual registry release after publication.
-Do not invent registry URLs or integrity records for an unpublished version.
+The pack includes builds and declarations, source/build configuration, examples, docs, README,
+changelog, this guide, LICENSE, NOTICE, attribution and audit. Exclude credentials, private data,
+node_modules, tests, old archives and development-only files. Keep the frozen archive and release
+record outside the repository; do not commit vendor tarballs or fabricated registry lock entries.
+Any source, metadata, documentation or archive change requires a new pack, hash and review.
 
-## User-only authentication and publication
+## Account-holder publication
 
-The npm account holder performs the following steps on their own trusted computer. The package
-is in the `@ayayaq` personal scope; verify that the account is `ayayaq`, or an explicitly authorized
-maintainer of this package. Sign-in and publishing challenges stay in npm's trusted CLI/browser.
-Never share passwords, tokens, recovery codes or `.npmrc` in chat. This workflow needs no
-separately created access token or trusted-publisher configuration. `npm login` saves
-authentication material locally.
+Use the exact approved `ayayaq-vivi-0.3.0.tgz` and its supplied release record on your trusted
+computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
+Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
+or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
 
-If not already signed in, use npm's [browser login](https://docs.npmjs.com/cli/v11/commands/npm-login/)
-then verify the account:
+If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm-login/):
 
 ```sh
 npm login --auth-type=web --registry=https://registry.npmjs.org/
 npm whoami --registry=https://registry.npmjs.org/
-```
-
-Check whether the target version already exists:
-
-```sh
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
+sha256sum ./ayayaq-vivi-0.3.0.tgz
 ```
 
-If `0.2.1` exists, stop and compare its integrity to the frozen release record. Do not attempt
-an overwrite or change versions without another review. npm package name/version pairs are
-immutable, including after unpublication.
-
-Check the approved archive's SHA-256 against the supplied release record, then publish that exact
-file as public, with the `latest` tag:
+Match SHA-256 to the approved release record. If `0.3.0` already exists, stop and compare registry
+integrity and bytes before taking another action. Name/version pairs are immutable even after
+unpublication. Do not change the version or archive without another review.
 
 ```sh
-shasum -a 256 ./ayayaq-vivi-0.2.1.tgz
-npm publish ./ayayaq-vivi-0.2.1.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+npm publish ./ayayaq-vivi-0.3.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This makes all archive contents public and updates `latest` to `0.2.1`. `publishConfig` also
-selects the public npm registry and public access. The [npm publish reference](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
-explains tarball publication, immutable versions, tags and authentication challenges. Complete
-any sign-in or security challenge yourself. If publication fails, retain the same reviewed
-archive and inspect the registry before retrying; a client-side failure can follow a successful
-upload. Do not publish different bytes under the same version.
+This publishes all archive contents and updates `latest` to `0.3.0`. See
+[npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
+A client-side failure can follow a successful upload; inspect the registry before retrying,
+and never substitute a newly packed working directory for the reviewed archive.
 
-## Verify the actual release and switch consumers
+## Verify registry bytes and integrate hosts
 
 ```sh
-npm view @ayayaq/vivi@0.2.1 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.3.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
+REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
+npm pack @ayayaq/vivi@0.3.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+cmp ./ayayaq-vivi-0.3.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.3.0.tgz"
 ```
 
-Confirm name/version, SHA-512 integrity and SHA-1 match the frozen archive, and `latest` is
-`0.2.1`. Download the actual registry archive and compare its SHA-256 and bytes to the reviewed
-file. Install the exact registry version into a clean consumer and repeat ESM/CommonJS runtime
-and declaration checks. Only then advertise the new version as available from npm.
+Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
+`@ayayaq/vivi@0.3.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+NodeNext declaration, extension/cache and headless-example checks. Record the verified release
+without repacking or replacing published bytes.
 
-For authorized consumer updates, set exact `"@ayayaq/vivi": "0.2.1"`, regenerate package-lock.json
-using npm against the verified public registry, and remove any obsolete tracked vendor
-archives/provenance. Retain dependency
-license/notice/attribution records in installed and packaged outputs. Keep the CLI private unless
-separately approving a CLI release. Rerun all host tests, type checks and package checks, including
-a fresh desktop unpacked package. Changing the shared dependency does not publish either app.
+Only then set exact `"@ayayaq/vivi": "0.3.0"` in authorized CLI/desktop changes and regenerate
+lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
+preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
+Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local
+packs do not establish release or clean registry integration. Publishing core does not publish
+or upgrade either host.
+
+## Immutable earlier release records
+
+`0.2.1` is published. Public npm metadata observed on 2026-10-05:
+
+- SHA-1: `5c3bafacb0265dacde85a19d1b98d8de7f8c573d`
+- Integrity: `sha512-iMuY7HbBfRljH9yTMS0unR98WctuNjYVUYrXOOuLYbwlscydW2TKwVKhw9ec6SVjtqFwjPQdn7tLkoYi4pUkmA==`
+
+The existing reviewed `0.2.0` record is unchanged:
+
+- Source commit: `063b84a009d8cc9c553f508e8d3cfece59fe0b1a`
+- Source tree: `692d9fc00412ebcf0c36843390c5714f4ed52a63`
+- Archive: `ayayaq-vivi-0.2.0.tgz`
+- SHA-256: `aab013aef6ae939dba5f07391358b3fa4c5cc83b7f5b6a9f520ed8d8c76dd9a9`
+- SHA-1: `9d9ddc7f9e07d7fba878b260931da06d81abc714`
+- Integrity: `sha512-4qxPGSjhKgJKx01fV18V4qvzlVQxkhyiXhPX+KpnbevDYFMilAlnlhx7JIPyWZENG6zUOYSRB6xnQkTT0K1usw==`
+
+Its registry archive and all 96 installed files matched the frozen archive, with clean runtime
+and declaration checks. The published immutable `0.1.0` reviewed archive SHA-256 is
+`9f5faecf9959f722bfa799efa8b0610b383b3d888bc13659b73be37306b6e2f6`.
+Never publish this candidate's new bytes as any earlier version.

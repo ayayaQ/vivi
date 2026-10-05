@@ -25,7 +25,7 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
-  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'src/extensions.ts', 'src/extensions/calculator.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json', 'dist/extensions.js', 'dist/extensions.d.ts', 'dist/extensions/calculator.js', 'dist/extensions/calculator.d.ts', 'dist/cjs/extensions.js', 'dist/cjs/extensions.d.ts', 'dist/cjs/extensions/calculator.js', 'dist/cjs/extensions/calculator.d.ts']) {
+  for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'docs/API.md', 'examples/headless.mjs', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'src/extensions.ts', 'src/extensions/calculator.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json', 'dist/extensions.js', 'dist/extensions.d.ts', 'dist/extensions/calculator.js', 'dist/extensions/calculator.d.ts', 'dist/cjs/extensions.js', 'dist/cjs/extensions.d.ts', 'dist/cjs/extensions/calculator.js', 'dist/cjs/extensions/calculator.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert([...paths].every((path) => !path.includes('node_modules') && !path.startsWith('test/')))
@@ -40,6 +40,8 @@ try {
   assert.equal(manifest.version, sourceManifest.version)
   assert.equal(packed.filename, `ayayaq-vivi-${sourceManifest.version}.tgz`)
   assert.equal(manifest.publishConfig.access, 'public')
+  assert.deepEqual(manifest.exports, sourceManifest.exports)
+  run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
   assert.equal(manifest.license, 'Apache-2.0')
   assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0)
   assert.deepEqual(await readFile(join(installed, 'LICENSE')), await readFile(join(root, 'LICENSE')))
