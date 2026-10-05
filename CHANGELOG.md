@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (prepared, not published)
+## 0.3.0 (2026-10-05)
 
 - Add optional cache-read/write input token counts to provider results, round events, and agent
   aggregates; omit each aggregate cache count unless every accepted round reports it

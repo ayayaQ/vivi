@@ -4,8 +4,8 @@
 
 The optional `@ayayaq/vivi/extensions` subpath registers explicitly imported, trusted in-process
 code. It adds no loader, installation flow, permissions, sandbox, UI, or runtime dependencies.
-The core runner is unchanged. These extension exports are prepared for `0.3.0` and are absent
-from `0.2.1`; check [the release status](../RELEASING.md) before using them from npm.
+The core runner is unchanged. These extension exports are available in published `0.3.0` and
+are absent from `0.2.1`; see [the verified release record](../RELEASING.md).
 
 ```ts
 import { runAgent } from '@ayayaq/vivi'
