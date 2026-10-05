@@ -34,3 +34,9 @@ https://www.apache.org/licenses/LICENSE-2.0.txt
 
 Source and build configuration are included in the npm package alongside compiled JavaScript,
 declarations, this attribution, and `NOTICE`.
+
+The unpublished endpoint-aware capability preparation generalizes the pure metadata semantics
+from the Apache-2.0 CLI `src/models.ts` at
+`ad31098bd6947411b659f57c0bb85cb129dfb894`. Exact source links, current official fact provenance,
+and paired consumer evidence are in `CAPABILITIES.md`. It does not copy either host's catalog
+fetch/cache, settings, UI, or desktop code into the shared module.

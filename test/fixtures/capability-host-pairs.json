@@ -1,0 +1,388 @@
+{
+  "apiVersion": 1,
+  "sources": {
+    "cli": "https://github.com/ayayaQ/vivi-cli/blob/ad31098bd6947411b659f57c0bb85cb129dfb894/src/models.ts",
+    "desktop": "https://github.com/ayayaQ/bot-commander-desktop/blob/929fe4cdb8ea99cc20616761eddfa6c4d2e73944/src/main/services/aiProviderService.ts",
+    "desktopAgent": "https://github.com/ayayaQ/bot-commander-desktop/blob/929fe4cdb8ea99cc20616761eddfa6c4d2e73944/src/main/services/agentProviderAdapter.ts"
+  },
+  "cases": [
+    {
+      "name": "Responses-only model is different from general desktop chat",
+      "provider": "openai",
+      "model": {
+        "id": "gpt-5-pro"
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "supported",
+          "reasoning": "supported",
+          "efforts": [
+            "high"
+          ],
+          "mandatory": true
+        },
+        "desktopChat": {
+          "selected": false
+        }
+      },
+      "sharedResponses": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "supported",
+        "reasoning": {
+          "support": "supported",
+          "effortSelection": "supported",
+          "efforts": [
+            "high"
+          ],
+          "requirement": "required",
+          "disable": "unsupported"
+        }
+      },
+      "sharedChat": {
+        "chat": "unsupported",
+        "tools": "unsupported",
+        "stream": "unsupported",
+        "reasoning": {
+          "support": "unsupported",
+          "effortSelection": "unsupported",
+          "efforts": [],
+          "requirement": "optional",
+          "disable": "unsupported"
+        }
+      }
+    },
+    {
+      "name": "Reasoning support does not imply documented effort or streaming support",
+      "provider": "openai",
+      "model": {
+        "id": "o3-pro"
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "unsupported",
+          "reasoning": "unknown",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": false
+        }
+      },
+      "sharedResponses": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "unsupported",
+        "reasoning": {
+          "support": "supported",
+          "effortSelection": "unknown",
+          "efforts": [],
+          "requirement": "unknown",
+          "disable": "unknown"
+        }
+      }
+    },
+    {
+      "name": "An exact non-reasoning model has an explicit unsupported state",
+      "provider": "openai",
+      "model": {
+        "id": "gpt-4.1"
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "supported",
+          "reasoning": "unknown",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": false
+        }
+      },
+      "sharedResponses": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "supported",
+        "reasoning": {
+          "support": "unsupported",
+          "effortSelection": "unsupported",
+          "efforts": [],
+          "requirement": "optional",
+          "disable": "unsupported"
+        }
+      }
+    },
+    {
+      "name": "A future name matching a known prefix remains unverified",
+      "provider": "openai",
+      "model": {
+        "id": "gpt-5-next-unverified"
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "unknown",
+          "tools": "unknown",
+          "stream": "unknown",
+          "reasoning": "unknown",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": true
+        }
+      },
+      "sharedResponses": {
+        "chat": "unknown",
+        "tools": "unknown",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "unknown",
+          "effortSelection": "unknown",
+          "efforts": [],
+          "requirement": "unknown",
+          "disable": "unknown"
+        }
+      }
+    },
+    {
+      "name": "A reasoning parameter without effort metadata does not mean unsupported reasoning",
+      "provider": "openrouter",
+      "model": {
+        "id": "vendor/model:free",
+        "supported_parameters": [
+          "tools",
+          "reasoning"
+        ],
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        }
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "unknown",
+          "reasoning": "unsupported",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": true
+        }
+      },
+      "sharedChat": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "supported",
+          "effortSelection": "unknown",
+          "efforts": [],
+          "requirement": "unknown",
+          "disable": "unknown"
+        }
+      }
+    },
+    {
+      "name": "Mandatory gateway reasoning has model-specific effort choices",
+      "provider": "openrouter",
+      "model": {
+        "id": "google/gemini-3.5-flash",
+        "supported_parameters": [
+          "tools",
+          "reasoning"
+        ],
+        "architecture": {
+          "input_modalities": [
+            "text",
+            "image"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        },
+        "reasoning": {
+          "supported_efforts": [
+            "high",
+            "medium",
+            "low",
+            "minimal"
+          ],
+          "mandatory": true
+        }
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "unknown",
+          "reasoning": "supported",
+          "efforts": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
+          "mandatory": true
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": true
+        }
+      },
+      "sharedChat": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "supported",
+          "effortSelection": "supported",
+          "efforts": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
+          "requirement": "required",
+          "disable": "unsupported"
+        }
+      }
+    },
+    {
+      "name": "Absent metadata is not a false capability assertion",
+      "provider": "openrouter",
+      "model": {
+        "id": "vendor/unknown"
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "unknown",
+          "tools": "unknown",
+          "stream": "unknown",
+          "reasoning": "unknown",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": false
+        }
+      },
+      "sharedChat": {
+        "chat": "unknown",
+        "tools": "unknown",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "unknown",
+          "effortSelection": "unknown",
+          "efforts": [],
+          "requirement": "unknown",
+          "disable": "unknown"
+        }
+      }
+    },
+    {
+      "name": "Text output alone does not prove text conversation input",
+      "provider": "openrouter",
+      "model": {
+        "id": "vendor/transcriber",
+        "supported_parameters": [],
+        "architecture": {
+          "input_modalities": [
+            "audio"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        }
+      },
+      "before": {
+        "cli": {
+          "selected": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": false
+        }
+      },
+      "sharedChat": {
+        "chat": "unsupported",
+        "tools": "unsupported",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "unsupported",
+          "effortSelection": "unsupported",
+          "efforts": [],
+          "requirement": "optional",
+          "disable": "unsupported"
+        }
+      }
+    },
+    {
+      "name": "Dynamic routers without reasoning metadata remain unknown",
+      "provider": "openrouter",
+      "model": {
+        "id": "openrouter/auto",
+        "supported_parameters": [
+          "tools"
+        ],
+        "architecture": {
+          "input_modalities": [
+            "text"
+          ],
+          "output_modalities": [
+            "text"
+          ]
+        }
+      },
+      "before": {
+        "cli": {
+          "selected": true,
+          "chat": "supported",
+          "tools": "supported",
+          "stream": "unknown",
+          "reasoning": "unsupported",
+          "efforts": [],
+          "mandatory": false
+        },
+        "desktopChat": {
+          "selected": true,
+          "reasoning": false
+        }
+      },
+      "sharedChat": {
+        "chat": "supported",
+        "tools": "supported",
+        "stream": "unknown",
+        "reasoning": {
+          "support": "unknown",
+          "effortSelection": "unknown",
+          "efforts": [],
+          "requirement": "unknown",
+          "disable": "unknown"
+        }
+      }
+    }
+  ]
+}

@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['CAPABILITIES.md', 'src/providers/models.ts', 'examples/model-capabilities.mjs',
+    'dist/providers/models.js', 'dist/providers/models.d.ts',
+    'dist/cjs/providers/models.js', 'dist/cjs/providers/models.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['LICENSE', 'NOTICE', 'ATTRIBUTION.md', 'README.md', 'CHANGELOG.md', 'RELEASING.md', 'docs/API.md', 'examples/headless.mjs', 'src/index.ts', 'src/run-agent.ts', 'src/types.ts', 'src/history.ts', 'src/providers/openai.ts', 'src/providers/openrouter.ts', 'src/extensions.ts', 'src/extensions/calculator.ts', 'tsconfig.json', 'tsconfig.cjs.json', 'scripts/clean-build.mjs', 'scripts/finish-build.mjs', 'dist/index.js', 'dist/index.d.ts', 'dist/providers/openai.js', 'dist/providers/openai.d.ts', 'dist/providers/openrouter.js', 'dist/providers/openrouter.d.ts', 'dist/cjs/index.js', 'dist/cjs/index.d.ts', 'dist/cjs/providers/openai.js', 'dist/cjs/providers/openrouter.js', 'dist/cjs/package.json', 'dist/extensions.js', 'dist/extensions.d.ts', 'dist/extensions/calculator.js', 'dist/extensions/calculator.d.ts', 'dist/cjs/extensions.js', 'dist/cjs/extensions.d.ts', 'dist/cjs/extensions/calculator.js', 'dist/cjs/extensions/calculator.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
@@ -44,6 +49,10 @@ try {
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
   assert.equal(manifest.license, 'Apache-2.0')
   assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0)
+  assert.deepEqual(manifest.exports['./providers/models'], {
+    import: { types: './dist/providers/models.d.ts', default: './dist/providers/models.js' },
+    require: { types: './dist/cjs/providers/models.d.ts', default: './dist/cjs/providers/models.js' }
+  })
   assert.deepEqual(await readFile(join(installed, 'LICENSE')), await readFile(join(root, 'LICENSE')))
   assert((await readFile(join(installed, 'LICENSE'), 'utf8')).includes('Version 2.0, January 2004'))
   assert((await readFile(join(installed, 'ATTRIBUTION.md'), 'utf8')).includes('943e3f84f67e4415a899da8921db84639843c625'))
@@ -147,6 +156,45 @@ assert.equal(typeof createOpenRouterProvider({apiKey:'fake',model:'fake'}).gener
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `)
   run(process.execPath, ['providers.cjs'], temporary)
+  const modelsConsumer = `
+const pro = normalizeModelCapabilities({apiVersion:1,provider:'openai',protocol:'responses',model:{id:'gpt-5-pro'}})
+assert.equal(pro.chat,'supported')
+assert.equal(pro.reasoning.requirement,'required')
+assert.equal(reasoningSelectionSupport(pro,{mode:'default'}),'supported')
+assert.equal(reasoningSelectionSupport(pro,{mode:'disabled'}),'unsupported')
+assert.equal(normalizeModelCapabilities({apiVersion:1,provider:'openai',protocol:'chat-completions',model:{id:'gpt-5-pro'}}).chat,'unsupported')
+const raw = {id:'vendor/model:free',supported_parameters:['tools'],architecture:{input_modalities:['text','image'],output_modalities:['text']},reasoning:{supports_max_tokens:true,mandatory:false}}
+const before = JSON.stringify(raw)
+const gateway = normalizeModelCapabilities({apiVersion:1,provider:'openrouter',protocol:'chat-completions',model:raw})
+assert.equal(gateway.id,raw.id)
+assert.equal(gateway.chat,'supported')
+assert.equal(gateway.tools,'supported')
+assert.equal(gateway.stream,'unknown')
+assert.equal(gateway.reasoning.effortSelection,'unsupported')
+assert.equal(gateway.reasoning.disable,'supported')
+assert.deepEqual(gateway.reasoning.efforts,[])
+assert.equal(reasoningSelectionSupport(gateway,{mode:'disabled'}),'supported')
+assert.equal(JSON.stringify(raw),before)
+assert(Object.isFrozen(gateway.reasoning.efforts))
+const future = normalizeModelCapabilities({apiVersion:1,provider:'openai',protocol:'responses',model:{id:'gpt-5-future-snapshot'}})
+assert.equal(future.chat,'unknown')
+assert.equal(future.reasoning.support,'unknown')
+assert.throws(()=>normalizeModelCapabilities({apiVersion:2,provider:'openai',protocol:'responses',model:{id:'gpt-5'}}),TypeError)
+`
+  await writeFile(join(temporary, 'models.mjs'), `
+import assert from 'node:assert/strict'
+import * as core from '@ayayaq/vivi'
+import { normalizeModelCapabilities, reasoningSelectionSupport } from '@ayayaq/vivi/providers/models'
+assert.equal(Object.hasOwn(core,'normalizeModelCapabilities'),false)
+${modelsConsumer}`)
+  run(process.execPath, ['models.mjs'], temporary)
+  await writeFile(join(temporary, 'models.cjs'), `
+const assert = require('node:assert/strict')
+const core = require('@ayayaq/vivi')
+const { normalizeModelCapabilities, reasoningSelectionSupport } = require('@ayayaq/vivi/providers/models')
+assert.equal(Object.hasOwn(core,'normalizeModelCapabilities'),false)
+${modelsConsumer}`)
+  run(process.execPath, ['models.cjs'], temporary)
   const cacheConsumer = `
 const baseUsage = {inputTokens:12,outputTokens:4,totalTokens:19}
 const cacheUsage = {...baseUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
@@ -201,6 +249,17 @@ import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayayaq/vivi/providers/openrouter'
 import { createToolRegistry, type ToolExtension, type ToolRegistry } from '@ayayaq/vivi/extensions'
 import { calculatorExtension, calculate } from '@ayayaq/vivi/extensions/calculator'
+import { normalizeModelCapabilities, reasoningSelectionSupport, type CapabilityInput, type ModelCapabilities, type Capability } from '@ayayaq/vivi/providers/models'
+const modelInput: CapabilityInput = {apiVersion:1,provider:'openai',protocol:'responses',model:{id:'gpt-5.1'}}
+const modelCapabilities: ModelCapabilities = normalizeModelCapabilities(modelInput)
+const disableSupport: Capability = reasoningSelectionSupport(modelCapabilities,{mode:'disabled'})
+// @ts-expect-error unsupported contract version
+normalizeModelCapabilities({...modelInput,apiVersion:2})
+// @ts-expect-error default is distinct from a named effort
+reasoningSelectionSupport(modelCapabilities,{mode:'effort',effort:'default'})
+// @ts-expect-error none uses the explicit disabled mode
+reasoningSelectionSupport(modelCapabilities,{mode:'effort',effort:'none'})
+void disableSupport
 const pack: ToolExtension = calculatorExtension
 const registry: ToolRegistry = createToolRegistry([pack], {reservedNames:['host_tool']})
 const extensionRun: Promise<AgentResult> = runAgent({provider:{async generate(){return {content:String(calculate('1+1')),toolCalls:[]}}},messages:[],tools:registry.tools,executeTool:registry.executeTool})
@@ -250,6 +309,12 @@ import openai = require('@ayayaq/vivi/providers/openai')
 import router = require('@ayayaq/vivi/providers/openrouter')
 import extensions = require('@ayayaq/vivi/extensions')
 import calculator = require('@ayayaq/vivi/extensions/calculator')
+import models = require('@ayayaq/vivi/providers/models')
+const modelCapabilities: models.ModelCapabilities = models.normalizeModelCapabilities({apiVersion:1,provider:'openrouter',protocol:'chat-completions',model:{id:'vendor/model'}})
+const modelSupport: models.Capability = models.reasoningSelectionSupport(modelCapabilities,{mode:'default'})
+// @ts-expect-error explicit API protocol required
+models.normalizeModelCapabilities({apiVersion:1,provider:'openai',protocol:'auto',model:{id:'gpt-5'}})
+void modelSupport
 const registry: extensions.ToolRegistry = extensions.createToolRegistry([calculator.calculatorExtension])
 const extensionRun: Promise<core.AgentResult> = core.runAgent({provider:{async generate(){return {content:'CJS extensions',toolCalls:[]}}},messages:[],tools:registry.tools,executeTool:registry.executeTool})
 void extensionRun
