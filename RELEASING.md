@@ -1,38 +1,53 @@
 # Release workflow
 
-## Prepared stable 0.6.0 candidate (unpublished)
+## Published stable 0.6.0
 
-The optional instruction-only skills foundation is merged in
-[PR #14](https://github.com/ayayaQ/vivi/pull/14) at
-`4583498d036c755863706c98ce27bd67588c105f` (reviewed feature head
-`74c74ce9f83051f5d401653f82a34e895d5bbbff`, tree
-`0233b73ad06f1e5036aba622fd43ac86ccd2d559`). This checkout prepares additive stable
-`0.6.0`; it is not a publication record. `0.5.0` remains the latest verified release.
+**`@ayayaq/vivi@0.6.0` is published and verified**, with npm `latest` set to `0.6.0` on
+2026-10-06. Registry publication time is `2026-10-06T10:55:16.382Z`. The actual public registry
+archive matches the exact independently reviewed frozen archive. This record was prepared after
+publication; do not repack this documentation checkout to replace the published archive.
 
-The new optional subpath includes standard SKILL.md parsing, explicit per-turn catalogs,
-list/read tools, an original read-only skill creator and a SKILL.md-only save contract.
-Hosts retain approved roots, scanning/resource containment, approvals, revision-checked atomic
-writes and lifecycle. No executable plugins, script execution, desktop/CLI adoption or notes
-migration are included. Host integration waits for exact registry verification.
+- Skills foundation: [PR #14](https://github.com/ayayaQ/vivi/pull/14), merged at `4583498d036c755863706c98ce27bd67588c105f`
+- Release preparation: [PR #15](https://github.com/ayayaQ/vivi/pull/15)
+- Merged release source: `fec11c3438f8f88013dfbf68df6bae3b34feb0ae`
+- Reviewed source commit: `c839d7309a5f2796b44949c322bb42d93286bc08`
+- Source tree: `d4fa6b13f29c7eb688bf88ee59a39e97959e42dd`
+- Archive: `ayayaq-vivi-0.6.0.tgz` (159 files, 150187 bytes)
+- SHA-256: `c621d76ed154e7e81ee12e30eaac0214b3386b17d48ff7b8fce7d68c9523ece7`
+- SHA-1: `7f0b6d412ee712e5ba7f82ac624326c897b03bd3`
+- Integrity: `sha512-hMj6QtpL7XmAWIanTW7iyF3PgoFHS7m1JxqOs7J+ASs5liV7T/pB/geZW0E7iI6QDoEH4AqX+y1svauiLsbvSg==`
 
-Frontmatter uses exact `yaml@2.9.1`, licensed ISC, from its real npm registry entry:
+Registry metadata, `latest`, archive byte equality, SHA-256/SHA-1/SHA-512 and the complete
+safe-path file list were checked. A fresh empty-cache exact-name public registry install on
+Node 24.19.0 matched all 159 installed files. That clean registry consumer passed all eight
+ESM/CommonJS export subpaths, mocked provider and streamed/nonstreamed cache usage, memory and
+skills consumers, the original read-only skill creator, denied read-only saves, installed
+headless/memory/skills examples, and strict NodeNext ESM/CommonJS declarations under both
+Node 24.19.0 and 22.23.3. This is one fresh registry installation checked with both runtimes;
+it does not claim a separate completed fresh Node 22 registry installation.
 
-- Resolved dependency: `https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz`
-- Integrity: `sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==`
-- YAML is installed as a normal dependency, not vendored, and imported only by the optional skills subpath
-- Packed-consumer verification checks its installed version, registry lock integrity and ISC license file
+Frontmatter uses exact `yaml@2.9.1`, licensed ISC, as a normal runtime dependency of the optional
+skills subpath, not vendored into vivi. The npm-generated consumer lock contains the real registry
+URLs and matching integrity for both packages. A separately downloaded public YAML tarball and
+all 233 installed dependency files match; its installed ISC license was checked. YAML's resolved
+URL is `https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz`, and its integrity is
+`sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==`.
 
-An earlier final cloud registry metadata request for YAML returned HTTP 403 and was not
-retried. Final local consumers use the already authorized integrity-checked cache in offline
-mode; this does not establish a fresh registry install of the unpublished release. Feature PR
-CI subsequently passed fresh `npm ci` plus complete Node 22/24 checks. Release CI and the
-account-holder's post-publication clean registry verification remain separate gates.
+The earlier cloud YAML metadata HTTP 403 was not retried. The post-publication clean registry
+installation above is separate from the prepublication offline-cache checks. Full aggregate
+checks with 268 mock tests passed on Node 22/24 before freezing.
+[Exact-head release CI](https://github.com/ayayaQ/vivi/actions/runs/37449465772) and subsequent
+[merged-main CI](https://github.com/ayayaQ/vivi/actions/runs/37450017690) also passed; the source
+aggregate was not redundantly rerun after publication. Independent review confirmed the registry and installed
+bytes, effective published metadata, runtime/declaration evidence and dependency license.
+No live provider calls, credentials or npm authentication/publication by dot were used.
 
-After independent source review and final Node 22/24 checks, freeze one exact `0.6.0` archive.
-Keep its commit/tree, hashes, file list and verification receipt outside Git. The account holder
-performs npm authentication and publication using that archive. Verify actual registry bytes
-and clean exact-version consumers before recording publication or adopting it in either host.
-Never replace a published version or upload a newly repacked checkout instead of the frozen archive.
+Hosts may now integrate exact registry `0.6.0`, regenerate lockfiles with npm and run their own
+integrated checks. Skills are untrusted instruction guidance, not executable plugins or a
+permission/security boundary. Approved disk roots, scanning/resource containment, approval UI,
+revision-checked atomic save transactions and operation admission/drain remain host-owned.
+Publication does not establish host adoption, native platform readiness or CLI session-note
+migration. All earlier published records and archives remain unchanged.
 
 ## Published stable 0.5.0
 
@@ -120,9 +135,10 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The workflow below prepares the unpublished `0.6.0` candidate. `0.5.0` is already
-published and must never be replaced. For future releases, select a new version and repeat
-source, archive, registry and host verification. All published records and archives remain immutable.
+The commands below document the historical `0.6.0` preparation and publication workflow.
+`0.6.0` and all earlier published versions must never be replaced or republished. For a future
+release, select a new version in every command and repeat source, archive, registry and host
+verification. All published records and archives remain immutable.
 
 ## Prepare and independently review
 
