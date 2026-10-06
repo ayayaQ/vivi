@@ -87,6 +87,16 @@
         "types": "./dist/cjs/extensions/memory.d.ts",
         "default": "./dist/cjs/extensions/memory.js"
       }
+    },
+    "./extensions/skills": {
+      "import": {
+        "types": "./dist/extensions/skills.d.ts",
+        "default": "./dist/extensions/skills.js"
+      },
+      "require": {
+        "types": "./dist/cjs/extensions/skills.d.ts",
+        "default": "./dist/cjs/extensions/skills.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
@@ -95,6 +105,7 @@
     "src",
     "docs",
     "examples",
+    "skills",
     "scripts",
     "tsconfig.json",
     "tsconfig.cjs.json",
@@ -111,11 +122,14 @@
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs",
+    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs",
     "test:package": "npm run build && node scripts/test-package.mjs"
   },
   "devDependencies": {
-    "typescript": "6.0.3",
-    "@types/node": "24.13.3"
+    "@types/node": "24.13.3",
+    "typescript": "6.0.3"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
   }
 }

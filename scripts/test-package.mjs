@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/SKILLS.md', 'src/extensions/skills.ts', 'src/extensions/skills-creator.ts',
+    'skills/skill-creator/SKILL.md', 'examples/skills.mjs', 'dist/extensions/skills.js',
+    'dist/extensions/skills.d.ts', 'dist/cjs/extensions/skills.js', 'dist/cjs/extensions/skills.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/MEMORY.md', 'src/extensions/memory.ts', 'examples/memory.mjs',
     'dist/extensions/memory.js', 'dist/extensions/memory.d.ts',
     'dist/cjs/extensions/memory.js', 'dist/cjs/extensions/memory.d.ts']) {
@@ -53,7 +58,7 @@ try {
   assert.deepEqual(manifest.exports, sourceManifest.exports)
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
   assert.equal(manifest.license, 'Apache-2.0')
-  assert.equal(Object.keys(manifest.dependencies ?? {}).length, 0)
+  assert.deepEqual(manifest.dependencies, {yaml:'2.9.1'})
   assert.deepEqual(manifest.exports['./providers/models'], {
     import: { types: './dist/providers/models.d.ts', default: './dist/providers/models.js' },
     require: { types: './dist/cjs/providers/models.d.ts', default: './dist/cjs/providers/models.js' }
@@ -234,6 +239,49 @@ const { createMemoryService, createMemoryExtension, decodeMemories, encodeMemori
 `)
   run(process.execPath, ['memory.cjs'], temporary)
   run(process.execPath, [join(installed, 'examples/memory.mjs')], temporary)
+  const skillsConsumer = `
+assert.equal(Object.hasOwn(core,'createSkillCatalog'),false)
+assert.equal(skillCreatorSource.readOnly,true)
+assert.equal(skillCreatorSource.content,await readFile(new URL('./node_modules/@ayayaq/vivi/skills/skill-creator/SKILL.md',importUrl),'utf8'))
+const parsed = parseSkillDocument(skillCreatorSource.content,'skill-creator')
+assert.equal(parsed.metadata.name,'skill-creator')
+assert(Object.isFrozen(parsed.metadata))
+const catalog = createSkillCatalog([skillCreatorSource])
+assert(!formatSkillCatalogContext(catalog).includes('## Understand the workflow'))
+const extension = createSkillsExtension({catalog,authorizeRead(){return true}})
+const registry = createToolRegistry([extension])
+assert.deepEqual(registry.tools.map(tool=>tool.name),['list_skills','read_skill'])
+const listed = await registry.executeTool({id:'list',name:'list_skills',arguments:{}},{signal:new AbortController().signal})
+assert.equal(JSON.parse(listed.content).skills[0].revision,parsed.revision)
+const loaded = await registry.executeTool({id:'read',name:'read_skill',arguments:{name:'skill-creator',path:'SKILL.md',expectedRevision:parsed.revision}},{signal:new AbortController().signal})
+assert.equal(JSON.parse(loaded.content).content,skillCreatorSource.content)
+let written=false
+const writing=createToolRegistry([createSkillsExtension({catalog,authorizeRead(){return true},save:{authorize(){return false},commit(){written=true}}})])
+const blocked=await writing.executeTool({id:'save',name:'save_skill',arguments:{name:'skill-creator',content:skillCreatorSource.content,expectedRevision:parsed.revision}},{signal:new AbortController().signal})
+assert.equal(blocked.isError,true)
+assert.equal(written,false)
+`
+  await writeFile(join(temporary, 'skills.mjs'), `
+import assert from 'node:assert/strict'
+import {readFile} from 'node:fs/promises'
+import * as core from '@ayayaq/vivi'
+import {createToolRegistry} from '@ayayaq/vivi/extensions'
+import {createSkillCatalog,createSkillsExtension,parseSkillDocument,formatSkillCatalogContext,skillCreatorSource} from '@ayayaq/vivi/extensions/skills'
+const importUrl=import.meta.url
+${skillsConsumer}`)
+  run(process.execPath, ['skills.mjs'], temporary)
+  await writeFile(join(temporary, 'skills.cjs'), `
+const assert=require('node:assert/strict')
+const {readFile}=require('node:fs/promises')
+const {pathToFileURL}=require('node:url')
+const core=require('@ayayaq/vivi')
+const {createToolRegistry}=require('@ayayaq/vivi/extensions')
+const {createSkillCatalog,createSkillsExtension,parseSkillDocument,formatSkillCatalogContext,skillCreatorSource}=require('@ayayaq/vivi/extensions/skills')
+const importUrl=pathToFileURL(__filename)
+;(async()=>{${skillsConsumer}})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+  run(process.execPath, ['skills.cjs'], temporary)
+  run(process.execPath, [join(installed, 'examples/skills.mjs')], temporary)
   const cacheConsumer = `
 const baseUsage = {inputTokens:12,outputTokens:4,totalTokens:19}
 const cacheUsage = {...baseUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
@@ -289,6 +337,16 @@ import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayaya
 import { createToolRegistry, type ToolExtension, type ToolRegistry } from '@ayayaq/vivi/extensions'
 import { calculatorExtension, calculate } from '@ayayaq/vivi/extensions/calculator'
 import { createMemoryService, createMemoryExtension, decodeMemories, encodeMemories, type MemoryPersistence, type MemoryMutation, type MemoryListResult, type MemoryToolCall } from '@ayayaq/vivi/extensions/memory'
+import {createSkillCatalog,createSkillsExtension,parseSkillDocument,skillCreatorSource, type SkillCatalog,type SkillDocument,type SkillSaveProposal,type SkillsExtensionHost} from '@ayayaq/vivi/extensions/skills'
+const skillDocument: SkillDocument = parseSkillDocument(skillCreatorSource.content)
+const skillCatalog: SkillCatalog = createSkillCatalog([skillCreatorSource])
+const skillsHost: SkillsExtensionHost = {catalog:skillCatalog,authorizeRead(request,{signal}){signal.throwIfAborted();return request.name.length>0},save:{authorize(proposal:SkillSaveProposal){return proposal.after.revision.length>0},commit(proposal,{signal}){signal.throwIfAborted();void proposal}}}
+const skillsExtension: ToolExtension = createSkillsExtension(skillsHost)
+// @ts-expect-error mandatory host read policy
+createSkillsExtension({catalog:skillCatalog})
+// @ts-expect-error save must have both approval and commit capabilities
+createSkillsExtension({catalog:skillCatalog,authorizeRead(){return true},save:{commit(){}}})
+void skillDocument;void skillsExtension
 import { normalizeModelCapabilities, reasoningSelectionSupport, type CapabilityInput, type ModelCapabilities, type Capability } from '@ayayaq/vivi/providers/models'
 const persistence: MemoryPersistence = {load(){return decodeMemories('{"version":1,"memories":[]}')},assertWritable(){},save(data){encodeMemories(data)}}
 const memoryService = createMemoryService(persistence)
@@ -361,6 +419,14 @@ import extensions = require('@ayayaq/vivi/extensions')
 import calculator = require('@ayayaq/vivi/extensions/calculator')
 import models = require('@ayayaq/vivi/providers/models')
 import memory = require('@ayayaq/vivi/extensions/memory')
+import skills = require('@ayayaq/vivi/extensions/skills')
+const skillCatalog: skills.SkillCatalog = skills.createSkillCatalog([skills.skillCreatorSource])
+const skillDocument: skills.SkillDocument = skills.parseSkillDocument(skills.skillCreatorSource.content)
+const skillsExtension: extensions.ToolExtension = skills.createSkillsExtension({catalog:skillCatalog,authorizeRead(){return true}})
+// @ts-expect-error mandatory host read policy
+skills.createSkillsExtension({catalog:skillCatalog})
+void skillDocument;void skillsExtension
+
 const memoryService: memory.MemoryService = memory.createMemoryService({load(){return {version:1,memories:[]}},assertWritable(){},save(data){memory.encodeMemories(data)}})
 const memoryList: Promise<memory.MemoryListResult> = memoryService.list()
 const memoryExtension: extensions.ToolExtension = memory.createMemoryExtension({async listMemories(){return {content:JSON.stringify(await memoryService.list())}},executeMutation(call: memory.MemoryToolCall){return {content:call.name,isError:true}}})
