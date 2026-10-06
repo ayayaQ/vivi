@@ -1,5 +1,18 @@
 # Release workflow
 
+## Prepared stable 0.5.0 candidate (unpublished)
+
+The optional shared memory extraction is merged at
+`4bcbe4579a0065e41c0563798349357a98da9587`. This checkout prepares the additive `0.5.0`
+release. It is not a publication record: `0.4.0` remains the latest verified registry release.
+The package includes the optional memory subpath; host adoption is still separate.
+
+After independent source review and final Node 22/24 checks, freeze one exact archive and keep
+its commit/tree, hashes, file list and verification receipt outside Git. The account holder
+performs npm authentication and publication using that archive. Verify the actual registry bytes
+and clean consumers before recording publication or integrating exact `0.5.0` in either host.
+Never replace any published version or upload a newly repacked checkout instead of that archive.
+
 ## Published stable 0.4.0
 
 **`@ayayaq/vivi@0.4.0` is published and verified**, with npm `latest` set to `0.4.0` on
@@ -53,10 +66,10 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The workflow below is the historical `0.4.0` example. For a future release, select a new version,
-update package/lock metadata and substitute that version in every archive and registry command,
-then repeat independent review and verification. Never publish new bytes as `0.4.0` or any
-earlier version; all published records and archives remain immutable.
+The workflow below prepares the unpublished `0.5.0` candidate. For a future release, select a
+new version, update package/lock metadata and substitute that version in every archive and registry command,
+then repeat independent review and verification. Never publish changed bytes under an already published
+version; all published records and archives remain immutable.
 
 ## Prepare and independently review
 
@@ -68,7 +81,7 @@ npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
 npm pack --json --pack-destination "$RELEASE_DIR"
-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.4.0.tgz"
+sha256sum "$RELEASE_DIR/ayayaq-vivi-0.5.0.tgz"
 git rev-parse HEAD HEAD^{tree}
 git status --short
 ```
@@ -87,7 +100,7 @@ Any source, metadata, documentation or archive change requires a new pack, hash 
 
 ## Account-holder publication
 
-Use the exact approved `ayayaq-vivi-0.4.0.tgz` and its supplied release record on your trusted
+Use the exact approved `ayayaq-vivi-0.5.0.tgz` and its supplied release record on your trusted
 computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
 Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
 or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
@@ -98,18 +111,18 @@ If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm
 npm login --auth-type=web --registry=https://registry.npmjs.org/
 npm whoami --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
-sha256sum ./ayayaq-vivi-0.4.0.tgz
+sha256sum ./ayayaq-vivi-0.5.0.tgz
 ```
 
-Match SHA-256 to the approved release record. If `0.4.0` already exists, stop and compare registry
+Match SHA-256 to the approved release record. If `0.5.0` already exists, stop and compare registry
 integrity and bytes before taking another action. Name/version pairs are immutable even after
 unpublication. Do not change the version or archive without another review.
 
 ```sh
-npm publish ./ayayaq-vivi-0.4.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+npm publish ./ayayaq-vivi-0.5.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This publishes all archive contents and updates `latest` to `0.4.0`. See
+This publishes all archive contents and updates `latest` to `0.5.0`. See
 [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
 A client-side failure can follow a successful upload; inspect the registry before retrying,
 and never substitute a newly packed working directory for the reviewed archive.
@@ -117,19 +130,19 @@ and never substitute a newly packed working directory for the reviewed archive.
 ## Verify registry bytes and integrate hosts
 
 ```sh
-npm view @ayayaq/vivi@0.4.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.5.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
-npm pack @ayayaq/vivi@0.4.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
-cmp ./ayayaq-vivi-0.4.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.4.0.tgz"
+npm pack @ayayaq/vivi@0.5.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+cmp ./ayayaq-vivi-0.5.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.5.0.tgz"
 ```
 
 Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
-`@ayayaq/vivi@0.4.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+`@ayayaq/vivi@0.5.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
 NodeNext declaration, extension/cache and headless-example checks. Record the verified release
 without repacking or replacing published bytes.
 
-Only then set exact `"@ayayaq/vivi": "0.4.0"` in authorized CLI/desktop changes and regenerate
+Only then set exact `"@ayayaq/vivi": "0.5.0"` in authorized CLI/desktop changes and regenerate
 lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
 preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
 Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local

@@ -1,8 +1,8 @@
 # Optional shared memory module
 
-The `@ayayaq/vivi/extensions/memory` subpath is a source-only extraction awaiting a separately
-reviewed release. Published `0.4.0` does not contain it. This change does not adopt it in either
-host, bump a version, publish a package, or migrate CLI session notes.
+The `@ayayaq/vivi/extensions/memory` subpath is prepared for stable `0.5.0`, awaiting
+account-holder publication and registry verification. Published `0.4.0` does not contain it.
+Host adoption remains a separately reviewed change; CLI session notes are not migrated.
 
 ## Domain contract
 
