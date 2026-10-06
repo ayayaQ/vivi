@@ -20,10 +20,10 @@ has two real hosts: desktop and CLI. Shared components are kept small and provid
 The root entry point remains free of provider transport, filesystem, terminal and app imports.
 Provider-specific entry points stay in the shared library package. The CLI is a separate simple
 project, consuming the exact shared-library npm release. It does not copy the
-loop or provider protocol. The core loop has no runtime dependency imports; the unreleased
+loop or provider protocol. The core loop has no runtime dependency imports; the prepared `0.6.0`
 optional instruction-only skills module separately loads maintained YAML for standard frontmatter.
 
-## Optional skills foundation (unreleased)
+## Optional skills foundation (0.6.0 release candidate)
 
 The shared SKILL.md format/parser, bounded immutable turn catalog, list/read tools, original
 creator and optional narrowly scoped save contract are provider/domain-neutral. Hosts explicitly

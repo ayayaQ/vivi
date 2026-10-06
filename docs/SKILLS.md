@@ -1,8 +1,9 @@
 # Optional instruction-only skills
 
-`@ayayaq/vivi/extensions/skills` is an unreleased, opt-in module. Published `0.5.0`
-does not contain it. This PR supplies a portable contract for both hosts; desktop/CLI
-adoption, app-wide stores, approval UI and a future package release are separate changes.
+`@ayayaq/vivi/extensions/skills` is prepared for stable `0.6.0`, awaiting account-holder
+publication and registry verification. Published `0.5.0` does not contain it. The portable
+contract is ready for both hosts; desktop/CLI adoption, app-wide stores and approval UI
+remain separate changes after verified publication.
 
 ## Format and interoperability
 

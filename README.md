@@ -54,7 +54,7 @@ planning mode, operation admission/drain, app-wide store paths and multi-process
 host-owned. See the [memory contract](docs/MEMORY.md) and [offline policy example](examples/memory.mjs).
 No host integration or session-note migration is included.
 
-## Optional instruction-only skills (unreleased)
+## Optional instruction-only skills (0.6.0 release candidate)
 
 The optional `@ayayaq/vivi/extensions/skills` module reads ordinary Agent Skills `SKILL.md`
 files, advertises a compact per-turn catalog, and loads instructions/resources on demand.
@@ -62,7 +62,7 @@ It includes an original read-only skill creator and an optional SKILL.md-only sa
 behind exact-content host approval and revision-checked persistence. Hosts choose approved
 sources, own their app-wide stores and apply existing permissions. No scripts/plugins execute,
 no workspace is scanned, and no current turn hot-reloads. This module is not in published
-`0.5.0`; desktop/CLI adoption and publication remain separate. See the
+`0.5.0`; `0.6.0` is prepared and not published. Desktop/CLI adoption follows verified publication. See the
 [format and host contract](docs/SKILLS.md) and [offline example](examples/skills.mjs).
 
 ## Small headless example

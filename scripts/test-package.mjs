@@ -59,6 +59,15 @@ try {
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
   assert.equal(manifest.license, 'Apache-2.0')
   assert.deepEqual(manifest.dependencies, {yaml:'2.9.1'})
+  const yamlManifest = JSON.parse(await readFile(join(temporary, 'node_modules/yaml/package.json'), 'utf8'))
+  assert.equal(yamlManifest.version, '2.9.1')
+  assert.equal(yamlManifest.license, 'ISC')
+  const yamlLicense = await readFile(join(temporary, 'node_modules/yaml/LICENSE'), 'utf8')
+  assert(yamlLicense.includes('Copyright Eemeli Aro'))
+  assert(yamlLicense.includes('Permission to use, copy, modify, and/or distribute'))
+  const consumerLock = JSON.parse(await readFile(join(temporary, 'package-lock.json'), 'utf8'))
+  assert.equal(consumerLock.packages['node_modules/yaml'].resolved, 'https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz')
+  assert.equal(consumerLock.packages['node_modules/yaml'].integrity, 'sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==')
   assert.deepEqual(manifest.exports['./providers/models'], {
     import: { types: './dist/providers/models.d.ts', default: './dist/providers/models.js' },
     require: { types: './dist/cjs/providers/models.d.ts', default: './dist/cjs/providers/models.js' }
