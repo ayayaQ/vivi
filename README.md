@@ -2,7 +2,8 @@
 
 A small, headless TypeScript tool-calling loop. `@ayayaq/vivi` provides messages, provider
 adapters, agent turns, and optional trusted tools. Your host owns approvals, credentials,
-storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS; no runtime dependencies.
+storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
+module loads the maintained YAML parser dependency.
 
 ## Install
 
@@ -52,6 +53,17 @@ and mandatory tool-policy callbacks; approvals,
 planning mode, operation admission/drain, app-wide store paths and multi-process locking remain
 host-owned. See the [memory contract](docs/MEMORY.md) and [offline policy example](examples/memory.mjs).
 No host integration or session-note migration is included.
+
+## Optional instruction-only skills (unreleased)
+
+The optional `@ayayaq/vivi/extensions/skills` module reads ordinary Agent Skills `SKILL.md`
+files, advertises a compact per-turn catalog, and loads instructions/resources on demand.
+It includes an original read-only skill creator and an optional SKILL.md-only save tool
+behind exact-content host approval and revision-checked persistence. Hosts choose approved
+sources, own their app-wide stores and apply existing permissions. No scripts/plugins execute,
+no workspace is scanned, and no current turn hot-reloads. This module is not in published
+`0.5.0`; desktop/CLI adoption and publication remain separate. See the
+[format and host contract](docs/SKILLS.md) and [offline example](examples/skills.mjs).
 
 ## Small headless example
 

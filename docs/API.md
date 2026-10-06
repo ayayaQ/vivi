@@ -1,5 +1,15 @@
 # API and host integration
 
+## Optional instruction-only skills (unreleased)
+
+The optional `@ayayaq/vivi/extensions/skills` subpath adds standard SKILL.md parsing,
+explicit host-supplied per-turn catalogs, list/read tools, an original bundled creator and
+an optional SKILL.md-only save capability. It is not in published `0.5.0`. It loads maintained
+YAML only when this subpath is imported; the registry and core loop remain unchanged.
+Hosts own approved roots, skill-store paths, approvals, revision-checked atomic persistence,
+diagnostics and context/history lifecycle. Skills do not execute scripts or grant permissions.
+See [the complete skills and interoperability contract](SKILLS.md).
+
 ## Trusted tool extensions (0.3.0)
 
 The optional `@ayayaq/vivi/extensions` subpath registers explicitly imported, trusted in-process

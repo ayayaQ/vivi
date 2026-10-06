@@ -1,5 +1,17 @@
 # Source attribution
 
+## Optional skills foundation
+
+The unreleased instruction-only skills module follows the public
+[Agent Skills specification](https://agentskills.io/specification), with name normalization
+checked against its [reference validator](https://github.com/agentskills/agentskills/blob/main/skills-ref/src/skills_ref/validator.py).
+The module, bundled creator and synthetic test fixtures are original Apache-2.0 work; no
+third-party skill bodies are copied. Optional frontmatter parsing uses the separately packaged
+[`yaml`](https://github.com/eemeli/yaml) dependency, licensed ISC. Its source/license remain
+in that installed dependency, rather than being vendored into vivi.
+
+## Initial shared core
+
 vivi's initial agent-loop design is extracted and generalized from Bot Commander Desktop by
 ayayaQ, specifically `src/main/services/agentService.ts` at commit
 `943e3f84f67e4415a899da8921db84639843c625`:
