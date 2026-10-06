@@ -1,7 +1,8 @@
 # Optional shared memory module
 
-The `@ayayaq/vivi/extensions/memory` subpath is prepared for stable `0.5.0`, awaiting
-account-holder publication and registry verification. Published `0.4.0` does not contain it.
+The `@ayayaq/vivi/extensions/memory` subpath is published in verified stable `0.5.0`.
+The actual registry archive matches the independently reviewed release bytes; immutable
+published `0.4.0` does not contain this subpath.
 Host adoption remains a separately reviewed change; CLI session notes are not migrated.
 
 ## Domain contract

@@ -6,14 +6,15 @@ storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS; no runtime de
 
 ## Install
 
-The latest verified npm release is `0.4.0`:
+The latest verified npm release is `0.5.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.4.0
+npm install --save-exact @ayayaq/vivi@0.5.0
 ```
 
-`0.4.0` includes trusted tool extensions, optional cache usage counts, and the optional model
-capability module. Registry bytes and clean ESM/CommonJS consumers were verified; see
+`0.5.0` includes trusted tool extensions, optional cache usage counts, the optional model
+capability module, and optional shared memory. Registry bytes and clean ESM/CommonJS consumers
+were verified; see
 [RELEASING.md](RELEASING.md).
 
 ## Optional model capabilities
@@ -42,11 +43,11 @@ and no request is changed. Hosts retain credentials, catalog fetching/cache, def
 and access policy. The [contract and provenance](CAPABILITIES.md) explains the bounded seed registry,
 paired host evidence, and the release/adoption gate.
 
-## Optional shared memory (0.5.0 release candidate)
+## Optional shared memory (published 0.5.0)
 
 The optional `@ayayaq/vivi/extensions/memory` module extracts the desktop v1 bounded memory
-service, codec, revisions, user-level context formatter and tool guidance. It is not in published
-`0.4.0`; `0.5.0` is prepared but has not been published. Hosts supply atomic persistence/recovery
+service, codec, revisions, user-level context formatter and tool guidance. It is published in
+verified `0.5.0` and absent from immutable `0.4.0`. Hosts supply atomic persistence/recovery
 and mandatory tool-policy callbacks; approvals,
 planning mode, operation admission/drain, app-wide store paths and multi-process locking remain
 host-owned. See the [memory contract](docs/MEMORY.md) and [offline policy example](examples/memory.mjs).

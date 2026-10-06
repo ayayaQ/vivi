@@ -1,17 +1,37 @@
 # Release workflow
 
-## Prepared stable 0.5.0 candidate (unpublished)
+## Published stable 0.5.0
 
-The optional shared memory extraction is merged at
-`4bcbe4579a0065e41c0563798349357a98da9587`. This checkout prepares the additive `0.5.0`
-release. It is not a publication record: `0.4.0` remains the latest verified registry release.
-The package includes the optional memory subpath; host adoption is still separate.
+**`@ayayaq/vivi@0.5.0` is published and verified**, with npm `latest` set to `0.5.0` on
+2026-10-06. Registry publication time is `2026-10-06T06:35:01.995Z`. The account holder
+published the exact independently reviewed archive. This record was prepared after the
+archive was frozen and published; do not repack this documentation checkout to replace it.
 
-After independent source review and final Node 22/24 checks, freeze one exact archive and keep
-its commit/tree, hashes, file list and verification receipt outside Git. The account holder
-performs npm authentication and publication using that archive. Verify the actual registry bytes
-and clean consumers before recording publication or integrating exact `0.5.0` in either host.
-Never replace any published version or upload a newly repacked checkout instead of that archive.
+- Merged release source: `b59f8631d6d0e8ce122e8b3c4d2bfff4220cd6dd`
+- Reviewed source commit: `4d8b57a76f1fcfc80a478e31ac1cab1bb2156baa`
+- Source tree: `0a2e746b592d039b6e9e6608c7a13ab80a7ba7ff`
+- Memory extraction: [PR #11](https://github.com/ayayaQ/vivi/pull/11)
+- Release preparation: [PR #12](https://github.com/ayayaQ/vivi/pull/12)
+- Archive: `ayayaq-vivi-0.5.0.tgz` (138 files, 120826 bytes)
+- SHA-256: `85bf71d012cbc79479130cbbe36980f4e20be5788c8e8d158af8b1fea2979ee5`
+- SHA-1: `917283a250b26934ab09030a8fac5952e442b04a`
+- Integrity: `sha512-9Y8PJF4EGKEJRfNoP1adJ3zhCe3mGebSl9bX3u6RmBPC6IOzflAo6wJyFeZV4JLsgFrfMzi0WrGMCYRbNeXPmA==`
+
+The actual registry archive matched the frozen archive byte-for-byte. A clean exact-name
+registry install on Node 24.19.0 matched all 138 installed files and passed all seven
+ESM/CommonJS export subpaths, mock streamed/nonstreamed cache usage, memory consumers,
+installed headless and memory examples, and strict NodeNext ESM/CommonJS declarations.
+The npm-generated lock contained the real registry URL and matching integrity. The exact-byte
+match also preserves the independent frozen-archive installed-file/runtime/declaration pass
+on Node 22.23.3. Full aggregate checks with 234 mock tests passed on Node 22/24 before the
+archive was frozen; the source suite was not redundantly rerun after publication.
+No live provider calls, credentials or npm authentication were used for verification.
+
+Hosts may now integrate exact registry `0.5.0`, regenerate lockfiles with npm and run separate
+host checks. Atomic persistence/recovery/durability notices, approvals, operation admission/drain
+and cross-process file transactions remain host-owned. Publication does not establish host
+integration, native platform readiness or CLI session-note migration. All immutable earlier
+published-release records and archives remain unchanged.
 
 ## Published stable 0.4.0
 
@@ -66,9 +86,10 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The workflow below prepares the unpublished `0.5.0` candidate. For a future release, select a
-new version, update package/lock metadata and substitute that version in every archive and registry command,
-then repeat independent review and verification. Never publish changed bytes under an already published
+The workflow below is a template for future releases. `0.5.0` is already published; do not
+run its publication command again. Select a new version, update package/lock metadata and
+substitute that version in every archive and registry command, then repeat independent review
+and verification. Never publish changed bytes under an already published
 version; all published records and archives remain immutable.
 
 ## Prepare and independently review
