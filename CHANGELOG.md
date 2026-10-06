@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (prepared; not yet published)
 
 - Add an optional shared instruction-only Agent Skills catalog/parser and list/read tools
 - Bundle an original portable skill creator and an optional host-approved, revision-checked
   SKILL.md-only save contract; hosts retain disk roots, approvals, atomic persistence and lifecycle
 - Cover bounded YAML, interoperability, lazy resources, stale/readonly/cancelled saves and packed
-  ESM/CommonJS declarations. No desktop/CLI adoption, executable plugins or publication included
+  ESM/CommonJS declarations; use maintained `yaml@2.9.1` (ISC) only in the optional skills module
+- Prepare the additive stable release. No desktop/CLI adoption, executable plugins or publication included
 
 ## 0.5.0 (2026-10-06)
 

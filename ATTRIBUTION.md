@@ -2,7 +2,7 @@
 
 ## Optional skills foundation
 
-The unreleased instruction-only skills module follows the public
+The instruction-only skills module prepared for `0.6.0` follows the public
 [Agent Skills specification](https://agentskills.io/specification), with name normalization
 checked against its [reference validator](https://github.com/agentskills/agentskills/blob/main/skills-ref/src/skills_ref/validator.py).
 The module, bundled creator and synthetic test fixtures are original Apache-2.0 work; no
