@@ -42,6 +42,15 @@ and no request is changed. Hosts retain credentials, catalog fetching/cache, def
 and access policy. The [contract and provenance](CAPABILITIES.md) explains the bounded seed registry,
 paired host evidence, and the release/adoption gate.
 
+## Optional shared memory (unreleased source)
+
+The optional `@ayayaq/vivi/extensions/memory` module extracts the desktop v1 bounded memory
+service, codec, revisions, user-level context formatter and tool guidance. It is not in published
+`0.4.0`. Hosts supply atomic persistence/recovery and mandatory tool-policy callbacks; approvals,
+planning mode, operation admission/drain, app-wide store paths and multi-process locking remain
+host-owned. See the [memory contract](docs/MEMORY.md) and [offline policy example](examples/memory.mjs).
+No host integration or session-note migration is included.
+
 ## Small headless example
 
 This example needs no terminal framework, app, provider key, or network request:

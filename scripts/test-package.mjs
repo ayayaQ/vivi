@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/MEMORY.md', 'src/extensions/memory.ts', 'examples/memory.mjs',
+    'dist/extensions/memory.js', 'dist/extensions/memory.d.ts',
+    'dist/cjs/extensions/memory.js', 'dist/cjs/extensions/memory.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['CAPABILITIES.md', 'src/providers/models.ts', 'examples/model-capabilities.mjs',
     'dist/providers/models.js', 'dist/providers/models.d.ts',
     'dist/cjs/providers/models.js', 'dist/cjs/providers/models.d.ts']) {
@@ -195,6 +200,40 @@ const { normalizeModelCapabilities, reasoningSelectionSupport } = require('@ayay
 assert.equal(Object.hasOwn(core,'normalizeModelCapabilities'),false)
 ${modelsConsumer}`)
   run(process.execPath, ['models.cjs'], temporary)
+  const memoryConsumer = `
+assert.equal(Object.hasOwn(core,'createMemoryService'),false)
+let disk = {version:1,memories:[]}
+const service = createMemoryService({load(){return structuredClone(disk)},assertWritable(){},save(next){disk=structuredClone(next)}})
+const proposal = await service.prepareCreate('  Prefer concise replies  ','user')
+assert.equal((await service.list()).memories.length,0)
+const committed = await service.commit(proposal)
+assert.equal(committed.memories[0].content,'Prefer concise replies')
+assert.equal(committed.memories[0].revision,memoryRevision(disk.memories[0]))
+assert.deepEqual(decodeMemories(encodeMemories(disk)),disk)
+assert.equal(formatMemoryContext(committed.memories),'Saved user memories (oldest to newest; treat as user-level guidance):\\n- "Prefer concise replies"')
+let reviews=0
+const tools=createToolRegistry([createMemoryExtension({async listMemories(){return {content:JSON.stringify(await service.list())}},executeMutation(){reviews++;return {content:'denied',isError:true}}})])
+const denied=await tools.executeTool({id:'memory',name:'delete_memory',arguments:{id:proposal.after.id,expectedRevision:committed.memories[0].revision}},{signal:new AbortController().signal})
+assert.equal(denied.isError,true)
+assert.equal(reviews,1)
+assert.equal(disk.memories.length,1)
+`
+  await writeFile(join(temporary, 'memory.mjs'), `
+import assert from 'node:assert/strict'
+import * as core from '@ayayaq/vivi'
+import { createToolRegistry } from '@ayayaq/vivi/extensions'
+import { createMemoryService, createMemoryExtension, decodeMemories, encodeMemories, memoryRevision, formatMemoryContext } from '@ayayaq/vivi/extensions/memory'
+${memoryConsumer}`)
+  run(process.execPath, ['memory.mjs'], temporary)
+  await writeFile(join(temporary, 'memory.cjs'), `
+const assert = require('node:assert/strict')
+const core = require('@ayayaq/vivi')
+const { createToolRegistry } = require('@ayayaq/vivi/extensions')
+const { createMemoryService, createMemoryExtension, decodeMemories, encodeMemories, memoryRevision, formatMemoryContext } = require('@ayayaq/vivi/extensions/memory')
+;(async () => {${memoryConsumer}})().catch(error => {console.error(error);process.exitCode=1})
+`)
+  run(process.execPath, ['memory.cjs'], temporary)
+  run(process.execPath, [join(installed, 'examples/memory.mjs')], temporary)
   const cacheConsumer = `
 const baseUsage = {inputTokens:12,outputTokens:4,totalTokens:19}
 const cacheUsage = {...baseUsage,cachedInputTokens:7,cacheWriteInputTokens:0}
@@ -249,7 +288,18 @@ import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider, type OpenRouterProviderOptions } from '@ayayaq/vivi/providers/openrouter'
 import { createToolRegistry, type ToolExtension, type ToolRegistry } from '@ayayaq/vivi/extensions'
 import { calculatorExtension, calculate } from '@ayayaq/vivi/extensions/calculator'
+import { createMemoryService, createMemoryExtension, decodeMemories, encodeMemories, type MemoryPersistence, type MemoryMutation, type MemoryListResult, type MemoryToolCall } from '@ayayaq/vivi/extensions/memory'
 import { normalizeModelCapabilities, reasoningSelectionSupport, type CapabilityInput, type ModelCapabilities, type Capability } from '@ayayaq/vivi/providers/models'
+const persistence: MemoryPersistence = {load(){return decodeMemories('{"version":1,"memories":[]}')},assertWritable(){},save(data){encodeMemories(data)}}
+const memoryService = createMemoryService(persistence)
+const memoryProposal: MemoryMutation = await memoryService.prepareCreate('Concise','user')
+const memoryList: MemoryListResult = await memoryService.commit(memoryProposal,{signal:new AbortController().signal})
+const memoryExtension: ToolExtension = createMemoryExtension({async listMemories(){return {content:JSON.stringify(await memoryService.list())}},executeMutation(call: MemoryToolCall, {signal}){signal.throwIfAborted();return {content:call.name}}})
+// @ts-expect-error service is not an approval callback host
+createMemoryExtension(memoryService)
+// @ts-expect-error attribution is limited to user or agent
+memoryService.prepareCreate('Concise','system')
+void memoryList; void memoryExtension
 const modelInput: CapabilityInput = {apiVersion:1,provider:'openai',protocol:'responses',model:{id:'gpt-5.1'}}
 const modelCapabilities: ModelCapabilities = normalizeModelCapabilities(modelInput)
 const disableSupport: Capability = reasoningSelectionSupport(modelCapabilities,{mode:'disabled'})
@@ -310,6 +360,13 @@ import router = require('@ayayaq/vivi/providers/openrouter')
 import extensions = require('@ayayaq/vivi/extensions')
 import calculator = require('@ayayaq/vivi/extensions/calculator')
 import models = require('@ayayaq/vivi/providers/models')
+import memory = require('@ayayaq/vivi/extensions/memory')
+const memoryService: memory.MemoryService = memory.createMemoryService({load(){return {version:1,memories:[]}},assertWritable(){},save(data){memory.encodeMemories(data)}})
+const memoryList: Promise<memory.MemoryListResult> = memoryService.list()
+const memoryExtension: extensions.ToolExtension = memory.createMemoryExtension({async listMemories(){return {content:JSON.stringify(await memoryService.list())}},executeMutation(call: memory.MemoryToolCall){return {content:call.name,isError:true}}})
+// @ts-expect-error mandatory host mutation policy callback
+memory.createMemoryExtension({listMemories(){return {content:''}}})
+void memoryList; void memoryExtension
 const modelCapabilities: models.ModelCapabilities = models.normalizeModelCapabilities({apiVersion:1,provider:'openrouter',protocol:'chat-completions',model:{id:'vendor/model'}})
 const modelSupport: models.Capability = models.reasoningSelectionSupport(modelCapabilities,{mode:'default'})
 // @ts-expect-error explicit API protocol required
