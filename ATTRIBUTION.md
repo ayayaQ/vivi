@@ -40,3 +40,13 @@ from the Apache-2.0 CLI `src/models.ts` at
 `ad31098bd6947411b659f57c0bb85cb129dfb894`. Exact source links, current official fact provenance,
 and paired consumer evidence are in `CAPABILITIES.md`. It does not copy either host's catalog
 fetch/cache, settings, UI, or desktop code into the shared module.
+
+The optional shared memory module generalizes `src/main/services/agentMemoryService.ts`,
+the memory types/tools, and the context formatter/guidance from Bot Commander Desktop at
+`67f4ce73a00f2072937b3a6e90f7f6b0ba3f8a2c`:
+
+https://github.com/ayayaQ/bot-commander-desktop/blob/67f4ce73a00f2072937b3a6e90f7f6b0ba3f8a2c/src/main/services/agentMemoryService.ts
+
+The copyright owner's shared-module authorization covers this separate Apache-2.0 extraction.
+Desktop atomic persistence, recovery, lifecycle, approval policy and UI are not copied.
+See `docs/MEMORY.md` for compatibility and host responsibilities.
