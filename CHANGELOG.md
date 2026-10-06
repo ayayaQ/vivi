@@ -1,13 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (prepared; not yet published)
 
 - Extract an optional shared bounded v1 memory service, codec, revision/context helpers and
   static tool pack behind mandatory host-policy callbacks
 - Preserve legacy stored records and revision bytes, queued stale checks, cancellation and
   commit-boundary semantics; keep atomic persistence, recovery, approvals and lifecycle in hosts
 - Add mock memory regressions and packed ESM/CommonJS/declaration coverage. No host adoption,
-  package version change, npm publication, or CLI session-note migration is included
+  npm publication or CLI session-note migration is included
 
 ## 0.4.0 (2026-10-05)
 
