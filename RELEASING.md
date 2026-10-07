@@ -1,5 +1,53 @@
 # Release workflow
 
+## Prepared 0.7.0, not yet published
+
+`@ayayaq/vivi@0.7.0` is the additive release candidate for optional decision review.
+Public registry metadata checked on 2026-10-07 still has `latest` at verified `0.6.0` and
+no `0.7.0`. The candidate is not a publication record. The decisions source was independently
+reviewed in [PR #17](https://github.com/ayayaQ/vivi/pull/17), merged at
+`6ed15d5ce4d47698a54f6f3e94193fe5a00749ec`; this preparation changes only version metadata
+and current release documentation. `yaml@2.9.1` remains the only runtime dependency, loaded
+only by optional skills. All earlier published archives and the records below are unchanged.
+
+Freeze the exact archive outside git after final aggregate checks on Node 22 and 24.
+The separate release record must contain the final source commit/tree, archive file list,
+SHA-256, SHA-1 and SHA-512 integrity, plus independent installed-file, ESM/CommonJS runtime,
+offline example and strict NodeNext declaration verification on both runtimes. Tests use
+mocked transports only; they do not establish real-model accuracy or threshold calibration.
+Any source, documentation, metadata or archive change requires a new pack, hashes and review.
+Do not commit the archive, vendor binaries, credentials or generated registry lock entries.
+
+After independent review and CI pass, the account holder uses the supplied frozen
+`ayayaq-vivi-0.7.0.tgz` and `PUBLISH.md` on a trusted computer. Complete npm browser login and
+security challenges personally. Do not share credentials, tokens, recovery codes or `.npmrc`.
+Confirm the publisher is `ayayaq` or an explicitly authorized maintainer, check the supplied
+SHA-256 and inspect public versions/tags. If `0.7.0` already exists, stop and compare exact
+registry bytes; if `latest` is newer, stop rather than move it backward. Never repack or
+change the version to bypass a conflict. npm name/version pairs are immutable.
+
+```sh
+npm login --auth-type=web --registry=https://registry.npmjs.org/
+npm whoami --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
+# Verify the archive SHA-256 against the supplied independent release record first.
+npm publish ./ayayaq-vivi-0.7.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+```
+
+That upload publishes the archive publicly and sets `latest` to `0.7.0`. If npm reports an
+error, inspect public registry state before retrying because an upload can succeed before a
+client-side failure. No npm authentication, credential creation or publication is performed
+by dot. See [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm-login/) and
+[npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/).
+
+After publication, retrieve the actual public `0.7.0` archive, compare exact bytes and all
+hashes, verify name/version and `latest`, and repeat clean exact-name installed-file,
+runtime/example and declaration checks on Node 22/24. Only then may authorized host changes
+adopt exact registry `0.7.0` and regenerate locks with npm. Hard policy, eligibility, privacy,
+approval UI, atomic revision checks, execution and audit remain host-owned. Publication alone
+does not establish host adoption or native platform readiness.
+
 ## Published stable 0.6.0
 
 **`@ayayaq/vivi@0.6.0` is published and verified**, with npm `latest` set to `0.6.0` on

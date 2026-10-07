@@ -7,7 +7,8 @@ module loads the maintained YAML parser dependency.
 
 ## Optional decision review
 
-This addition is unreleased source; no npm version change is included in it.
+This module is prepared for stable `0.7.0`, awaiting account-holder publication and
+registry verification. It is absent from published `0.6.0`; host adoption follows separately.
 
 `@ayayaq/vivi/decisions` provides frozen exact-action snapshots, `allow` / `ask` / `deny`
 recommendations, and dedicated OpenAI Decisions / OpenRouter Jev adapters. It never grants
@@ -17,14 +18,14 @@ with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
 
 ## Install
 
-The latest verified npm release is `0.5.0`:
+The latest verified npm release is `0.6.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.5.0
+npm install --save-exact @ayayaq/vivi@0.6.0
 ```
 
-`0.5.0` includes trusted tool extensions, optional cache usage counts, the optional model
-capability module, and optional shared memory. Registry bytes and clean ESM/CommonJS consumers
+`0.6.0` includes trusted tool extensions, optional cache usage counts, the optional model
+capability module, shared memory, and instruction-only skills. Registry bytes and clean ESM/CommonJS consumers
 were verified; see
 [RELEASING.md](RELEASING.md).
 
@@ -64,15 +65,15 @@ planning mode, operation admission/drain, app-wide store paths and multi-process
 host-owned. See the [memory contract](docs/MEMORY.md) and [offline policy example](examples/memory.mjs).
 No host integration or session-note migration is included.
 
-## Optional instruction-only skills (0.6.0 release candidate)
+## Optional instruction-only skills (published 0.6.0)
 
 The optional `@ayayaq/vivi/extensions/skills` module reads ordinary Agent Skills `SKILL.md`
 files, advertises a compact per-turn catalog, and loads instructions/resources on demand.
 It includes an original read-only skill creator and an optional SKILL.md-only save tool
 behind exact-content host approval and revision-checked persistence. Hosts choose approved
 sources, own their app-wide stores and apply existing permissions. No scripts/plugins execute,
-no workspace is scanned, and no current turn hot-reloads. This module is not in published
-`0.5.0`; `0.6.0` is prepared and not published. Desktop/CLI adoption follows verified publication. See the
+no workspace is scanned, and no current turn hot-reloads. This module is published in verified `0.6.0` and absent from immutable
+`0.5.0`. Desktop/CLI adoption remains separately reviewed. See the
 [format and host contract](docs/SKILLS.md) and [offline example](examples/skills.mjs).
 
 ## Small headless example

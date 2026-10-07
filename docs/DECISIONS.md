@@ -1,6 +1,8 @@
 # Optional decision review
 
-This module is an unreleased source addition and does not change the package version.
+This module is prepared for stable `0.7.0`, awaiting account-holder publication and
+registry verification. Published `0.6.0` does not contain it. Host adoption remains
+a separate reviewed change after exact registry bytes and consumers are verified.
 
 Import `@ayayaq/vivi/decisions` for frozen review requests, fail-closed normalization,
 and dedicated OpenAI/OpenRouter decision providers. The existing agent loop and generation

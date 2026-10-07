@@ -1,19 +1,21 @@
 # API and host integration
 
-## Optional decisions entry point
+## Optional decisions entry point (0.7.0 release candidate)
 
 `@ayayaq/vivi/decisions` exports `createDecisionRequest`, `evaluateDecision`,
 `isDecisionCurrent`, `createOpenAIDecisionProvider`, `createOpenRouterDecisionProvider`,
 `DecisionConfigurationError`, and the decision types/limits. It is independent of `runAgent`
 and grants no execution authority. See [DECISIONS.md](DECISIONS.md) for the snapshot contract,
 threshold semantics, cancellation, failure reasons, privacy, and host responsibilities.
+It is prepared for `0.7.0` and absent from published `0.6.0`; publication and host adoption
+remain separate gates.
 
-## Optional instruction-only skills (0.6.0 release candidate)
+## Optional instruction-only skills (published 0.6.0)
 
 The optional `@ayayaq/vivi/extensions/skills` subpath adds standard SKILL.md parsing,
 explicit host-supplied per-turn catalogs, list/read tools, an original bundled creator and
-an optional SKILL.md-only save capability. It is prepared for `0.6.0`, not yet published,
-and absent from published `0.5.0`. It loads maintained
+an optional SKILL.md-only save capability. It is published in verified `0.6.0`
+and absent from immutable `0.5.0`. It loads maintained
 YAML only when this subpath is imported; the registry and core loop remain unchanged.
 Hosts own approved roots, skill-store paths, approvals, revision-checked atomic persistence,
 diagnostics and context/history lifecycle. Skills do not execute scripts or grant permissions.
