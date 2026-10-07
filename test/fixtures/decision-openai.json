@@ -1,0 +1,21 @@
+{
+  "attribution": {
+    "source": "https://developers.openai.com/api/reference/resources/decisions/methods/create",
+    "accessed": "2026-10-07",
+    "licenseNote": "Synthetic offline fixtures authored for this project; only the public API field structure is derived from the cited reference. No production request, response, credentials, or hidden reasoning is included."
+  },
+  "response": {
+    "model": "gpt-6-luna",
+    "answers": [
+      { "name": "scope", "type": "predicate", "probability": 0.99 },
+      { "name": "resource", "type": "predicate", "probability": 0.98 }
+    ],
+    "usage": {
+      "input_tokens": 20,
+      "output_tokens": 4,
+      "total_tokens": 24,
+      "input_tokens_details": { "cached_tokens": 5, "cache_write_tokens": 2 },
+      "output_tokens_details": { "reasoning_tokens": 1 }
+    }
+  }
+}

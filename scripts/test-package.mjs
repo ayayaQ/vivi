@@ -25,6 +25,12 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/DECISIONS.md', 'src/decisions.ts', 'src/decisions/evaluate.ts',
+    'src/decisions/providers.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts',
+    'examples/decisions.mjs', 'dist/decisions.js', 'dist/decisions.d.ts',
+    'dist/cjs/decisions.js', 'dist/cjs/decisions.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/SKILLS.md', 'src/extensions/skills.ts', 'src/extensions/skills-creator.ts',
     'skills/skill-creator/SKILL.md', 'examples/skills.mjs', 'dist/extensions/skills.js',
     'dist/extensions/skills.d.ts', 'dist/cjs/extensions/skills.js', 'dist/cjs/extensions/skills.d.ts']) {
@@ -56,6 +62,11 @@ try {
   assert.equal(packed.filename, `ayayaq-vivi-${sourceManifest.version}.tgz`)
   assert.equal(manifest.publishConfig.access, 'public')
   assert.deepEqual(manifest.exports, sourceManifest.exports)
+  assert.deepEqual(manifest.exports['./decisions'], {
+    import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
+    require: { types: './dist/cjs/decisions.d.ts', default: './dist/cjs/decisions.js' }
+  })
+  run(process.execPath, [join(installed, 'examples/decisions.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
   assert.equal(manifest.license, 'Apache-2.0')
   assert.deepEqual(manifest.dependencies, {yaml:'2.9.1'})
@@ -477,6 +488,46 @@ const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: []
 void result
 `)
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', 'consumer.cts'], temporary)
+  for (const [extension, importLine] of [
+    ['mjs', "import * as decisions from '@ayayaq/vivi/decisions'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const decisions = require('@ayayaq/vivi/decisions')\nconst assert = require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `decision-consumer.${extension}`), `${importLine}
+;(async () => {
+  const snapshot = {sessionId:'package-session',runId:'package-run',toolCall:{id:'call-1',name:'memory_add',arguments:{text:'Tea'}},userRequest:{id:'request-1',text:'Remember tea',approvedScope:{operation:'remember'}},policyRevision:'policy-1',resourceRevisions:{memory:1},inputData:null}
+  const request = decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scope',instructions:'Matches request?',trueDescription:'Matches',falseDescription:'Outside scope',allowAt:0.95,denyAt:0.05}]})
+  const provider = {id:'openai',model:'gpt-6-luna',async evaluate(){return {model:'gpt-6-luna',answers:[{name:'scope',type:'predicate',probability:0.99}],usage:{inputTokens:1,outputTokens:0}}}}
+  const result = await decisions.evaluateDecision(request, provider)
+  assert.equal(result.outcome, 'allow')
+  assert.equal(decisions.isDecisionCurrent(result, snapshot), true)
+  assert.equal(decisions.isDecisionCurrent({...result}, snapshot), false)
+  assert.equal(typeof decisions.createOpenAIDecisionProvider, 'function')
+  assert.equal(typeof decisions.createOpenRouterDecisionProvider, 'function')
+})().catch(error => { console.error(error); process.exitCode = 1 })
+`)
+    run(process.execPath, [`decision-consumer.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mts', "import * as decisions from '@ayayaq/vivi/decisions'"],
+    ['cts', "import decisions = require('@ayayaq/vivi/decisions')"]
+  ]) {
+    await writeFile(join(temporary, `decision-types.${extension}`), `${importLine}
+const snapshot: decisions.DecisionSnapshot = {sessionId:'s',runId:'r',toolCall:{id:'c',name:'memory_add',arguments:{}},userRequest:{id:'u',text:'Remember tea',approvedScope:{}},policyRevision:'p',resourceRevisions:{memory:1},inputData:null}
+const request: decisions.DecisionRequest = decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scope',instructions:'Matches?',trueDescription:'Matches',falseDescription:'Does not',allowAt:0.95}]})
+// @ts-expect-error snapshot is immutable
+request.snapshot.runId = 'changed'
+// @ts-expect-error explicit provider calibration is required
+decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scope',instructions:'Matches?',trueDescription:'Matches',falseDescription:'Does not'}]})
+// @ts-expect-error requests cannot select authentication destinations
+decisions.createOpenAIDecisionProvider({apiKey:'fake',baseURL:'https://example.test'})
+// @ts-expect-error generation is a separate protocol
+decisions.createOpenRouterDecisionProvider({apiKey:'fake',model:'chat-model'})
+const provider: decisions.DecisionProvider = decisions.createOpenAIDecisionProvider({apiKey:async()=> 'fake',timeoutMs:1000,fetch:globalThis.fetch})
+const result: Promise<decisions.DecisionResult> = decisions.evaluateDecision(request, provider, {signal:new AbortController().signal})
+void result.then(result => { const outcome: decisions.DecisionOutcome = result.outcome; const current: boolean = decisions.isDecisionCurrent(result,snapshot); void outcome;void current })
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `decision-types.${extension}`], temporary)
+  }
   console.log(`Packaged ESM/CommonJS runtime and TypeScript consumers passed (${packed.filename})`)
   console.log(`sha256 ${sha256}`)
   console.log(`integrity ${packed.integrity}`)

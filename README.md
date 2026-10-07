@@ -5,6 +5,16 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
+## Optional decision review
+
+This addition is unreleased source; no npm version change is included in it.
+
+`@ayayaq/vivi/decisions` provides frozen exact-action snapshots, `allow` / `ask` / `deny`
+recommendations, and dedicated OpenAI Decisions / OpenRouter Jev adapters. It never grants
+permissions or executes tools. Host rules, eligibility, privacy, manual review, and audit stay
+with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
+[`examples/decisions.mjs`](examples/decisions.mjs) before adopting it.
+
 ## Install
 
 The latest verified npm release is `0.5.0`:

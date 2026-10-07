@@ -1,5 +1,13 @@
 # API and host integration
 
+## Optional decisions entry point
+
+`@ayayaq/vivi/decisions` exports `createDecisionRequest`, `evaluateDecision`,
+`isDecisionCurrent`, `createOpenAIDecisionProvider`, `createOpenRouterDecisionProvider`,
+`DecisionConfigurationError`, and the decision types/limits. It is independent of `runAgent`
+and grants no execution authority. See [DECISIONS.md](DECISIONS.md) for the snapshot contract,
+threshold semantics, cancellation, failure reasons, privacy, and host responsibilities.
+
 ## Optional instruction-only skills (0.6.0 release candidate)
 
 The optional `@ayayaq/vivi/extensions/skills` subpath adds standard SKILL.md parsing,
