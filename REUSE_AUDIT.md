@@ -20,10 +20,10 @@ has two real hosts: desktop and CLI. Shared components are kept small and provid
 The root entry point remains free of provider transport, filesystem, terminal and app imports.
 Provider-specific entry points stay in the shared library package. The CLI is a separate simple
 project, consuming the exact shared-library npm release. It does not copy the
-loop or provider protocol. The core loop has no runtime dependency imports; the prepared `0.6.0`
+loop or provider protocol. The core loop has no runtime dependency imports; the published `0.6.0`
 optional instruction-only skills module separately loads maintained YAML for standard frontmatter.
 
-## Optional skills foundation (0.6.0 release candidate)
+## Optional skills foundation (published 0.6.0)
 
 The shared SKILL.md format/parser, bounded immutable turn catalog, list/read tools, original
 creator and optional narrowly scoped save contract are provider/domain-neutral. Hosts explicitly
@@ -31,6 +31,16 @@ choose sources and retain app-wide filesystem stores, scanning/resource containm
 revision-checked atomic writes, operation admission/drain and future-turn activation. Neither
 desktop nor CLI adoption is included. This is an instruction-only module, not a plugin runtime
 or security boundary. See [the interoperability and host contract](docs/SKILLS.md).
+
+## Optional decisions foundation (0.7.0 release candidate)
+
+The optional `@ayayaq/vivi/decisions` subpath supplies bounded frozen exact-action snapshots,
+host-authored predicate checks, explicit provider-specific thresholds and fail-closed
+recommendations through dedicated OpenAI Decisions and OpenRouter Jev transports. It is
+prepared for `0.7.0` and absent from published `0.6.0`. Hard policy, eligibility, privacy,
+manual review UI, resource locking/revision rechecks, execution and audit storage remain
+host-owned. Mock protocol/safety tests establish implementation behavior, not real-model
+accuracy or threshold calibration. See [the decision contract](docs/DECISIONS.md).
 
 ## Reviewed and kept host-owned
 

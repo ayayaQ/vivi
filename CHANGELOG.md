@@ -1,13 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 (prepared; not yet published)
 
 - Add an optional `@ayayaq/vivi/decisions` module with frozen exact-action/request/revision
   binding, host-authored named requirements, explicit provider-specific thresholds,
   fail-closed `allow` / `ask` / `deny` recommendations, deadlines/cancellation, coded reasons,
   and dedicated OpenAI Decisions / OpenRouter Jev adapters
-- Add mocked wire/safety tests and an offline shadow-review example; no host approval policy,
-  automatic execution, npm version change, or live API calls
+- Add mocked wire/safety tests, packed ESM/CommonJS/declaration consumers and an offline
+  shadow-review example; no host approval policy, automatic execution, or live API calls
+- Prepare the additive stable release; account-holder publication and registry verification
+  remain pending, and desktop/CLI adoption remains separately reviewed
 
 ## 0.6.0 (prepared; not yet published)
 

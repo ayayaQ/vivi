@@ -1,9 +1,8 @@
 # Optional instruction-only skills
 
-`@ayayaq/vivi/extensions/skills` is prepared for stable `0.6.0`, awaiting account-holder
-publication and registry verification. Published `0.5.0` does not contain it. The portable
-contract is ready for both hosts; desktop/CLI adoption, app-wide stores and approval UI
-remain separate changes after verified publication.
+`@ayayaq/vivi/extensions/skills` is published in verified stable `0.6.0` and absent from
+immutable `0.5.0`. The portable contract is ready for both hosts; desktop/CLI adoption,
+app-wide stores and approval UI remain separately reviewed host changes.
 
 ## Format and interoperability
 
