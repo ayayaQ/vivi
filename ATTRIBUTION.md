@@ -62,3 +62,10 @@ https://github.com/ayayaQ/bot-commander-desktop/blob/67f4ce73a00f2072937b3a6e90f
 The copyright owner's shared-module authorization covers this separate Apache-2.0 extraction.
 Desktop atomic persistence, recovery, lifecycle, approval policy and UI are not copied.
 See `docs/MEMORY.md` for compatibility and host responsibilities.
+
+## Optional decision review
+
+The optional `src/decisions*` module is original implementation for this repository.
+Its wire schemas were checked against the official OpenAI Decisions and OpenRouter Jev
+references listed in `docs/DECISIONS.md` on October 7, 2026. No vendor SDK or cookbook
+implementation was copied or bundled. Tests use attributed, synthetic protocol fixtures.

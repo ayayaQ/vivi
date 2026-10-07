@@ -97,6 +97,16 @@
         "types": "./dist/cjs/extensions/skills.d.ts",
         "default": "./dist/cjs/extensions/skills.js"
       }
+    },
+    "./decisions": {
+      "import": {
+        "types": "./dist/decisions.d.ts",
+        "default": "./dist/decisions.js"
+      },
+      "require": {
+        "types": "./dist/cjs/decisions.d.ts",
+        "default": "./dist/cjs/decisions.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
@@ -122,7 +132,7 @@
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs",
+    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs",
     "test:package": "npm run build && node scripts/test-package.mjs"
   },
   "devDependencies": {

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add an optional `@ayayaq/vivi/decisions` module with frozen exact-action/request/revision
+  binding, host-authored named requirements, explicit provider-specific thresholds,
+  fail-closed `allow` / `ask` / `deny` recommendations, deadlines/cancellation, coded reasons,
+  and dedicated OpenAI Decisions / OpenRouter Jev adapters
+- Add mocked wire/safety tests and an offline shadow-review example; no host approval policy,
+  automatic execution, npm version change, or live API calls
+
 ## 0.6.0 (prepared; not yet published)
 
 - Add an optional shared instruction-only Agent Skills catalog/parser and list/read tools
