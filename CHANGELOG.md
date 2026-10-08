@@ -1,13 +1,15 @@
 # Changelog
 
-## 0.8.0 (prepared; not yet published)
+## 0.8.0 (2026-10-08)
 
 - Add optional host-prepared effect metadata and deterministic review routing to `/decisions`
 - Bind concrete targets, affected-data evidence, and trusted classifications to existing frozen
   snapshots/currentness; keep access, privacy, target resolution, and execution in hosts
 - Cover mixed/unknown effects, exact stale metadata, and offline ESM/CommonJS/type consumers;
   no filesystem tool or host integration included
-- Prepare the additive release; account-holder publication and exact registry verification remain pending
+- Publish the exact reviewed archive; registry bytes, all 215 installed files, nine ESM/CommonJS
+  subpaths, strict NodeNext declarations and 63 installed decisions/routing tests pass on Node 22/24
+- Host adoption remains separately reviewed; mock checks do not calibrate live models
 
 ## 0.7.0 (2026-10-08)
 

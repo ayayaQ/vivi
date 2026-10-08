@@ -16,21 +16,21 @@ permissions or executes tools. Host rules, eligibility, privacy, manual review, 
 with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
 [`examples/decisions.mjs`](examples/decisions.mjs) before adopting it.
 
-Prepared `0.8.0` adds optional host-prepared effect metadata and pure review routing on the
-same subpath. It is not yet published and adds no filesystem tools, permissions, or host
-integration; see [the contract](docs/DECISIONS.md#prepared-action-routing-prepared-080).
+Verified `0.8.0` adds optional host-prepared effect metadata and pure review routing on the
+same subpath. Host adoption remains separately reviewed; see
+[the contract](docs/DECISIONS.md#prepared-action-routing-published-080).
 
 ## Install
 
-The latest verified npm release is `0.7.0`:
+The latest verified npm release is `0.8.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.7.0
+npm install --save-exact @ayayaq/vivi@0.8.0
 ```
 
-`0.7.0` includes optional decision review, trusted tool extensions, optional cache usage
-counts, model capabilities, shared memory, and instruction-only skills. Exact registry bytes,
-all 206 installed files, ESM/CommonJS consumers and strict NodeNext declarations were verified; see
+`0.8.0` includes prepared-action routing, optional decision review, trusted tool extensions,
+cache usage counts, model capabilities, memory, and skills. Exact registry bytes, all 215
+installed files, ESM/CommonJS consumers and strict NodeNext declarations were verified; see
 [RELEASING.md](RELEASING.md).
 
 ## Optional model capabilities
