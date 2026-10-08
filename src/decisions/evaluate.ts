@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 ayayaQ
 import { ProviderRequestError } from '../providers/transport.js'
-import { canonical, copyJson, invalid, keys, MAX_DECISION_CHECKS, probability, record, text } from './validation.js'
+import { canonical, copyJson, invalid, keys, MAX_DECISION_CHECKS, probability, record, text, validateSnapshot } from './validation.js'
 import type {
   DecisionCheckResult, DecisionPolicy, DecisionProvider, DecisionProviderId, DecisionReasonCode,
   DecisionRequest, DecisionResult, DecisionSnapshot, DecisionUsage, EvaluateDecisionOptions
@@ -19,14 +19,7 @@ export function supportedModel(provider: DecisionProviderId, model: unknown): mo
 export function createDecisionRequest(snapshot: DecisionSnapshot, policy: DecisionPolicy): DecisionRequest {
   const copied = copyJson({ snapshot, policy })
   if (!record(copied) || !record(copied.snapshot) || !record(copied.policy)) invalid()
-  const state = copied.snapshot
-  if (!keys(state, ['sessionId', 'runId', 'toolCall', 'userRequest', 'policyRevision', 'resourceRevisions', 'inputData']) ||
-      !text(state.sessionId, 256) || !text(state.runId, 256) || !text(state.policyRevision, 256) ||
-      !record(state.resourceRevisions) || !record(state.toolCall) || !record(state.userRequest)) invalid()
-  if (!keys(state.toolCall, ['id', 'name', 'arguments']) || !text(state.toolCall.id, 256) ||
-      !text(state.toolCall.name, 256) || !record(state.toolCall.arguments)) invalid()
-  if (!keys(state.userRequest, ['id', 'text', 'approvedScope']) || !text(state.userRequest.id, 256) ||
-      !text(state.userRequest.text)) invalid()
+  validateSnapshot(copied.snapshot)
   const config = copied.policy
   if (!keys(config, ['provider', 'checks']) || (config.provider !== 'openai' && config.provider !== 'openrouter') ||
       !Array.isArray(config.checks) || config.checks.length < 1 || config.checks.length > MAX_DECISION_CHECKS) invalid()
