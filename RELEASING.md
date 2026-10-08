@@ -1,27 +1,36 @@
 # Release workflow
 
-## Prepared stable 0.8.0 (not yet published)
+## Published stable 0.8.0
 
-`@ayayaq/vivi@0.8.0` prepares the additive host-authored effect metadata and pure
-`routePreparedAction` helper from [PR #20](https://github.com/ayayaQ/vivi/pull/20), merged
-at `94f1a8a1d5b89b546e25dc547dcea7fc550b85c0` (tree
-`acbd0974d35961506f9b95e7fad441c454170f8b`). The nine public subpaths and exact
-`yaml@2.9.1` dependency are unchanged. Existing snapshots without metadata retain their
-Decisions behavior. No filesystem tool, access permission, or host adoption is included.
+**`@ayayaq/vivi@0.8.0` is published and verified**, with npm `latest` observed at
+`0.8.0` on 2026-10-08. Registry publication time: `2026-10-08T07:42:38.290Z`.
+The actual public registry archive equals the independently reviewed frozen archive byte-for-byte.
 
-Public npm `latest` remains verified `0.7.0`. Freeze the final reviewed `0.8.0` source
-only after full Node 22/24 checks, then independently verify the exact archive's source,
-file bytes, all nine ESM/CommonJS exports, examples, new metadata/routing behavior and
-strict NodeNext declarations. Keep its source commit/tree, complete file list and
-SHA-256/SHA-1/SHA-512 identity in a separate release record, outside the package.
+- Tarball: [`vivi-0.8.0.tgz`](https://registry.npmjs.org/@ayayaq/vivi/-/vivi-0.8.0.tgz), **188,799 bytes, 215 files**
+- SHA-256: `821703c1a4d5d5c484182556de30ec4611c76c808744b8a39924402c6babaf64`
+- SHA-1: `fb5a08da2f48e58810020e4ae2fca08fafadd34f`
+- Integrity: `sha512-8uyVIES42ZYSYKvmrU53WdVVFpu6TtWACBR1DVDv4p6hvvbRLkxRRHJlInT6virfrowhl4gYcIqbvSbny3Cjog==`
+- Reviewed/merged source: `dec635f09a5f259fb8d203f9aab6f516e923825f`
+- Reviewed source tree: `8fc296bd6f5c4ff896b9ff15e0b11616513711b8`
+- Prepared-action foundation: [PR #20](https://github.com/ayayaQ/vivi/pull/20);
+  frozen release preparation: [PR #21](https://github.com/ayayaQ/vivi/pull/21)
 
-The account holder publishes that exact frozen archive, completing browser login and
-security challenges personally. Use the account-holder workflow below; stop if `0.8.0`
-already exists or `latest` is newer. Do not rebuild, repack, create a token, or change the
-version to bypass a conflict. Actual public registry bytes, tags and clean installed
-consumers must be verified before separately reviewed host adoption. Mock checks do not
-calibrate live models; access, privacy, target resolution and atomic execution stay in hosts.
-All earlier published records and archives remain unchanged.
+Version metadata, tags, full archive bytes, and all 215 file hashes/size/modes match the
+reviewed identity. Exact `yaml@2.9.1` and its registry integrity are unchanged. Separate
+fresh exact-name registry installs on Node **22.23.3** and **24.19.0** resolve the public
+`0.8.0` URL and reviewed integrity; all 215 installed files match. Nine public subpaths
+pass ESM/CommonJS runtime and strict NodeNext declarations, all six offline examples and
+mocked consumers pass, and 63 installed decisions/prepared-routing tests pass in each of
+ESM and CommonJS on both runtimes.
+
+The additive host-authored effect metadata and pure `routePreparedAction` helper grant no
+access or execution authority. Host adoption remains separately reviewed; privacy, target
+resolution, hard policy and atomic execution stay host-owned. Mock checks do not establish
+live-model accuracy or threshold calibration. No live provider calls or npm authentication/
+publication were performed by this verification.
+
+The immutable npm archive retains its preparation documentation. This postpublication
+record does not repack or replace it. Earlier published records and archives remain unchanged.
 
 ## Published stable 0.7.0
 

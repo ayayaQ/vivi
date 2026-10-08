@@ -61,11 +61,12 @@ must update the corresponding snapshot revisions.
 Results have process-local binding: serializing, cloning, or reconstructing a result removes
 that binding. Do not persist a recommendation and later treat it as an approval token.
 
-## Prepared-action routing (prepared 0.8.0)
+## Prepared-action routing (published 0.8.0)
 
 The optional `DecisionSnapshot.preparedAction` field and `routePreparedAction(snapshot)`
-helper are prepared for `0.8.0`, not yet published and absent from immutable `0.7.0`.
-Host adoption remains separately reviewed. Snapshots without this field keep the existing
+helper are published in verified `0.8.0` and absent from immutable `0.7.0`; see the
+[release record](../RELEASING.md). Host adoption remains separately reviewed.
+Snapshots without this field keep the existing
 Decisions behavior; the new helper routes them to `manual` with `missing_metadata`.
 
 Use one exact snapshot for preparation, routing, review, and the host's commit-time

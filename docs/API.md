@@ -10,11 +10,11 @@ threshold semantics, cancellation, failure reasons, privacy, and host responsibi
 It is published in verified stable `0.7.0` and absent from immutable `0.6.0`; exact registry
 bytes and clean consumers are verified. Host adoption remains separately reviewed.
 
-Prepared `0.8.0` additions (not yet published; absent from `0.7.0`): optional `DecisionSnapshot.preparedAction`,
+Verified `0.8.0` additions (absent from immutable `0.7.0`): optional `DecisionSnapshot.preparedAction`,
 `PreparedActionEffect`, `PreparedActionMetadata`, `PreparedActionRoute`, and pure
 `routePreparedAction`. These reuse the exact snapshot/freeze/currentness contract and route
 trusted host classifications to `auto-read`, `model-review`, `manual`, or `blocked`.
-See [prepared-action routing](DECISIONS.md#prepared-action-routing-prepared-080); hosts keep
+See [prepared-action routing](DECISIONS.md#prepared-action-routing-published-080); hosts keep
 access, evidence privacy, resolution, and commit authority.
 
 ## Optional instruction-only skills (published 0.6.0)
