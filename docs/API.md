@@ -1,14 +1,14 @@
 # API and host integration
 
-## Optional decisions entry point (0.7.0 release candidate)
+## Optional decisions entry point (published 0.7.0)
 
 `@ayayaq/vivi/decisions` exports `createDecisionRequest`, `evaluateDecision`,
 `isDecisionCurrent`, `createOpenAIDecisionProvider`, `createOpenRouterDecisionProvider`,
 `DecisionConfigurationError`, and the decision types/limits. It is independent of `runAgent`
 and grants no execution authority. See [DECISIONS.md](DECISIONS.md) for the snapshot contract,
 threshold semantics, cancellation, failure reasons, privacy, and host responsibilities.
-It is prepared for `0.7.0` and absent from published `0.6.0`; publication and host adoption
-remain separate gates.
+It is published in verified stable `0.7.0` and absent from immutable `0.6.0`; exact registry
+bytes and clean consumers are verified. Host adoption remains separately reviewed.
 
 ## Optional instruction-only skills (published 0.6.0)
 

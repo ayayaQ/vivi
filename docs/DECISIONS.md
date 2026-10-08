@@ -1,8 +1,8 @@
 # Optional decision review
 
-This module is prepared for stable `0.7.0`, awaiting account-holder publication and
-registry verification. Published `0.6.0` does not contain it. Host adoption remains
-a separate reviewed change after exact registry bytes and consumers are verified.
+This module is published in verified stable `0.7.0` and absent from immutable `0.6.0`.
+Exact registry bytes and clean Node 22/24 consumers are verified; see the
+[release record](../RELEASING.md). Host adoption remains a separate reviewed change.
 
 Import `@ayayaq/vivi/decisions` for frozen review requests, fail-closed normalization,
 and dedicated OpenAI/OpenRouter decision providers. The existing agent loop and generation

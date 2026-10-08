@@ -32,12 +32,13 @@ revision-checked atomic writes, operation admission/drain and future-turn activa
 desktop nor CLI adoption is included. This is an instruction-only module, not a plugin runtime
 or security boundary. See [the interoperability and host contract](docs/SKILLS.md).
 
-## Optional decisions foundation (0.7.0 release candidate)
+## Optional decisions foundation (published 0.7.0)
 
 The optional `@ayayaq/vivi/decisions` subpath supplies bounded frozen exact-action snapshots,
 host-authored predicate checks, explicit provider-specific thresholds and fail-closed
 recommendations through dedicated OpenAI Decisions and OpenRouter Jev transports. It is
-prepared for `0.7.0` and absent from published `0.6.0`. Hard policy, eligibility, privacy,
+published in verified stable `0.7.0` and absent from immutable `0.6.0`. Exact registry bytes
+and clean consumers are verified; host adoption remains separate. Hard policy, eligibility, privacy,
 manual review UI, resource locking/revision rechecks, execution and audit storage remain
 host-owned. Mock protocol/safety tests establish implementation behavior, not real-model
 accuracy or threshold calibration. See [the decision contract](docs/DECISIONS.md).

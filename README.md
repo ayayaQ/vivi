@@ -7,8 +7,8 @@ module loads the maintained YAML parser dependency.
 
 ## Optional decision review
 
-This module is prepared for stable `0.7.0`, awaiting account-holder publication and
-registry verification. It is absent from published `0.6.0`; host adoption follows separately.
+This module is published in verified stable `0.7.0` and absent from immutable `0.6.0`.
+Exact registry bytes and clean Node 22/24 consumers are verified; host adoption follows separately.
 
 `@ayayaq/vivi/decisions` provides frozen exact-action snapshots, `allow` / `ask` / `deny`
 recommendations, and dedicated OpenAI Decisions / OpenRouter Jev adapters. It never grants
@@ -18,15 +18,15 @@ with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
 
 ## Install
 
-The latest verified npm release is `0.6.0`:
+The latest verified npm release is `0.7.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.6.0
+npm install --save-exact @ayayaq/vivi@0.7.0
 ```
 
-`0.6.0` includes trusted tool extensions, optional cache usage counts, the optional model
-capability module, shared memory, and instruction-only skills. Registry bytes and clean ESM/CommonJS consumers
-were verified; see
+`0.7.0` includes optional decision review, trusted tool extensions, optional cache usage
+counts, model capabilities, shared memory, and instruction-only skills. Exact registry bytes,
+all 206 installed files, ESM/CommonJS consumers and strict NodeNext declarations were verified; see
 [RELEASING.md](RELEASING.md).
 
 ## Optional model capabilities
