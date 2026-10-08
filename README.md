@@ -16,9 +16,9 @@ permissions or executes tools. Host rules, eligibility, privacy, manual review, 
 with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
 [`examples/decisions.mjs`](examples/decisions.mjs) before adopting it.
 
-Unreleased development adds optional host-prepared effect metadata and pure review routing
-on the same subpath. It adds no filesystem tools, permissions, or host integration; see
-[the prepared-action contract](docs/DECISIONS.md#prepared-action-routing-unreleased).
+Prepared `0.8.0` adds optional host-prepared effect metadata and pure review routing on the
+same subpath. It is not yet published and adds no filesystem tools, permissions, or host
+integration; see [the contract](docs/DECISIONS.md#prepared-action-routing-prepared-080).
 
 ## Install
 

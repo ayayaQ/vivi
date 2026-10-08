@@ -1,5 +1,28 @@
 # Release workflow
 
+## Prepared stable 0.8.0 (not yet published)
+
+`@ayayaq/vivi@0.8.0` prepares the additive host-authored effect metadata and pure
+`routePreparedAction` helper from [PR #20](https://github.com/ayayaQ/vivi/pull/20), merged
+at `94f1a8a1d5b89b546e25dc547dcea7fc550b85c0` (tree
+`acbd0974d35961506f9b95e7fad441c454170f8b`). The nine public subpaths and exact
+`yaml@2.9.1` dependency are unchanged. Existing snapshots without metadata retain their
+Decisions behavior. No filesystem tool, access permission, or host adoption is included.
+
+Public npm `latest` remains verified `0.7.0`. Freeze the final reviewed `0.8.0` source
+only after full Node 22/24 checks, then independently verify the exact archive's source,
+file bytes, all nine ESM/CommonJS exports, examples, new metadata/routing behavior and
+strict NodeNext declarations. Keep its source commit/tree, complete file list and
+SHA-256/SHA-1/SHA-512 identity in a separate release record, outside the package.
+
+The account holder publishes that exact frozen archive, completing browser login and
+security challenges personally. Use the account-holder workflow below; stop if `0.8.0`
+already exists or `latest` is newer. Do not rebuild, repack, create a token, or change the
+version to bypass a conflict. Actual public registry bytes, tags and clean installed
+consumers must be verified before separately reviewed host adoption. Mock checks do not
+calibrate live models; access, privacy, target resolution and atomic execution stay in hosts.
+All earlier published records and archives remain unchanged.
+
 ## Published stable 0.7.0
 
 **`@ayayaq/vivi@0.7.0` is published and verified**, with npm `latest` observed at `0.7.0` on
