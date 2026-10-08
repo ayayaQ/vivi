@@ -9,7 +9,7 @@ const snapshot = {
   toolCall: { id: 'memory-1', name: 'memory_add', arguments: { text: 'Prefers tea' } },
   userRequest: { id: 'request-1', text: 'Remember that I prefer tea', approvedScope: { operation: 'remember_preference' } },
   policyRevision: 'example-policy-1', resourceRevisions: { memories: 7 }, inputData: null,
-  // Unreleased metadata. A real host must resolve/classify this action itself and check
+  // Optional prepared-action metadata. A real host must resolve/classify this action itself and check
   // exact-data/provider privacy before review; no model can create this authority.
   preparedAction: { complete: true, effects: [{
     kind: 'write', resourceId: 'memories', scope: 'outside-workspace',
