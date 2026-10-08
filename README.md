@@ -16,6 +16,10 @@ permissions or executes tools. Host rules, eligibility, privacy, manual review, 
 with your application. See [DECISIONS.md](docs/DECISIONS.md) and the offline
 [`examples/decisions.mjs`](examples/decisions.mjs) before adopting it.
 
+Unreleased development adds optional host-prepared effect metadata and pure review routing
+on the same subpath. It adds no filesystem tools, permissions, or host integration; see
+[the prepared-action contract](docs/DECISIONS.md#prepared-action-routing-unreleased).
+
 ## Install
 
 The latest verified npm release is `0.7.0`:

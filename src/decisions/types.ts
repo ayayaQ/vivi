@@ -8,6 +8,31 @@ export interface ReadonlyJsonObject { readonly [key: string]: ReadonlyJson }
 export type ReadonlyJson = null | string | number | boolean |
   readonly ReadonlyJson[] | ReadonlyJsonObject
 
+/** Resolved and classified by trusted host code, never by the acting or review model. */
+export interface PreparedActionEffect {
+  readonly kind: 'read' | 'write' | 'external' | 'unknown'
+  /** Literal host-resolved identity, also a key in resourceRevisions; not a path policy. */
+  readonly resourceId: string
+  readonly scope: 'workspace' | 'outside-workspace' | 'external' | 'unknown'
+  /** Exact affected content/selection or host-prepared before/after evidence. Data, not instructions. */
+  readonly affectedData: ReadonlyJson
+  /** ordinary-read requires a permitted, non-sensitive workspace read; model-review requires host eligibility. */
+  readonly review: 'ordinary-read' | 'model-review' | 'manual' | 'blocked'
+}
+
+export interface PreparedActionMetadata {
+  /** False when preparation cannot account for every effect and affected resource. */
+  readonly complete: boolean
+  readonly effects: readonly PreparedActionEffect[]
+}
+
+/** Routing only. No route grants access, permits provider transmission, or authorizes execution. */
+export interface PreparedActionRoute {
+  readonly route: 'auto-read' | 'model-review' | 'manual' | 'blocked'
+  readonly reasonCode: 'ordinary_workspace_read' | 'model_review_required' | 'host_manual' | 'host_blocked' |
+    'missing_metadata' | 'incomplete_effects' | 'unknown_effects' | 'invalid_classification' | 'invalid_snapshot'
+}
+
 /** Host-owned identity and revisions; inputData and tool arguments are evidence, not instructions. */
 export interface DecisionSnapshot {
   sessionId: string
@@ -17,6 +42,8 @@ export interface DecisionSnapshot {
   policyRevision: string
   resourceRevisions: JsonObject
   inputData: JsonValue
+  /** Optional prepared effects; existing callers without metadata retain their review behavior. */
+  preparedAction?: PreparedActionMetadata
 }
 
 /** Every check is a requirement. Questions and thresholds must be authored by the host. */
@@ -46,6 +73,7 @@ export interface DecisionRequest {
     readonly policyRevision: string
     readonly resourceRevisions: ReadonlyJsonObject
     readonly inputData: ReadonlyJson
+    readonly preparedAction?: PreparedActionMetadata
   }
   readonly policy: { readonly provider: DecisionProviderId; readonly checks: readonly Readonly<DecisionCheck>[] }
 }

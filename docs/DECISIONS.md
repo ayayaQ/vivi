@@ -61,6 +61,65 @@ must update the corresponding snapshot revisions.
 Results have process-local binding: serializing, cloning, or reconstructing a result removes
 that binding. Do not persist a recommendation and later treat it as an approval token.
 
+## Prepared-action routing (unreleased)
+
+The optional `DecisionSnapshot.preparedAction` field and `routePreparedAction(snapshot)`
+helper are development additions, absent from published `0.7.0`. No package version or
+host integration is changed here. Snapshots without this field keep the existing Decisions
+behavior; the new routing helper sends them to `manual` with `missing_metadata`.
+
+Use one exact snapshot for preparation, routing, review, and the host's commit-time
+comparison. The existing `createDecisionRequest` copies and deeply freezes this metadata
+along with the tool call, approved scope, input data, and revisions. Routing also accepts
+`request.snapshot`; it is synchronous, performs no provider request, and returns only a
+frozen `{ route, reasonCode }`. No second request or permission token is created.
+
+Trusted host code must resolve concrete resource identities and enumerate every effect:
+
+- `complete`: true only when preparation accounts for all effects, targets, and affected data
+- `effects`: up to 256 entries, each with `kind` (`read`, `write`, `external`, or `unknown`)
+- `resourceId`: an exact opaque host-resolved identity, with an own entry in `resourceRevisions`
+- `scope`: host-classified `workspace`, `outside-workspace`, `external`, or `unknown`
+- `affectedData`: exact affected selection/content or prepared before/after evidence, as JSON
+- `review`: trusted host classification: `ordinary-read`, `model-review`, `manual`, or `blocked`
+
+`ordinary-read` asserts that this effect is a permitted, non-sensitive ordinary workspace
+read. Mere readability or workspace membership is insufficient. `model-review` asserts
+that hard host policy permits the effect and model review is eligible; `manual` and
+`blocked` preserve mandatory human review and hard denials. Provider destination and
+exact-data transmission permission still require the host's separate privacy checks.
+The acting model, retrieved content, or review model cannot supply these classifications.
+Do not pass model-generated metadata directly to the helper.
+
+Routing uses every effect, without guessing from tool names, descriptions, user prose,
+arguments, or path patterns:
+
+- Any `blocked` effect: `blocked`; otherwise any `manual` effect: `manual`
+- Incomplete or empty effects, unknown kind/scope: `manual`
+- `ordinary-read` paired with anything except `read` + `workspace`: `manual`
+- Every effect explicitly `ordinary-read` + `read` + `workspace`: `auto-read`
+- Remaining known effects, each explicitly ordinary-read or model-review eligible: `model-review`
+
+A mixed read/write or external-effect call never becomes an automatic read. Known mixed
+effects may receive model review only when every effect is eligible. Missing revisions,
+invalid metadata, and malformed snapshots produce `manual` / `invalid_snapshot` from
+routing; `createDecisionRequest` rejects them with sanitized `DecisionConfigurationError`.
+Existing JSON depth/byte limits apply, with no truncation. Results contain no targets or data.
+
+The helper does not resolve a path, inspect a filesystem, enroll a root, verify content,
+grant external workspace access, open approval UI, or execute anything. A revision entry
+captures host evidence; it does not prove current content or access. For unversioned targets,
+the host must capture whatever concrete identity/state evidence its own commit checks need.
+Hosts retain validation, target resolution, sandbox/access rules, cancellation, privacy,
+one-time lifecycle, and atomic current-state recheck plus commit. Even `auto-read` is routing,
+not new access authority; a model recommendation cannot broaden existing permissions.
+
+Both adapters include this metadata under `hostState.preparedAction` in the structured
+evidence envelope. `affectedData` remains evidence, never question instructions or approval.
+`isDecisionCurrent` binds its exact values, classifications, resource identities, and
+revisions; changing any of them invalidates the captured result. Changes absent from the
+snapshot cannot be detected by this library.
+
 ## Named requirements and provider-specific thresholds
 
 A policy contains `provider: 'openai' | 'openrouter'` and `checks`. Each check has:

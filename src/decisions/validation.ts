@@ -34,6 +34,29 @@ export function probability(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
 }
 
+/** Call only on copied plain JSON. Resource identities are opaque literal keys, never resolved here. */
+export function validateSnapshot(state: unknown): void {
+  if (!record(state) ||
+      !keys(state, ['sessionId', 'runId', 'toolCall', 'userRequest', 'policyRevision', 'resourceRevisions', 'inputData'], ['preparedAction']) ||
+      !text(state.sessionId, 256) || !text(state.runId, 256) || !text(state.policyRevision, 256) ||
+      !record(state.resourceRevisions) || !record(state.toolCall) || !record(state.userRequest)) invalid()
+  if (!keys(state.toolCall, ['id', 'name', 'arguments']) || !text(state.toolCall.id, 256) ||
+      !text(state.toolCall.name, 256) || !record(state.toolCall.arguments)) invalid()
+  if (!keys(state.userRequest, ['id', 'text', 'approvedScope']) || !text(state.userRequest.id, 256) ||
+      !text(state.userRequest.text)) invalid()
+  if (!Object.hasOwn(state, 'preparedAction')) return
+  const action = state.preparedAction
+  if (!record(action) || !keys(action, ['complete', 'effects']) || typeof action.complete !== 'boolean' ||
+      !Array.isArray(action.effects) || action.effects.length > 256) invalid()
+  for (const effect of action.effects) {
+    if (!record(effect) || !keys(effect, ['kind', 'resourceId', 'scope', 'affectedData', 'review']) ||
+        !['read', 'write', 'external', 'unknown'].includes(effect.kind as string) ||
+        !text(effect.resourceId, 1_024) || !Object.hasOwn(state.resourceRevisions, effect.resourceId) ||
+        !['workspace', 'outside-workspace', 'external', 'unknown'].includes(effect.scope as string) ||
+        !['ordinary-read', 'model-review', 'manual', 'blocked'].includes(effect.review as string)) invalid()
+  }
+}
+
 /** Plain JSON only: reject accessors, cycles, custom prototypes, sparse arrays, and excess depth/size. */
 export function copyJson(value: unknown): ReadonlyJson {
   const ancestors = new Set<object>()

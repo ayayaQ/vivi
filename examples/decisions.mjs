@@ -2,13 +2,19 @@
 // Copyright 2026 ayayaQ
 // Offline shadow review only: no credentials, paid calls, or tool execution.
 import assert from 'node:assert/strict'
-import { createDecisionRequest, evaluateDecision, isDecisionCurrent } from '../dist/decisions.js'
+import { createDecisionRequest, evaluateDecision, isDecisionCurrent, routePreparedAction } from '../dist/decisions.js'
 
 const snapshot = {
   sessionId: 'example-session', runId: 'example-run',
   toolCall: { id: 'memory-1', name: 'memory_add', arguments: { text: 'Prefers tea' } },
   userRequest: { id: 'request-1', text: 'Remember that I prefer tea', approvedScope: { operation: 'remember_preference' } },
-  policyRevision: 'example-policy-1', resourceRevisions: { memories: 7 }, inputData: null
+  policyRevision: 'example-policy-1', resourceRevisions: { memories: 7 }, inputData: null,
+  // Unreleased metadata. A real host must resolve/classify this action itself and check
+  // exact-data/provider privacy before review; no model can create this authority.
+  preparedAction: { complete: true, effects: [{
+    kind: 'write', resourceId: 'memories', scope: 'outside-workspace',
+    affectedData: { before: null, after: { text: 'Prefers tea' } }, review: 'model-review'
+  }] }
 }
 const request = createDecisionRequest(snapshot, {
   provider: 'openai', checks: [{
@@ -19,6 +25,7 @@ const request = createDecisionRequest(snapshot, {
     allowAt: 0.95, denyAt: 0.05
   }]
 })
+assert.equal(routePreparedAction(request.snapshot).route, 'model-review')
 const mock = {
   id: 'openai', model: 'gpt-6-luna',
   async evaluate(_request, signal) {

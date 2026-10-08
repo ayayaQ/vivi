@@ -26,9 +26,9 @@ try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
   for (const required of ['docs/DECISIONS.md', 'src/decisions.ts', 'src/decisions/evaluate.ts',
-    'src/decisions/providers.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts',
+    'src/decisions/providers.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts', 'src/decisions/actions.ts',
     'examples/decisions.mjs', 'dist/decisions.js', 'dist/decisions.d.ts',
-    'dist/cjs/decisions.js', 'dist/cjs/decisions.d.ts']) {
+    'dist/cjs/decisions.js', 'dist/cjs/decisions.d.ts', 'dist/decisions/actions.js', 'dist/cjs/decisions/actions.js']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   for (const required of ['docs/SKILLS.md', 'src/extensions/skills.ts', 'src/extensions/skills-creator.ts',
@@ -503,6 +503,14 @@ void result
   assert.equal(decisions.isDecisionCurrent({...result}, snapshot), false)
   assert.equal(typeof decisions.createOpenAIDecisionProvider, 'function')
   assert.equal(typeof decisions.createOpenRouterDecisionProvider, 'function')
+  const prepared = {...snapshot,preparedAction:{complete:true,effects:[{kind:'write',resourceId:'memory',scope:'outside-workspace',affectedData:{before:null,after:'Tea'},review:'model-review'}]}}
+  const preparedRequest = decisions.createDecisionRequest(prepared, request.policy)
+  assert.deepEqual(decisions.routePreparedAction(preparedRequest.snapshot), {route:'model-review',reasonCode:'model_review_required'})
+  assert.ok(Object.isFrozen(preparedRequest.snapshot.preparedAction.effects[0]))
+  const preparedResult = await decisions.evaluateDecision(preparedRequest, provider)
+  assert.equal(decisions.isDecisionCurrent(preparedResult, prepared), true)
+  assert.equal(decisions.isDecisionCurrent(preparedResult, {...prepared,preparedAction:{...prepared.preparedAction,complete:false}}), false)
+  assert.equal(decisions.routePreparedAction(snapshot).route, 'manual')
 })().catch(error => { console.error(error); process.exitCode = 1 })
 `)
     run(process.execPath, [`decision-consumer.${extension}`], temporary)
@@ -514,6 +522,18 @@ void result
     await writeFile(join(temporary, `decision-types.${extension}`), `${importLine}
 const snapshot: decisions.DecisionSnapshot = {sessionId:'s',runId:'r',toolCall:{id:'c',name:'memory_add',arguments:{}},userRequest:{id:'u',text:'Remember tea',approvedScope:{}},policyRevision:'p',resourceRevisions:{memory:1},inputData:null}
 const request: decisions.DecisionRequest = decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scope',instructions:'Matches?',trueDescription:'Matches',falseDescription:'Does not',allowAt:0.95}]})
+const effect: decisions.PreparedActionEffect = {kind:'write',resourceId:'memory',scope:'outside-workspace',affectedData:{after:'Tea'},review:'model-review'}
+const metadata: decisions.PreparedActionMetadata = {complete:true,effects:[effect]}
+const prepared = decisions.createDecisionRequest({...snapshot,preparedAction:metadata}, request.policy)
+const route: decisions.PreparedActionRoute = decisions.routePreparedAction(prepared.snapshot)
+void route
+// @ts-expect-error trusted classification has a closed vocabulary
+const invalidEffect: decisions.PreparedActionEffect = {...effect,review:'allow'}
+void invalidEffect
+// @ts-expect-error captured metadata is immutable
+prepared.snapshot.preparedAction!.complete = false
+// @ts-expect-error captured effects are immutable
+prepared.snapshot.preparedAction!.effects.push(effect)
 // @ts-expect-error snapshot is immutable
 request.snapshot.runId = 'changed'
 // @ts-expect-error explicit provider calibration is required
