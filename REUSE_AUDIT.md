@@ -43,7 +43,7 @@ manual review UI, resource locking/revision rechecks, execution and audit storag
 host-owned. Mock protocol/safety tests establish implementation behavior, not real-model
 accuracy or threshold calibration. See [the decision contract](docs/DECISIONS.md).
 
-## Optional MCP foundation (source only)
+## Optional MCP foundation (prepared 0.9.0)
 
 The CLI-demonstrated bounded catalogs, alias mapping, schema quarantine, immutable
 operation bindings, fixed extension and result projection are reusable without the

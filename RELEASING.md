@@ -1,5 +1,43 @@
 # Release workflow
 
+## Prepared stable 0.9.0, not yet published
+
+This release prepares the optional dependency-free MCP bridge. Verified public npm
+`latest` remains `0.8.0` until account-holder publication and exact registry-byte
+verification. CLI and desktop continue using their published dependency; no Git URL,
+file dependency or vendored archive is substituted.
+
+MCP foundation [PR #23](https://github.com/ayayaQ/vivi/pull/23) is merged at
+`8d3bbc2530d85ee70982f5813d07b2cbf4f7d2f2`, exact reviewed tree
+`c50ed5641f38431b13005270458759d5d26f0ee1`. Both complete Node22/24 checks
+passed 380 tests with zero skips, all seven examples and clean packed consumers;
+independent review cleared both descriptor-admission and cancellation-contract findings.
+
+The frozen release includes captured catalog/alias/schema admission, immutable exact
+operation bindings, the ordinary fixed extension and bounded untrusted result helpers.
+Host schema/privacy/review wiring is mandatory. Connections, SDK negotiation, installed
+processes, configuration/credentials, actual-send one-shot approval, cancellation,
+unknown-outcome invalidation and transcript/history remain host-owned. Persisted/displayed not-attempted results
+must remain distinct from sent/potentially-sent unknown effects through cancellation
+and checkpoint/restart recovery. The documented bounded host intent/outcome ledger
+obligation is exercised by owned synthetic end-to-end adapters; no application fix is
+claimed by this source-only release. Core callbacks
+and pure comparisons do not guarantee transport enforcement. See [MCP.md](docs/MCP.md).
+
+Only `yaml@2.9.1` remains a runtime dependency. The exact official MCP client SDK
+`2.3.1` is a development/test dependency and absent from clean installed consumers.
+A separate release identity records the reviewed source commit/tree, complete archive
+file list, sizes/modes and SHA-256/SHA-1/SHA-512 integrity. Publish only that archive,
+without repacking it. The account holder performs npm login/security challenges and
+publication on a trusted computer; no credentials are shared with the assistant.
+
+Before publication, independent exact-tree/archive review, Node22/24 aggregate/build/
+examples and packed ESM/CommonJS/strict NodeNext consumers must pass. Linux aggregate
+and focused Windows22/24 checks cover the shared synthetic contract. This is no claim
+of actual application adoption, native-process isolation or live-provider/MCP-server
+readiness. After publication, verify actual public metadata/tags, complete archive
+bytes and all installed files on both runtimes before host dependency adoption.
+
 ## Published stable 0.8.0
 
 **`@ayayaq/vivi@0.8.0` is published and verified**, with npm `latest` observed at

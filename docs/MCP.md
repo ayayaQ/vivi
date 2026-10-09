@@ -2,7 +2,7 @@
 
 `@ayayaq/vivi/extensions/mcp` shares the catalog, proposal and content pieces of the
 CLI MCP implementation. It adds no runtime dependencies and does not import the MCP
-SDK. This source is preparation for a future release; verified npm `0.8.0` does not
+SDK. This source prepares `0.9.0`; verified npm `0.8.0` does not
 include this subpath. Consumer adoption waits for a reviewed registry publication.
 
 ## Boundary

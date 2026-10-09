@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 (prepared 2026-10-09, not yet published)
 
 - Add optional dependency-free MCP catalog, operation-binding, fixed extension and
   bounded untrusted-result helpers with mandatory host review/schema/privacy wiring
