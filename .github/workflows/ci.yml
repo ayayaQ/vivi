@@ -21,3 +21,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  mcp-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node --test test/mcp-contract.test.mjs test/mcp-extension.test.mjs
+      - run: node examples/mcp.mjs
+      - run: node -e "const mcp = require('./dist/cjs/extensions/mcp.js'); const result = JSON.parse(mcp.mcpFailure('offline', 'Synthetic unknown outcome', true).content); if (!result.untrusted || !result.unknownOutcome || !result.doNotRetry) process.exit(1)"

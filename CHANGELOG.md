@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add optional dependency-free MCP catalog, operation-binding, fixed extension and
+  bounded untrusted-result helpers with mandatory host review/schema/privacy wiring
+- Keep connections, processes, credentials, actual sends and approval UI host-owned;
+  add a metadata-only host capability and offline paired-host adapter checks
+
 ## 0.8.0 (2026-10-08)
 
 - Add optional host-prepared effect metadata and deterministic review routing to `/decisions`
