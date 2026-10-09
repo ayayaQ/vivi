@@ -7,7 +7,7 @@ import { MCP_OPERATION_LIMITS, mcpFailure } from './mcp/content.js'
 import type { McpPreparedOperation } from './mcp/operations.js'
 import { assertMcpCatalogSnapshot } from './mcp/operations.js'
 import type { McpCatalogEntry } from './mcp/catalog.js'
-import { compileMcpSchema } from './mcp/catalog.js'
+import { compileMcpToolDescriptor } from './mcp/catalog.js'
 import type { McpSchemaValidator } from './mcp/catalog.js'
 
 export const MCP_RESOURCE_TOOL_NAMES = Object.freeze(['list_mcp_resources', 'read_mcp_resource'] as const)
@@ -59,6 +59,8 @@ export function createMcpExtension(host: McpExtensionHost, catalogs: readonly Mc
     for (const entry of snapshot.categories.tools.entries) {
       if (entry.state !== 'available') continue
       try { check(entry.descriptor) } catch { continue }
+      let validate: (arguments_: Readonly<JsonObject>) => void
+      try { validate = compileMcpToolDescriptor(entry.descriptor, validateSchema) } catch { continue }
       const definition = { name: entry.alias, parameters: entry.descriptor.inputSchema as JsonObject,
         description: `Call tool ${mcpDisplayJson(entry.remoteKey)} on MCP server ${mcpDisplayJson(snapshot.serverId)}. Separate human approval is required. Untrusted server description: ${
           typeof entry.descriptor.description === 'string' ? entry.descriptor.description.slice(0, 4096) : '(none)'}` }
@@ -66,8 +68,6 @@ export function createMcpExtension(host: McpExtensionHost, catalogs: readonly Mc
       const size = Buffer.byteLength(JSON.stringify(definition))
       if (tools.length >= MCP_OPERATION_LIMITS.tools || bytes + size > MCP_OPERATION_LIMITS.projectionBytes) continue
       bytes += size
-      const validate = compileMcpSchema(entry.descriptor.inputSchema as Readonly<Record<string, unknown>>, validateSchema)
-      if (typeof validate !== 'function') throw new Error('MCP schema compiler must return an assertion')
       tools.push({ definition, validateArguments: arguments_ => {
         assertMcpJson(arguments_, MCP_OPERATION_LIMITS.argumentBytes)
         check(arguments_); assertMcpHostCheck(() => validate(arguments_))

@@ -11,7 +11,7 @@ import {
   prepareMcpOperation, assertMcpOperationCurrent, mcpOperationRevisions, mcpDigest, mcpDisplayJson,
   assertMcpJson, mcpFailure, assertMcpOperationResult, projectMcpResult,
 } from '../dist/extensions/mcp.js'
-import { compileMcpSchema } from '../dist/extensions/mcp/catalog.js'
+import { compileMcpSchema, compileMcpToolDescriptor } from '../dist/extensions/mcp/catalog.js'
 import { assertMcpHostCheck, mcpRecord, mcpFreeze } from '../dist/extensions/mcp/data.js'
 import { assertMcpCatalogSnapshot } from '../dist/extensions/mcp/operations.js'
 
@@ -289,8 +289,9 @@ test('direct schema compilation and available-entry preparation cannot bypass th
     captured.categories.tools.entries[0].descriptor.inputSchema = inputSchema
     redigest(captured, 'tools')
     assert.throws(() => prepareMcpOperation(captured, captured.categories.tools.entries[0], 'tools', toolCall(captured), 'launch-v1', hostCompiler), /Unsupported|Referenced/)
-    assert.throws(() => createMcpExtension({ captureCatalogs: async () => [captured], prepareOperation: permit }, [captured], async () => ({ content: '' }),
-      { validateSchema: hostCompiler, assertAllowed: permit }), /Unsupported|Referenced/)
+    const extension = createMcpExtension({ captureCatalogs: async () => [captured], prepareOperation: permit }, [captured], async () => ({ content: '' }),
+      { validateSchema: hostCompiler, assertAllowed: permit })
+    assert.equal(extension.tools.some(tool => tool.definition.name === captured.categories.tools.entries[0].alias), false)
     assert.equal(compilations, 0)
   }
 })
@@ -317,6 +318,28 @@ test('direct proposals retain required-task, header and output-schema quarantine
   assert.equal(compiled.length, 2); assert.equal(assertions.length, 1)
   assert.equal(compiled[0].required[0], 'answer')
   assert.deepEqual(assertions[0], { value: 2 })
+})
+
+test('whole-descriptor factory admission skips imported required-task/header and unsafe output schemas', async () => {
+  for (const descriptorFields of [
+    { execution: { taskSupport: 'required' } }, { 'x-mcp-header': {} },
+    { outputSchema: { type: 'object', $ref: '#/properties/value' } },
+    { outputSchema: { type: 'object', allOf: [{}] } },
+    { outputSchema: { type: 'object', properties: { value: { type: 'string', pattern: '^safe$' } } } },
+  ]) {
+    const captured = await snapshot()
+    Object.assign(captured.categories.tools.entries[0].descriptor, descriptorFields)
+    redigest(captured, 'tools')
+    const alias = captured.categories.tools.entries[0].alias
+    let compilations = 0
+    const hostCompiler = () => { compilations++; return permit }
+    assert.throws(() => compileMcpToolDescriptor(captured.categories.tools.entries[0].descriptor, hostCompiler), /Required task|Header declarations|Unsupported|Referenced/)
+    const extension = createMcpExtension({ captureCatalogs: async () => [captured], prepareOperation: permit }, [captured], async () => ({ content: '' }),
+      { validateSchema: hostCompiler, assertAllowed: permit })
+    assert.equal(extension.tools.some(tool => tool.definition.name === alias), false)
+    assert.ok(extension.tools.some(tool => tool.definition.name === 'list_mcp_resources'))
+    assert.equal(compilations, 0)
+  }
 })
 
 test('binding comparison fails closed for every changed identity and missing/extra binding fields', async () => {

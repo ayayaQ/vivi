@@ -86,6 +86,24 @@ If the request was sent and a result, cancellation or error leaves its outcome
 unconfirmed, return `mcpFailure(code, message, true)`, invalidate that connection and
 do not retry automatically. Cancellation cannot undo effects. The host must preserve
 `unknownOutcome` and `doNotRetry` through UI, history, recovery and result processing.
+The ordinary shared `runAgent`/`createToolRegistry` abort path can discard a returned
+host projection and synthesize generic cancellation history. Returning `mcpFailure`
+is therefore insufficient as the only record of a sent attempt. Record exact attempted
+operations and settled/unconfirmed outcomes in a bounded host-owned ledger before send;
+settle it even while cancellation unwinds. After the runner settles, reconcile the
+matching terminal call-result pair by captured session/run/call/alias identity, and
+preserve it through checkpoint failures and restart recovery. This records outcomes,
+never reusable approvals. Persist conservative send intent before the boundary; if
+outcome/terminal-history checkpointing fails, retain that evidence and reconcile it as
+unconfirmed on restart. Send intent alone does not prove delivery; do not claim a
+confirmed send from an unsettled intent record. Confirmed not-attempted (`requestSent:false`) must remain
+separate from sent/potentially-sent unknown effects (`unknownOutcome:true`, `doNotRetry:true`)
+in both persisted history and display. Preserve a confirmed result when known; never
+replace uncertainty with a generic "cancelled, not sent" inference. It must not replay a sent attempt or infer identity from an
+untrusted `result.source` field. The offline adapter test explicitly demonstrates the
+raw cancellation loss, zero-send cancellation, one-send uncertainty, persisted/displayed
+results and restart reconciliation after a failed checkpoint; the core runner is unchanged.
+
 Do not run app-specific clipping on the projected JSON: truncating it can remove its
 source, untrusted marker or unknown-outcome semantics. Reject oversized content instead.
 
@@ -109,7 +127,11 @@ provided by this shared slice.
 host responses. Tests include CLI-shaped and desktop-shaped adapters, mutable source
 catalogs, schema rejection, stale bindings, host denial, metadata-only capability and
 unknown-outcome preservation. They do not establish real-server, native-process or
-live-provider readiness. Hosts are adopted and reviewed separately after publication.
+live-provider readiness. Hosts are adopted and reviewed separately after publication. CLI adoption must add this
+attempt/outcome reconciliation alongside its existing privacy checkpoints; current CLI
+`c748317` terminal history is taken from the runner and has no MCP outcome-ledger drain.
+Desktop adoption must implement the same terminal/recovery guarantee before enabling calls.
+The synthetic adapters establish this explicit obligation, not an already-shipped host fix.
 
 ## Provenance
 

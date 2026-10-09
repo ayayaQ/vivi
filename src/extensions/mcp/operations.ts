@@ -2,7 +2,7 @@
 // Derived from vivi-cli c748317cb87a72f4e023cc21b96e793ea89e3170, src/mcp-manager.ts.
 // These pure preparation/comparison helpers grant no approval, connection ownership or send guarantee.
 import type { JsonObject, ToolCall } from '../../types.js'
-import { compileMcpSchema, MCP_LIMITS } from './catalog.js'
+import { compileMcpToolDescriptor, MCP_LIMITS } from './catalog.js'
 import type { McpCatalogEntry, McpCatalogSnapshot, McpSchemaValidator } from './catalog.js'
 import { MCP_OPERATION_LIMITS } from './content.js'
 import { assertMcpJson, mcpDigest, mcpFreeze, mcpRecord, mcpText } from './data.js'
@@ -82,12 +82,7 @@ export function prepareMcpOperation(snapshot: McpCatalogSnapshot, entry: McpCata
   // Callers and compiler adapters cannot alter the captured approval data after this point.
   const capturedSnapshot = mcpFreeze(structuredClone(snapshot)), capturedCall = mcpFreeze(structuredClone(call))
   const capturedEntry = capturedSnapshot.categories[kind].entries.find(value => value.remoteKey === entry.remoteKey)!
-  if (kind === 'tools') {
-    if (mcpRecord(capturedEntry.descriptor.execution) && capturedEntry.descriptor.execution.taskSupport === 'required') throw new Error('Required task execution is unavailable')
-    if (capturedEntry.descriptor['x-mcp-header'] !== undefined) throw new Error('Header declarations are unavailable in bounded discovery')
-    if (capturedEntry.descriptor.outputSchema !== undefined) compileMcpSchema(capturedEntry.descriptor.outputSchema as Readonly<Record<string, unknown>>, validateSchema)
-    compileMcpSchema(capturedEntry.descriptor.inputSchema as Readonly<Record<string, unknown>>, validateSchema)(capturedCall.arguments)
-  }
+  if (kind === 'tools') compileMcpToolDescriptor(capturedEntry.descriptor, validateSchema)(capturedCall.arguments)
   const captured = { call: capturedCall, serverId: capturedSnapshot.serverId, catalogKind: kind, remoteKey: capturedEntry.remoteKey,
     descriptor: capturedEntry.descriptor, snapshot: capturedSnapshot }
   const binding: JsonObject = { serverId: capturedSnapshot.serverId, configRevision: capturedSnapshot.configRevision,

@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { AjvJsonSchemaValidator } from '@modelcontextprotocol/client/validators/ajv'
 import { createToolRegistry } from '../dist/extensions.js'
+import { runAgent } from '../dist/index.js'
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { createMcpExtension, collectMcpCategory, emptyMcpCategory, prepareMcpOperation,
   assertMcpOperationCurrent, mcpOperationRevisions, projectMcpResult, mcpFailure,
   MCP_RESOURCE_TOOL_NAMES } from '../dist/extensions/mcp.js'
@@ -156,3 +160,84 @@ test('direct extension execution still rejects wrong aliases and invalid argumen
   assert.equal((await tool.execute({...s.call,arguments:{query:'hello',count:3}},{signal:signal()})).isError,true)
   assert.equal(s.reviews.length,0);assert.equal(s.host.sent.length,0)
 })
+
+for (const phase of ['before-send', 'after-send', 'after-send-checkpoint-failure']) {
+  test(`host cancellation ledger reconciles persisted/displayed ${phase} results without replay`, async t => {
+    const s = await subject(DesktopAdapter), controller = new AbortController(), outcomes = new Map()
+    const directory = await mkdtemp(join(tmpdir(), 'vivi-mcp-ledger-'))
+    t.after(() => rm(directory, { recursive: true, force: true }))
+    const ledgerFile = join(directory, 'attempt.json'), historyFile = join(directory, 'history.json')
+    const scope = { sessionId: 'fixture-session', runId: 'run-1' }
+    let attempts = 0, checkpointFailed = false
+    const withRequestSent = (result, requestSent) => ({ ...result,
+      content: JSON.stringify({ ...JSON.parse(result.content), requestSent }) })
+    const review = async operation => {
+      let result
+      if (phase === 'before-send') {
+        result = withRequestSent(mcpFailure('mcp_not_attempted', 'Cancelled before the send boundary'), false)
+        outcomes.set(operation.call.id, { ...scope, operation, attempted: false, result })
+      } else {
+        // Durable send intent is conservative evidence of a possibly sent attempt, never approval.
+        const attempt = { ...scope, call: operation.call, binding: operation.binding, outcome: 'unconfirmed' }
+        await writeFile(ledgerFile, JSON.stringify(attempt))
+        outcomes.set(operation.call.id, { ...scope, operation, attempted: true, result: null })
+        attempts++ // The fake final transport boundary; no real server exists.
+        result = withRequestSent(mcpFailure('mcp_unknown_outcome', 'Response lost after send', true), true)
+        outcomes.get(operation.call.id).result = result
+        try {
+          if (phase === 'after-send-checkpoint-failure') throw new Error('Synthetic outcome checkpoint failure')
+          await writeFile(ledgerFile, JSON.stringify({ ...attempt, result }))
+        } catch { checkpointFailed = true }
+      }
+      controller.abort(new Error('Synthetic cancellation'))
+      s.host.connected = false
+      return result
+    }
+    const registry = createToolRegistry([createMcpExtension(s.host, [s.snapshot], review, { validateSchema, assertAllowed })])
+    const raw = await runAgent({ provider: { async generate() { return { content: '', toolCalls: [s.call] } } },
+      messages: [], tools: registry.tools, executeTool: registry.executeTool, signal: controller.signal })
+    assert.equal(raw.status, 'cancelled')
+    const rawResult = raw.history.find(message => message.kind === 'tool_result' && message.callId === s.call.id)
+    assert(rawResult); assert.equal(JSON.parse(rawResult.content).unknownOutcome, undefined)
+    await writeFile(historyFile, JSON.stringify(raw.history))
+    // Terminal reconciliation is by captured session/run/call/alias, never untrusted result.source.
+    const reconciled = raw.history.map(message => {
+      if (message.kind !== 'tool_result') return message
+      const outcome = outcomes.get(message.callId)
+      if (!outcome || outcome.sessionId !== scope.sessionId || outcome.runId !== scope.runId ||
+        outcome.operation.call.name !== message.name || !outcome.result) return message
+      return { ...message, ...outcome.result }
+    })
+    if (!checkpointFailed) await writeFile(historyFile, JSON.stringify(reconciled))
+    const display = message => {
+      const body = JSON.parse(message.content)
+      return body.unknownOutcome === true ? 'Outcome unconfirmed; do not retry' :
+        body.requestSent === false ? 'Not attempted' : 'Confirmed response'
+    }
+    const final = reconciled.find(message => message.kind === 'tool_result' && message.callId === s.call.id)
+    const expectedLabel = phase === 'before-send' ? 'Not attempted' : 'Outcome unconfirmed; do not retry'
+    assert.equal(display(final), expectedLabel)
+    // A restart after failed terminal/outcome writes repairs generic cancellation from durable intent.
+    const persisted = JSON.parse(await readFile(historyFile, 'utf8'))
+    const attempt = phase === 'before-send' ? undefined : JSON.parse(await readFile(ledgerFile, 'utf8'))
+    const recovered = persisted.map(message => {
+      if (message.kind !== 'tool_result' || !attempt || attempt.sessionId !== scope.sessionId ||
+        attempt.runId !== scope.runId || attempt.call.id !== message.callId || attempt.call.name !== message.name) return message
+      const result = attempt.result ?? mcpFailure('mcp_unknown_outcome', 'Recorded send intent interrupted before confirmation', true)
+      return { ...message, ...result }
+    })
+    const restored = recovered.find(message => message.kind === 'tool_result' && message.callId === s.call.id)
+    assert.equal(display(restored), expectedLabel)
+    assert.equal(restored.name, s.call.name); assert.equal(restored.isError, true)
+    assert.equal(JSON.parse(restored.content).untrusted, true)
+    assert.equal(JSON.parse(restored.content).requestSent, phase === 'before-send' ? false :
+      phase === 'after-send-checkpoint-failure' ? undefined : true)
+    assert.equal(JSON.parse(restored.content).unknownOutcome === true, phase !== 'before-send')
+    assert.equal(JSON.parse(restored.content).doNotRetry === true, phase !== 'before-send')
+    assert.deepEqual(recovered.map(message => message.kind === 'tool_result' ? [message.callId, message.name] : message),
+      raw.history.map(message => message.kind === 'tool_result' ? [message.callId, message.name] : message))
+    assert.equal(attempts, phase === 'before-send' ? 0 : 1)
+    assert.equal(checkpointFailed, phase === 'after-send-checkpoint-failure')
+    assert.equal(s.host.connected, false)
+  })
+}

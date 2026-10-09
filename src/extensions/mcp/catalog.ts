@@ -94,14 +94,29 @@ function schemaReason(value: unknown, root = true): string | undefined {
   }
   return undefined
 }
-function toolReason(descriptor: Record<string, unknown>, validateSchema: McpSchemaValidator): string | undefined {
+function toolDescriptorReason(descriptor: Readonly<Record<string, unknown>>): string | undefined {
   if (mcpRecord(descriptor.execution) && descriptor.execution.taskSupport === 'required') return 'Required task execution is unavailable'
   if (descriptor['x-mcp-header'] !== undefined) return 'Header declarations are unavailable in bounded discovery'
   if (!mcpRecord(descriptor.inputSchema) || descriptor.inputSchema.type !== 'object') return 'Tool input schema must have object type'
   for (const schema of [descriptor.inputSchema, ...(descriptor.outputSchema === undefined ? [] : [descriptor.outputSchema])]) {
     const reason = schemaReason(schema); if (reason) return reason
-    try { compileMcpSchema(schema as Readonly<Record<string, unknown>>, validateSchema) } catch { return 'Invalid schema' }
   }
+  return undefined
+}
+
+/** Whole-descriptor admission for collected or imported metadata; returns only the input assertion. */
+export function compileMcpToolDescriptor(descriptor: Readonly<Record<string, unknown>>,
+  validateSchema: McpSchemaValidator): (arguments_: Readonly<JsonObject>) => void {
+  assertMcpJson(descriptor, MCP_LIMITS.descriptorBytes)
+  if (!mcpRecord(descriptor)) throw new Error('MCP tool descriptor must be an object')
+  const reason = toolDescriptorReason(descriptor)
+  if (reason) throw new Error(reason)
+  if (descriptor.outputSchema !== undefined) compileMcpSchema(descriptor.outputSchema as Readonly<Record<string, unknown>>, validateSchema)
+  return compileMcpSchema(descriptor.inputSchema as Readonly<Record<string, unknown>>, validateSchema)
+}
+function toolReason(descriptor: Record<string, unknown>, validateSchema: McpSchemaValidator): string | undefined {
+  const reason = toolDescriptorReason(descriptor); if (reason) return reason
+  try { compileMcpToolDescriptor(descriptor, validateSchema) } catch { return 'Invalid schema' }
   return undefined
 }
 
