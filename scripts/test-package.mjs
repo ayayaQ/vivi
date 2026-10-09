@@ -25,6 +25,12 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/MCP.md', 'src/extensions/mcp.ts', 'src/extensions/mcp/catalog.ts',
+    'src/extensions/mcp/data.ts', 'src/extensions/mcp/operations.ts', 'src/extensions/mcp/content.ts',
+    'examples/mcp.mjs', 'dist/extensions/mcp.js', 'dist/extensions/mcp.d.ts',
+    'dist/cjs/extensions/mcp.js', 'dist/cjs/extensions/mcp.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/DECISIONS.md', 'src/decisions.ts', 'src/decisions/evaluate.ts',
     'src/decisions/providers.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts', 'src/decisions/actions.ts',
     'examples/decisions.mjs', 'dist/decisions.js', 'dist/decisions.d.ts',
@@ -66,8 +72,13 @@ try {
     import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
     require: { types: './dist/cjs/decisions.d.ts', default: './dist/cjs/decisions.js' }
   })
+  run(process.execPath, [join(installed, 'examples/mcp.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/decisions.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
+  assert.deepEqual(manifest.exports['./extensions/mcp'], {
+    import: { types: './dist/extensions/mcp.d.ts', default: './dist/extensions/mcp.js' },
+    require: { types: './dist/cjs/extensions/mcp.d.ts', default: './dist/cjs/extensions/mcp.js' }
+  })
   assert.equal(manifest.license, 'Apache-2.0')
   assert.deepEqual(manifest.dependencies, {yaml:'2.9.1'})
   const yamlManifest = JSON.parse(await readFile(join(temporary, 'node_modules/yaml/package.json'), 'utf8'))
@@ -77,6 +88,7 @@ try {
   assert(yamlLicense.includes('Copyright Eemeli Aro'))
   assert(yamlLicense.includes('Permission to use, copy, modify, and/or distribute'))
   const consumerLock = JSON.parse(await readFile(join(temporary, 'package-lock.json'), 'utf8'))
+  assert(!Object.keys(consumerLock.packages).some(path => path.includes('node_modules/@modelcontextprotocol/')), 'Host SDK must not be a runtime dependency')
   assert.equal(consumerLock.packages['node_modules/yaml'].resolved, 'https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz')
   assert.equal(consumerLock.packages['node_modules/yaml'].integrity, 'sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==')
   assert.deepEqual(manifest.exports['./providers/models'], {
@@ -86,6 +98,30 @@ try {
   assert.deepEqual(await readFile(join(installed, 'LICENSE')), await readFile(join(root, 'LICENSE')))
   assert((await readFile(join(installed, 'LICENSE'), 'utf8')).includes('Version 2.0, January 2004'))
   assert((await readFile(join(installed, 'ATTRIBUTION.md'), 'utf8')).includes('943e3f84f67e4415a899da8921db84639843c625'))
+  for (const [extension, importLine] of [
+    ['mjs', "import * as mcp from '@ayayaq/vivi/extensions/mcp'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const mcp = require('@ayayaq/vivi/extensions/mcp')\nconst assert = require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `mcp-consumer.${extension}`), `${importLine}
+;(async () => {
+  const signal = new AbortController().signal
+  const compile = schema => { assert.equal(schema.type,'object'); return value => { assert.equal(typeof value.query,'string') } }
+  const category = await mcp.collectMcpCategory('fixture','tools',async () => ({tools:[{name:'echo/name',inputSchema:{type:'object',properties:{query:{type:'string'}},required:['query'],additionalProperties:false}}]}),signal,compile)
+  const snapshot = {serverId:'fixture',configRevision:'config-1',connectionGeneration:'connection-1',protocolVersion:'legacy',catalogGeneration:1,categories:{tools:category,resources:mcp.emptyMcpCategory(),resourceTemplates:mcp.emptyMcpCategory()}}
+  const entry = category.entries[0], call = {id:'call-1',name:entry.alias,arguments:{query:'offline'}}
+  const operation = mcp.prepareMcpOperation(snapshot,entry,'tools',call,'launch-1',compile)
+  mcp.assertMcpOperationCurrent(operation,snapshot,'launch-1',true,'config-1')
+  const host = {async captureCatalogs(){return [snapshot]},prepareOperation(){return operation}}
+  let reviews = 0
+  const extension = mcp.createMcpExtension(host,[snapshot],async () => {reviews++;return mcp.mcpFailure('unknown','Synthetic unknown outcome',true)},{validateSchema:compile,assertAllowed(){}})
+  const result = await extension.tools[0].execute(call,{signal})
+  assert.equal(reviews,1);assert.equal(JSON.parse(result.content).doNotRetry,true)
+  const projected = mcp.projectMcpResult('fixture','tools/call','echo/name',{content:[{type:'image',mimeType:'image/png',data:'omitted'}]},()=>{})
+  assert.equal(JSON.parse(projected.content).content[0].binaryOmitted,true)
+})().catch(error => {console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`mcp-consumer.${extension}`], temporary)
+  }
   await writeFile(join(temporary, 'consumer.mjs'), `
 import assert from 'node:assert/strict'
 import { runAgent } from '@ayayaq/vivi'
@@ -440,6 +476,12 @@ import calculator = require('@ayayaq/vivi/extensions/calculator')
 import models = require('@ayayaq/vivi/providers/models')
 import memory = require('@ayayaq/vivi/extensions/memory')
 import skills = require('@ayayaq/vivi/extensions/skills')
+import mcp = require('@ayayaq/vivi/extensions/mcp')
+const mcpCompiler: mcp.McpSchemaValidator = () => () => {}
+const mcpExtension: extensions.ToolExtension = mcp.createMcpExtension({async captureCatalogs(){return []},prepareOperation(){throw new Error('No operation')}},[],async () => ({content:''}),{validateSchema:mcpCompiler,assertAllowed(){}})
+// @ts-expect-error mandatory host privacy assertion
+mcp.createMcpExtension({async captureCatalogs(){return []},prepareOperation(){throw new Error('No operation')}},[],async () => ({content:''}),{validateSchema:mcpCompiler})
+void mcpExtension
 const skillCatalog: skills.SkillCatalog = skills.createSkillCatalog([skills.skillCreatorSource])
 const skillDocument: skills.SkillDocument = skills.parseSkillDocument(skills.skillCreatorSource.content)
 const skillsExtension: extensions.ToolExtension = skills.createSkillsExtension({catalog:skillCatalog,authorizeRead(){return true}})
@@ -488,6 +530,22 @@ const result: Promise<core.AgentResult> = core.runAgent({ provider, messages: []
 void result
 `)
   run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', 'consumer.cts'], temporary)
+  for (const [extension, importLine] of [
+    ['mts', "import * as mcp from '@ayayaq/vivi/extensions/mcp'"],
+    ['cts', "import mcp = require('@ayayaq/vivi/extensions/mcp')"]
+  ]) {
+    await writeFile(join(temporary, `mcp-types.${extension}`), `${importLine}
+const compiler: mcp.McpSchemaValidator = () => () => {}
+const host: mcp.McpExtensionHost = {async captureCatalogs(){return []},prepareOperation(){throw new Error('No connected server')}}
+const result = mcp.createMcpExtension(host,[],async () => ({content:''}),{validateSchema:compiler,assertAllowed(){},operationsEnabled:false})
+// @ts-expect-error a review callback is mandatory
+mcp.createMcpExtension(host,[],undefined,{validateSchema:compiler,assertAllowed(){}})
+// @ts-expect-error a privacy callback is mandatory
+mcp.createMcpExtension(host,[],async () => ({content:''}),{validateSchema:compiler})
+void result
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `mcp-types.${extension}`], temporary)
+  }
   for (const [extension, importLine] of [
     ['mjs', "import * as decisions from '@ayayaq/vivi/decisions'\nimport assert from 'node:assert/strict'"],
     ['cjs', "const decisions = require('@ayayaq/vivi/decisions')\nconst assert = require('node:assert/strict')"]

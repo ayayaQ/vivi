@@ -107,6 +107,16 @@
         "types": "./dist/cjs/decisions.d.ts",
         "default": "./dist/cjs/decisions.js"
       }
+    },
+    "./extensions/mcp": {
+      "import": {
+        "types": "./dist/extensions/mcp.d.ts",
+        "default": "./dist/extensions/mcp.js"
+      },
+      "require": {
+        "types": "./dist/cjs/extensions/mcp.d.ts",
+        "default": "./dist/cjs/extensions/mcp.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
@@ -132,10 +142,11 @@
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs",
+    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs",
     "test:package": "npm run build && node scripts/test-package.mjs"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
     "@types/node": "24.13.3",
     "typescript": "6.0.3"
   },

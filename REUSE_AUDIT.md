@@ -43,6 +43,17 @@ manual review UI, resource locking/revision rechecks, execution and audit storag
 host-owned. Mock protocol/safety tests establish implementation behavior, not real-model
 accuracy or threshold calibration. See [the decision contract](docs/DECISIONS.md).
 
+## Optional MCP foundation (source only)
+
+The CLI-demonstrated bounded catalogs, alias mapping, schema quarantine, immutable
+operation bindings, fixed extension and result projection are reusable without the
+CLI's SDK, filesystem or process imports. A host-supplied compiler enforces the accepted
+schema subset; this does not add a generic schema engine to the main agent loop.
+Connections, configuration/credential policy, human approval, actual transport-boundary
+checks, cancellation, unknown-outcome handling and app history remain host-owned.
+Adapter tests prove the contract against both host shapes without adopting unpublished
+versions. See [the precise boundary](docs/MCP.md).
+
 ## Reviewed and kept host-owned
 
 - Tool argument validation: core checks the JSON envelope; calculator/notes and bot resources

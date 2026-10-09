@@ -69,3 +69,15 @@ The optional `src/decisions*` module is original implementation for this reposit
 Its wire schemas were checked against the official OpenAI Decisions and OpenRouter Jev
 references listed in `docs/DECISIONS.md` on October 7, 2026. No vendor SDK or cookbook
 implementation was copied or bundled. Tests use attributed, synthetic protocol fixtures.
+
+## Optional MCP bridge
+
+The optional MCP catalog, operation-binding, extension and result-projection helpers
+are extracted and generalized from Apache-2.0 vivi-cli at
+`c748317cb87a72f4e023cc21b96e793ea89e3170`:
+
+https://github.com/ayayaQ/vivi-cli/tree/c748317cb87a72f4e023cc21b96e793ea89e3170
+
+OS process ownership, configuration persistence, credential screening, SDK connection
+and approval UI remain host-owned. No MCP SDK source or binary is bundled; the shared
+module uses host-supplied synchronous schema assertions. See `docs/MCP.md`.

@@ -33,6 +33,14 @@ cache usage counts, model capabilities, memory, and skills. Exact registry bytes
 installed files, ESM/CommonJS consumers and strict NodeNext declarations were verified; see
 [RELEASING.md](RELEASING.md).
 
+## Optional MCP bridge (source only)
+
+The upcoming `@ayayaq/vivi/extensions/mcp` subpath shares captured catalogs, exact
+operation proposals and bounded untrusted results with host-supplied schema validation
+and approval wiring. It adds no dependencies. Connections, processes, credentials,
+actual sends and UI stay in your host; verified npm `0.8.0` does not include it.
+See [the host contract](docs/MCP.md) and [offline example](examples/mcp.mjs).
+
 ## Optional model capabilities
 
 The optional `@ayayaq/vivi/providers/models` subpath is published in verified registry `0.4.0`
