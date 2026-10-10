@@ -1,9 +1,9 @@
-# Ordered accepted records (unreleased)
+# Ordered accepted records (prepared 0.10.0)
 
 The optional `@ayayaq/vivi/events/stream` subpath adds bounded v1 run-local records to
 [session snapshots](AGENT_RECORDS.md). `runAgent` adds an optional `onAccepted` hook.
 Published `0.9.0` does not contain these additions. Hosts adopt verified published bytes
-through their separately reviewed migrations.
+through their separately reviewed migrations. The prepared release is not yet published.
 
 ## Canonical acceptance and compatibility
 
@@ -92,7 +92,10 @@ display metadata, title, notes and authoritative aggregate usage. It fabricates 
 runs, rounds or approvals. Hosts retain the original stored document until the versioned
 successor validates and commits. Privacy changes must also scrub/quarantine stored log bodies
 and backups. If immutable identities/evidence cannot safely be screened, quarantine rather
-than replay secrets. Sanitized bootstrap/receipt retirement is not implemented here.
+than replay secrets. Restore requires the exact screened complete session chain; a privacy
+snapshot cannot replace erased prior records. If policy requires old bodies to be removed,
+scrub/quarantine that chain and withhold restoration. Sanitized bootstrap/receipt retirement
+is optional future work, not a prerequisite or implied capability of bounded v1 adoption.
 
 ## Bounds and storage cost
 
@@ -111,5 +114,6 @@ bound encoded input before parsing, retained runs and model-token budgets.
 
 Run-local deltas cost approximately the new accepted payload bytes plus one final session
 snapshot per turn. Cross-turn snapshots still cost approximately N × H for N turns and
-history size H in the worst case. Limits fail closed; efficient cross-turn persistence,
-validated sanitized bootstrap and production CLI-20/Desktop-14 migration remain gates.
+history size H in the worst case. Limits fail closed; efficient cross-turn persistence and
+optional sanitized bootstrap are outside this version. Production CLI-20/Desktop-14
+migration remains separately reviewed after verified publication.

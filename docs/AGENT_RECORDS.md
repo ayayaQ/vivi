@@ -1,4 +1,4 @@
-# Terminal records and projections (unreleased CORE-12 slice)
+# Session records and projections (prepared 0.10.0)
 
 `@ayayaq/vivi/events` is an additive, data-only contract for **settled snapshots**. The
 existing `runAgent`, `AgentEvent`, awaited callbacks and provider-native receipts are
@@ -6,11 +6,12 @@ unchanged. A live callback is neither a complete journal nor proof of a disk che
 Build a terminal record from the final **host-reconciled** result after admitted outcome
 work drains, even when cancellation or a callback failure suppressed later live events.
 
-This slice supplies bounded v1 records, stable source identities, exact outcome evidence,
-and immutable full/incremental projection. It does not finish CORE-12's ordered incremental
-agent/tool event stream, CLI-20/Desktop-14 production persistence/migration, or sanitized
-mid-log checkpoint bootstrap. Those remain separate acceptance work. No release version is
-bumped here; published 0.9.0 has neither this API nor CORE-11 owned scopes.
+The prepared 0.10.0 contract supplies bounded v1 session records, stable source identities,
+exact outcome evidence and immutable full/incremental projection. Its additive
+[run stream](AGENT_STREAM.md) records ordered accepted assistant/results separately from
+transient progress. Published 0.9.0 contains neither these APIs nor CORE-11 owned scopes.
+Production CLI-20/Desktop-14 persistence/migration follows verified publication. Mid-log
+bootstrap, compaction and receipt retirement are not supported or required for bounded v1 use.
 
 ## Records
 
@@ -83,7 +84,12 @@ invalidation, sanitized rewrite/backup/quarantine and commit policy. No old cont
 in projection duplicate receipts; run summaries retain no answer/error body. An identical
 old event returns the **current** projection, so it cannot undo a privacy rewrite.
 
-Hash-only receipts do not sanitize old stored log bodies. Full replay is atomic to its
+Hash-only receipts do not sanitize old stored log bodies. A privacy snapshot alone cannot
+restore a chain after earlier records are erased. Keep exact screened replay bodies, or
+scrub/delete/quarantine the chain and withhold its restoration when current policy requires
+removal. Do not rewrite old bodies and pretend their receipt digests or original call bindings
+are unchanged. Continued same-session recovery after prefix erasure requires a future
+explicitly reviewed checkpoint/migration contract. Full replay is atomic to its
 caller, but a host publishing intermediate catch-up states must screen each publication.
 Never expose a pre-redaction projection or revive deleted/disabled context through replay.
 New records are screened against current policy; long waits never preserve reusable approval.
@@ -113,8 +119,8 @@ Full snapshots deliberately trade simplicity for repeated bytes. A history of H 
 N turns costs approximately N × H in the worst case, plus metadata/evidence. The 64 MiB
 limit fails closed; it does not compact, truncate or silently drop history. The additive [run stream](AGENT_STREAM.md) stores accepted deltas within each turn and
 retains this terminal session anchor. Session snapshots still repeat cumulative history;
-receipt retirement, efficient cross-turn compaction and validated sanitized bootstrap
-require a later contract and host migration proof.
+receipt retirement, efficient cross-turn compaction and sanitized bootstrap are optional
+future contracts, not assumptions made by this bounded complete-chain API.
 
 The [offline example](../examples/agent-records.mjs), decoder tests and paired CLI/Desktop
 fixture adapters demonstrate this contract. They do not change either production host or

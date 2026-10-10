@@ -79,6 +79,16 @@ try {
   assert.equal(packed.filename, `ayayaq-vivi-${sourceManifest.version}.tgz`)
   assert.equal(manifest.publishConfig.access, 'public')
   assert.deepEqual(manifest.exports, sourceManifest.exports)
+  const specifiers = Object.keys(manifest.exports).map(path => path === '.' ? manifest.name : manifest.name + path.slice(1))
+  await writeFile(join(temporary, 'all-subpaths.mjs'), `import assert from 'node:assert/strict'\n${specifiers.map(specifier => `assert(Object.keys(await import(${JSON.stringify(specifier)})).length > 0)`).join('\n')}\n`)
+  await writeFile(join(temporary, 'all-subpaths.cjs'), `const assert=require('node:assert/strict')\n${specifiers.map(specifier => `assert(Object.keys(require(${JSON.stringify(specifier)})).length > 0)`).join('\n')}\n`)
+  run(process.execPath, ['all-subpaths.mjs'], temporary)
+  run(process.execPath, ['all-subpaths.cjs'], temporary)
+  for (const extension of ['mts', 'cts']) {
+    await writeFile(join(temporary, `all-subpaths.${extension}`), specifiers.map((specifier, index) =>
+      `${extension === 'mts' ? `import * as entry${index} from ${JSON.stringify(specifier)}` : `import entry${index}=require(${JSON.stringify(specifier)})`}\nvoid entry${index}`).join('\n') + '\n')
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `all-subpaths.${extension}`], temporary)
+  }
   assert.deepEqual(manifest.exports['./decisions'], {
     import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
     require: { types: './dist/cjs/decisions.d.ts', default: './dist/cjs/decisions.js' }
@@ -767,6 +777,7 @@ void result.then(result => { const outcome: decisions.DecisionOutcome = result.o
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `decision-types.${extension}`], temporary)
   }
   console.log(`Packaged ESM/CommonJS runtime and TypeScript consumers passed (${packed.filename})`)
+  console.log(`All ${specifiers.length} public subpaths resolved in both runtimes and declaration modes`)
   console.log(`sha256 ${sha256}`)
   console.log(`integrity ${packed.integrity}`)
 } finally {

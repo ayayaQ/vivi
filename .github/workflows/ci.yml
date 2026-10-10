@@ -35,7 +35,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: node --test test/mcp-contract.test.mjs test/mcp-extension.test.mjs test/extension-scope.test.mjs test/extension-scope-hosts.test.mjs test/agent-records.test.mjs test/agent-record-hosts.test.mjs test/accepted-updates.test.mjs test/agent-stream.test.mjs test/agent-stream-hosts.test.mjs
+      - run: node --test test/mcp-contract.test.mjs test/mcp-extension.test.mjs test/extension-scope.test.mjs test/extension-scope-hosts.test.mjs test/agent-records.test.mjs test/agent-record-hosts.test.mjs test/accepted-updates.test.mjs test/agent-stream.test.mjs test/agent-stream-hosts.test.mjs test/agent-privacy-policy.test.mjs
       - run: node examples/mcp.mjs
       - run: node examples/extension-scope.mjs
       - run: node examples/agent-records.mjs

@@ -1,6 +1,6 @@
 # Owned extension lifetimes and durable event projections
 
-Status: Proposed after CORE-10 audit, 10 October 2026
+Status: Accepted and implemented core contracts, 10 October 2026
 
 ## Decision
 
@@ -49,8 +49,25 @@ CLI-20 and DESKTOP-14 first compare projections in shadow fixtures, then add hos
 
 Long approval pauses may persist bounded pending-work descriptions, source revisions and a safe-resume cursor. They do not persist reusable approval. Resume revalidates resources, policy and current sources. Credential screening, memory deletion/invalidation, physical append/fsync/backup/quarantine policy and process ownership remain host responsibilities.
 
+## Implemented bounded scope
+
+CORE-11 owned scopes and CORE-12 session/run projections are implemented in
+[PR #26](https://github.com/ayayaQ/vivi/pull/26), [PR #27](https://github.com/ayayaQ/vivi/pull/27)
+and [PR #28](https://github.com/ayayaQ/vivi/pull/28). The optional canonical acceptance hook
+separates accepted data from live progress; host append/commit and exact outcome authority
+remain unchanged. Reviewed publication and actual host migrations are separate gates.
+
+The v1 contract is bounded complete-chain replay. Mid-log bootstrap, compaction and receipt
+retirement are not required by CORE-12 acceptance and are not implied capabilities. A privacy
+snapshot sanitizes current projection data, not old persisted bodies. If policy requires earlier
+bodies to be erased, hosts scrub/quarantine and withhold that chain's restoration. Continued
+same-session recovery afterward would require a separately reviewed checkpoint contract.
+
 ## Reference and deferred work
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness/blob/d743267388641bc76f17c45ce8b4c231aed1d32c/docs/architecture.md) demonstrates scoped teardown and distinct live/durable projections. Reuse those principles; do not adopt its Cordis configuration, replaceable-loop composition, UI slots or arbitrary plugin loading. CORE-14 remains an offline optional hierarchical-context experiment alongside explicit app-wide memory, with provenance/invalidation and quality/cost/latency evidence before a shipping decision.
 
-No product decision blocks the lifecycle-only PR. Persistent format details and unknown-version behavior need exact independent contract review before CORE-12 adoption. Existing Auto eligibility, hard denies, human MCP approval, disabled skill saving, native/live gates and restricted-assessment exclusions remain in force.
+No product decision blocked the original lifecycle-only slice. The persistent formats and
+unknown-version behavior now have independent exact-tree contract review; publication and
+host adoption retain their own gates. Existing Auto eligibility, hard denies, human MCP
+approval, disabled skill saving, native/live gates and restricted-assessment exclusions remain.
