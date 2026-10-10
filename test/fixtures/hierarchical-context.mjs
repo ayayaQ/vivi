@@ -110,7 +110,8 @@ export class OfflineContext {
       } catch { this.stats.failures++ } finally { clearTimeout(timer) }
     }
     // No truncated source becomes alleged evidence. Search/zoom remain available from exact sources.
-    const fallback = ['[unavailable]', '[failed]', '?'].find(text => this.fits(text, maxBytes, maxTokens))
+    const fallback = ['[unavailable]', '[failed]', '?'].find(text => this.fits(text, maxBytes, maxTokens) &&
+      !this.secrets.some(secret => text.includes(secret)))
     check(fallback, 'Explicit fallback cannot fit summary budget; context withheld')
     return { text: fallback, fallback: true }
   }

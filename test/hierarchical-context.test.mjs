@@ -207,6 +207,15 @@ test('tight injected token budgets admit only fitting fallbacks and round-trip t
   assert.equal(recovered.render(), context.render())
 })
 
+test('recognized literals cannot reappear through fallback; all screened markers withhold context', async () => {
+  const corpus = fixture(), context = make({ summarizer: () => '[unavailable]' })
+  await context.update(corpus.entries, changedPolicy({ secrets: ['[unavailable]'] }))
+  assert(!context.render().includes('[unavailable]'))
+  const noMarker = make({ summarizer: () => '[unavailable]' })
+  await assert.rejects(noMarker.update(corpus.entries, changedPolicy({ secrets: ['[unavailable]', '[failed]', '?'] })), /fallback.*withheld/)
+  assert.throws(() => noMarker.render(), /withheld/)
+})
+
 test('mock experiment compares same corpus, budgets and exact-source access without provider conclusions', async () => {
   const result = await evaluate()
   assert.deepEqual(result, await evaluate())
