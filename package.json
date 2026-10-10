@@ -137,6 +137,16 @@
         "types": "./dist/cjs/events/stream.d.ts",
         "default": "./dist/cjs/events/stream.js"
       }
+    },
+    "./presentation": {
+      "import": {
+        "types": "./dist/presentation.d.ts",
+        "default": "./dist/presentation.js"
+      },
+      "require": {
+        "types": "./dist/cjs/presentation.d.ts",
+        "default": "./dist/cjs/presentation.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
@@ -162,7 +172,7 @@
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs && node examples/extension-scope.mjs && node examples/agent-records.mjs && node examples/agent-stream.mjs",
+    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs && node examples/extension-scope.mjs && node examples/agent-records.mjs && node examples/agent-stream.mjs && node examples/tool-presentation.mjs",
     "test:package": "npm run build && node scripts/test-package.mjs"
   },
   "devDependencies": {

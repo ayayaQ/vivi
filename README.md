@@ -5,6 +5,10 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
+The optional `/presentation` source addition provides bounded, UI-neutral tool display
+snapshots and safe text fallback. It is not in published `0.10.0`; CLI/Desktop adapters
+follow reviewed publication. See [the presentation contract](docs/TOOL_PRESENTATION.md).
+
 ## Optional decision review
 
 This module is published in verified stable `0.7.0` and absent from immutable `0.6.0`.
