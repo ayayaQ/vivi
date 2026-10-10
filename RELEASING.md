@@ -280,10 +280,9 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The commands below document the historical `0.6.0` preparation and publication workflow.
-`0.6.0` and all earlier published versions must never be replaced or republished. For a future
-release, select a new version in every command and repeat source, archive, registry and host
-verification. All published records and archives remain immutable.
+The commands below target the prepared `0.11.0` release. For a later release, select its
+new version in every command and repeat source, archive, registry and host verification.
+All published records and archives remain immutable.
 
 ## Prepare and independently review
 

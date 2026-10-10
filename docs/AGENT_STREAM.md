@@ -1,9 +1,9 @@
-# Ordered accepted records (prepared 0.10.0)
+# Ordered accepted records (published 0.10.0)
 
 The optional `@ayayaq/vivi/events/stream` subpath adds bounded v1 run-local records to
 [session snapshots](AGENT_RECORDS.md). `runAgent` adds an optional `onAccepted` hook.
-Published `0.9.0` does not contain these additions. Hosts adopt verified published bytes
-through their separately reviewed migrations. The prepared release is not yet published.
+Published `0.9.0` does not contain these additions. Registry `0.10.0` bytes are verified;
+hosts adopt them through separately reviewed migrations.
 
 ## Canonical acceptance and compatibility
 
