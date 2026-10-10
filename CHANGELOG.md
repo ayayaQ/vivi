@@ -4,8 +4,10 @@
 
 - Add bounded opt-in terminal records and pure immutable full/incremental snapshot projections
   on `/events`; retain final reconciled history/usage, exact host outcome evidence and live callback compatibility
-- Prove paired offline host checkpoint/recovery seams; ordered durable event streaming and
-  production migration remain separate CORE-12/CLI-20/Desktop-14 work
+- Add an opt-in canonical accepted-update hook and bounded `/events/stream` run-local deltas,
+  with exact session anchors, frozen replay, usage and terminal reconciliation
+- Prove paired offline host append/checkpoint/recovery seams; production migration and
+  sanitized bootstrap remain separately gated CORE-12/CLI-20/Desktop-14 work
 
 - Add opt-in owned extension scopes with atomic registration, fixed lifetime-bound snapshots,
   combined cancellation and one awaited reverse-cleanup completion, including aggregate failures

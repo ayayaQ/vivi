@@ -2,6 +2,7 @@
 export { runAgent } from './run-agent.js'
 export { closeInterruptedHistory, validateHistory } from './history.js'
 export type {
+  AgentAcceptedUpdate,
   AgentError,
   AgentEvent,
   AgentResult,

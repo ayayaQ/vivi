@@ -29,6 +29,10 @@ try {
     'dist/events.js', 'dist/events.d.ts', 'dist/cjs/events.js', 'dist/cjs/events.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
+  for (const required of ['docs/AGENT_STREAM.md', 'examples/agent-stream.mjs', 'src/events/stream.ts',
+    'dist/events/stream.js', 'dist/events/stream.d.ts', 'dist/cjs/events/stream.js', 'dist/cjs/events/stream.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/EXTENSION_SCOPES.md', 'examples/extension-scope.mjs']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
@@ -131,6 +135,57 @@ try {
     run(process.execPath, [`mcp-consumer.${extension}`], temporary)
   }
   run(process.execPath, [join(installed, 'examples/agent-records.mjs')], temporary)
+  run(process.execPath, [join(installed, 'examples/agent-stream.mjs')], temporary)
+  assert.deepEqual(manifest.exports['./events/stream'], {
+    import: { types: './dist/events/stream.d.ts', default: './dist/events/stream.js' },
+    require: { types: './dist/cjs/events/stream.d.ts', default: './dist/cjs/events/stream.js' }
+  })
+  for (const [extension, importLine] of [
+    ['mjs', "import * as stream from '@ayayaq/vivi/events/stream'\nimport * as events from '@ayayaq/vivi/events'\nimport {runAgent} from '@ayayaq/vivi'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const stream=require('@ayayaq/vivi/events/stream')\nconst events=require('@ayayaq/vivi/events')\nconst {runAgent}=require('@ayayaq/vivi')\nconst assert=require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `stream-consumer.${extension}`), `${importLine}
+;(async () => {
+  const source={reference:'host/packed-stream',revision:'1'}, base=events.createAgentProjection('stream-packed')
+  let state=stream.createAgentRunProjection(base,'run'); const records=[]
+  const header=()=>({version:1,scope:'run',sessionId:base.sessionId,runId:'run',eventId:'event-'+(state.sequence+1),sequence:state.sequence+1,previousEventId:state.eventId,source})
+  const append=record=>{state=stream.applyAgentRunRecord(state,record);records.push(record)}
+  append(stream.createAgentRunStart(header(),base,[]))
+  const result=await runAgent({messages:[],tools:[],provider:{async generate(){return {content:'Packed stream',toolCalls:[],usage:{inputTokens:3,outputTokens:1,totalTokens:5}}}},async executeTool(){throw new Error('No tools')},onAccepted(update){assert(Object.isFrozen(update.message));append(stream.createAgentAcceptedRecord({envelope:header(),update,historyId:'original-assistant-id',source}))}})
+  const terminal=events.createRunSettlement({envelope:{version:1,sessionId:base.sessionId,eventId:'session-terminal',sequence:1,previousEventId:null,source},runId:'run',inputHistoryLength:0,result,history:state.history,outcomes:[],sessionUsage:result.usage})
+  append(stream.createAgentRunTerminal(header(),terminal))
+  assert.deepEqual(state,stream.projectAgentRunRecords(base,'run',records));assert.equal(state.state,'settled');assert.equal(state.runUsage.totalTokens,5)
+  assert.equal(stream.applyAgentRunRecord(state,records[0]),state)
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`stream-consumer.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mts', "import * as stream from '@ayayaq/vivi/events/stream'\nimport * as events from '@ayayaq/vivi/events'\nimport * as core from '@ayayaq/vivi'"],
+    ['cts', "import stream=require('@ayayaq/vivi/events/stream')\nimport events=require('@ayayaq/vivi/events')\nimport core=require('@ayayaq/vivi')"]
+  ]) {
+    await writeFile(join(temporary, `stream-types.${extension}`), `${importLine}
+const base: events.AgentProjection=events.createAgentProjection('typed')
+const state: stream.AgentRunProjection=stream.createAgentRunProjection(base,'run')
+const header: stream.AgentRunRecordEnvelope={version:1,scope:'run',sessionId:'typed',runId:'run',eventId:'event',sequence:1,previousEventId:null,source:{reference:'host/source'}}
+const record: stream.AgentRunRecord=stream.createAgentRunStart(header,base,[])
+const restored: stream.AgentRunProjection=stream.projectAgentRunRecords(base,'run',[record])
+const update: core.AgentAcceptedUpdate={type:'assistant_accepted',message:{kind:'assistant',content:'Typed',toolCalls:[]},round:1,aggregateUsage:{inputTokens:0,outputTokens:0,totalTokens:0}}
+void stream.createAgentAcceptedRecord({envelope:header,update,historyId:'original-id',source:header.source})
+const options: core.RunAgentOptions={messages:[],tools:[],provider:{async generate(){return {content:'Typed',toolCalls:[]}}},async executeTool(){return {content:''}},onAccepted(accepted){if(accepted.type==='assistant_accepted'){const total:number=accepted.aggregateUsage.totalTokens;void total}}}
+void core.runAgent(options);void state;void stream.AGENT_RUN_RECORD_LIMITS
+// @ts-expect-error projected canonical history is deeply immutable
+restored.history[0]!.message.content='changed'
+// @ts-expect-error run state cursor is immutable
+restored.sequence=2
+// @ts-expect-error unsupported run namespace
+header.scope='session'
+// @ts-expect-error canonical acceptance is not a transient progress event
+const progress: core.AgentAcceptedUpdate={type:'progress',text:'partial'}
+void progress
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `stream-types.${extension}`], temporary)
+  }
   for (const [extension, importLine] of [
     ['mjs', "import * as events from '@ayayaq/vivi/events'\nimport assert from 'node:assert/strict'"],
     ['cjs', "const events = require('@ayayaq/vivi/events')\nconst assert = require('node:assert/strict')"]

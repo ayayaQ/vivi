@@ -90,7 +90,7 @@ reviewed release and verified published bytes.
 - `ModelProvider.generate({ messages, tools }, signal)`: returns `{ content, toolCalls }` with optional
   `usage: { inputTokens, outputTokens, totalTokens, cachedInputTokens?, cacheWriteInputTokens? }`
   and `providerState`
-- `runAgent({ provider, messages, tools, executeTool, signal?, maxRounds?, onEvent? })`: returns
+- `runAgent({ provider, messages, tools, executeTool, signal?, maxRounds?, onEvent?, onAccepted? })`: returns
   `{ status, history, content, rounds, usage, error? }`
 
 See the [exported types](../src/types.ts) for the complete API. The result status is `completed`,
@@ -129,6 +129,15 @@ against its schemas and domain constraints before acting.
 Advertising a tool enables dispatch; it does not authorize an action. Core is not an approval
 system or security sandbox. The host must enforce authorization, approval, data-sharing boundaries,
 and any isolation required by its tools.
+
+## Opt-in canonical acceptance (unreleased)
+
+`onAccepted(update)` observes a frozen detached assistant or tool result after canonical
+history/round/usage acceptance and before its existing `onEvent` notification. It is awaited;
+a thrown/rejected callback returns `event_error`, and cancellation remains prompt. Cleanup
+closures are available only in the final `AgentResult`. When omitted, existing callback
+ordering and scheduling are unchanged. The update does not certify host persistence or
+external effects. See [ordered records and host commit obligations](AGENT_STREAM.md).
 
 ## Transcript and provider adapters
 

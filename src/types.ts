@@ -94,6 +94,11 @@ export type AgentEvent =
   | { type: 'tool_completed'; message: ToolResultMessage }
   | { type: 'round_completed'; usage?: Usage }
 
+/** Canonical acceptance, separate from transient progress and host storage acknowledgement. */
+export type AgentAcceptedUpdate =
+  | { type: 'assistant_accepted'; message: AssistantMessage; round: number; usage?: Usage; aggregateUsage: Usage }
+  | { type: 'tool_result_accepted'; message: ToolResultMessage; round: number }
+
 export interface RunAgentOptions {
   provider: ModelProvider
   messages: readonly HistoryMessage[]
@@ -104,6 +109,10 @@ export interface RunAgentOptions {
   maxRounds?: number
   /** Awaited in order. Receives deeply frozen copies, never the live transcript. */
   onEvent?(event: AgentEvent): void | Promise<void>
+  /** Opt-in frozen canonical updates, after acceptance and before onEvent/next dispatch.
+   * Awaited in order; failure is event_error. Hosts own durable commit and admitted-write drain.
+   * Cleanup closures are in final AgentResult, not additional callbacks. */
+  onAccepted?(update: AgentAcceptedUpdate): void | Promise<void>
 }
 
 export interface AgentError {

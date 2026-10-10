@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
+  AgentAcceptedUpdate,
   AgentError,
   AgentEvent,
   AgentResult,
@@ -148,6 +149,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const usage: Usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
   let pending: ToolCall[] = []
   let signal: AbortSignal = new AbortController().signal
+  let onAccepted: RunAgentOptions['onAccepted']
 
   const result = (status: AgentResult['status'], error?: AgentError): AgentResult => ({
     status, history, content, rounds, usage, ...(error ? { error } : {})
@@ -162,6 +164,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       assert(options.provider && typeof options.provider.generate === 'function', 'Provider must implement generate')
       assert(typeof options.executeTool === 'function', 'executeTool must be a function')
       assert(options.onEvent === undefined || typeof options.onEvent === 'function', 'onEvent must be a function')
+      onAccepted = options.onAccepted
+      assert(onAccepted === undefined || typeof onAccepted === 'function', 'onAccepted must be a function')
       assert(options.signal === undefined || options.signal instanceof AbortSignal, 'signal must be an AbortSignal')
       const limit = options.maxRounds === undefined ? 25 : options.maxRounds
       assert(Number.isInteger(limit) && limit >= 1 && limit <= 1000, 'maxRounds must be an integer from 1 to 1000')
@@ -185,6 +189,19 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       if (!onEvent) return
       try {
         await wait(() => onEvent(snapshot(event)), waitSignal)
+        checkAbort()
+      } catch (error) {
+        if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
+        throw new RunFailure('event_error', detail(error))
+      }
+    }
+
+    const accept = async (update: AgentAcceptedUpdate): Promise<void> => {
+      const observer = onAccepted
+      if (!observer) return
+      checkAbort()
+      try {
+        await wait(() => observer(snapshot(update)), signal)
         checkAbort()
       } catch (error) {
         if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
@@ -302,6 +319,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       }
       pending = assistant.toolCalls.slice()
       for (const call of pending) seenIds.add(call.id)
+      if (onAccepted) await accept({ type: 'assistant_accepted', message: assistant, round: rounds,
+        ...(turn.usage ? { usage: turn.usage } : {}), aggregateUsage: usage })
       await emit({ type: 'assistant', message: assistant })
 
       while (pending.length > 0) {
@@ -330,6 +349,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         checkAbort()
         history.push(message)
         pending.shift()
+        if (onAccepted) await accept({ type: 'tool_result_accepted', message, round: rounds })
         await emit({ type: 'tool_completed', message })
       }
 
