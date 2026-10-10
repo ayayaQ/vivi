@@ -90,12 +90,12 @@ token and byte enforcement; neither stands in for a real model tokenizer.
 | CORE-14 requirement | Offline proof / limitation |
 | --- | --- |
 | Recent verbatim window and explicit memory | Whole original recent entries and separate memory are rendered; insufficient headroom withholds context rather than truncating them |
-| Exact-source search/zoom and provenance | Existing record projection, exact ID/source/revision/role equality, recursive child-to-source zoom, detached return values |
+| Exact-source search/zoom and provenance | Existing record projection, exact ID/source/revision/role equality, compact child-to-source zoom without internal manifests; oversized leaves use checked Unicode-codepoint pages that reconstruct the exact serialized source |
 | Corrections/conflicting instructions | Oracle includes authoritative and stale/conflicting sources; later tool claims remain tool data; no automatic latest-mention truth |
-| Delete/disable/revise/recognized secret | Reconcile before reuse; affected summaries, related descendants and derived caches are purged. Secret screening covers complete source envelopes, summary output, saved nodes and explicit memory; screened memory withholds the request until refreshed |
+| Delete/disable/revise/recognized secret | Reconcile before reuse; affected summaries, related descendants and derived caches are purged. Decoded-string screening covers complete source envelopes including keys/tool metadata, summary output, saved nodes and explicit memory; quote/newline/backslash markers are tested. Screened memory withholds the request until refreshed |
 | Model-token and byte budgets | Checked complete request and exact retrieval, bounded summary input/output, named injected tokenizer; malformed counts fail. Real tokenizer validation remains a live/product gate |
-| Failed summary | Rejection, timeout and oversized output have at most two attempts per node and a short explicit unavailable marker; original source retrieval remains intact |
-| Recoverable versioned state | Bounded v1 JSON, checksum, tokenizer/memory/limits/source fingerprint validation, structurally checked node links/coverage and saved-view preservation |
+| Failed summary | Rejection, timeout and oversized output have at most two attempts per node and a checked fitting unavailable marker; no fitting marker withholds context. Tight injected-token fallback checkpoints round-trip; original source retrieval remains intact |
+| Recoverable versioned state | Bounded v1 JSON, checksum, tokenizer/memory/limits/source fingerprint and current-policy revision binding, structurally checked node links/coverage and saved-view preservation |
 | Durability failures | Corrupt/truncated/unknown-version or incompatible state is quarantined with context withheld, then rebuilt from authoritative current sources; failed simulated commit leaves the previous checkpoint recoverable; changed/deleted/screened sources never reuse saved summaries |
 | Comparison | Same-arrival flat compaction and unchanged full-history baseline, per-probe evidence, bytes/mock units, callback work, prefix bytes and explicit failure evidence |
 
@@ -107,6 +107,15 @@ locking, fsync, atomic rename, backup or disk durability. Those policies remain 
 Flat's compressed view can be regenerated from the same retained records; no durability
 advantage over that baseline is established. Privacy erasure of persisted old record bodies
 still follows the existing core/host quarantine contract, not this experiment.
+
+Source policy is a complete host-supplied snapshot with a positive monotonic revision and
+explicit deleted IDs, disabled references and recognized secret strings. Omitted policy on
+an existing context preserves the known snapshot; it never clears invalidation. Clearing
+requires a newer complete explicit snapshot. A fresh context requires current policy from
+its caller, through construction or reconciliation; absent policy or a revision older than
+the checkpoint fails closed. Saved state retains only policy revision/fingerprint, never
+secret patterns. The caller must obtain genuinely current policy from its authoritative
+store; this prototype does not invent a persistent permission/privacy service.
 
 ## Reproduction and gates
 

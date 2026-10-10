@@ -11,6 +11,17 @@ const role = entry => entry.message.kind === 'message' ? entry.message.role
   : entry.message.kind === 'assistant' ? 'assistant' : 'tool'
 const text = entry => entry.message.content
 const manifest = entries => entries.map(entry => ({ id: entry.id, fingerprint: hash(entry) }))
+const containsSecret = (value, secrets) => {
+  const pending = [value]
+  while (pending.length) {
+    const item = pending.pop()
+    if (typeof item === 'string' && secrets.some(secret => item.includes(secret))) return true
+    if (item && typeof item === 'object') {
+      for (const [key, child] of Object.entries(item)) pending.push(key, child)
+    }
+  }
+  return false
+}
 
 // This is a named mock model's tokenizer, NOT an actual provider tokenizer or token estimate.
 // A caller must supply its model-specific counter. Counting complete rendered requests is mandatory.
@@ -18,6 +29,7 @@ export const mockTokenizer = Object.freeze({ id: 'mock-unicode-codepoints-v1', c
 export const defaultLimits = Object.freeze({ maxBytes: 6000, maxTokens: 6000, recent: 4,
   nodeBytes: 160, nodeTokens: 160, sourceBytes: 16000, stateBytes: 1024 * 1024,
   summaryInputTokens: 32768, entries: 256, attempts: 2, timeoutMs: 20 })
+export const emptyPolicy = Object.freeze({ revision: 1, disabled: Object.freeze([]), deleted: Object.freeze([]), secrets: Object.freeze([]) })
 
 export function entriesFromRecords(sessionId, records) {
   // Existing complete-chain projection supplies original stable IDs and role/source provenance.
@@ -33,7 +45,7 @@ export function prefixOnlySummarizer({ input, maxBytes }) {
 }
 
 export class OfflineContext {
-  constructor({ memory, tokenizer = mockTokenizer, summarizer = prefixOnlySummarizer, limits = {} }) {
+  constructor({ memory, tokenizer = mockTokenizer, summarizer = prefixOnlySummarizer, limits = {}, policy }) {
     this.limits = { ...defaultLimits, ...limits }
     for (const value of Object.values(this.limits)) check(Number.isSafeInteger(value) && value > 0, 'Invalid experiment limits')
     check(this.limits.entries <= 256 && this.limits.attempts <= 3 && this.limits.timeoutMs <= 1000 &&
@@ -46,6 +58,19 @@ export class OfflineContext {
     this.secrets = []
     this.entries = []; this.nodes = new Map(); this.view = []; this.cache = new Map()
     this.stats = { calls: 0, failures: 0, inputTokens: 0, outputTokens: 0, batches: 0, invalidated: 0 }
+    if (policy !== undefined) this.acceptPolicy(policy)
+  }
+
+  acceptPolicy(input) {
+    if (input === undefined) { check(this.policy, 'Explicit current policy snapshot required'); return this.policy }
+    check(input && Object.keys(input).length === 4 && Number.isSafeInteger(input.revision) && input.revision > 0 &&
+      ['disabled', 'deleted', 'secrets'].every(key => Array.isArray(input[key]) && input[key].length <= this.limits.entries &&
+        input[key].every(value => typeof value === 'string' && value.length > 0 && bytes(value) <= this.limits.sourceBytes)),
+      'Invalid complete current policy snapshot')
+    check(!this.policy || input.revision > this.policy.revision ||
+      (input.revision === this.policy.revision && hash(input) === hash(this.policy)), 'Stale or conflicting current policy revision')
+    this.policy = clone(input)
+    return this.policy
   }
 
   tokens(value) {
@@ -85,7 +110,9 @@ export class OfflineContext {
       } catch { this.stats.failures++ } finally { clearTimeout(timer) }
     }
     // No truncated source becomes alleged evidence. Search/zoom remain available from exact sources.
-    return { text: '[unavailable]', fallback: true }
+    const fallback = ['[unavailable]', '[failed]', '?'].find(text => this.fits(text, maxBytes, maxTokens))
+    check(fallback, 'Explicit fallback cannot fit summary budget; context withheld')
+    return { text: fallback, fallback: true }
   }
 
   async node(start, count) {
@@ -103,8 +130,9 @@ export class OfflineContext {
     return result
   }
 
-  async update(entries, { disabled = [], deleted = [], secrets = [] } = {}) {
+  async update(entries, policy) {
     this.blocked = true; this.cache.clear()
+    const { disabled, deleted, secrets } = this.acceptPolicy(policy)
     check(Array.isArray(entries) && entries.length <= this.limits.entries, 'Source count limit exceeded')
     check(new Set(entries.map(entry => entry.id)).size === entries.length, 'Duplicate source identity')
     check(entries.every(entry => typeof entry.id === 'string' && typeof entry.source?.reference === 'string' &&
@@ -114,7 +142,7 @@ export class OfflineContext {
     this.secrets = clone(secrets)
     // Screen complete source envelopes before summarization, exact retrieval, recent context or state reuse.
     const current = clone(entries.filter(entry => !disabled.includes(entry.source.reference) &&
-      !deleted.includes(entry.id) && !secrets.some(secret => JSON.stringify(entry).includes(secret))))
+      !deleted.includes(entry.id) && !containsSecret(entry, secrets)))
     const previous = manifest(this.entries), next = manifest(current)
     const map = new Map(next.map(item => [item.id, item.fingerprint]))
     const changed = new Set(previous.filter(item => map.get(item.id) !== item.fingerprint).map(item => item.id))
@@ -179,25 +207,43 @@ export class OfflineContext {
       (options.maxTokens ?? this.limits.maxTokens) <= this.limits.maxTokens, 'Retrieval budget or state invalid')
     const node = this.nodes.get(key)
     check(node, 'Unavailable summary')
+    const maxBytes = options.maxBytes ?? this.limits.maxBytes, maxTokens = options.maxTokens ?? this.limits.maxTokens
     const result = node.count === 1 ? clone(this.entries[node.start])
-      : node.children.map(child => clone(this.nodes.get(child)))
-    check(this.fits(JSON.stringify(result), options.maxBytes ?? this.limits.maxBytes,
-      options.maxTokens ?? this.limits.maxTokens), 'Exact-source retrieval budget exceeded')
+      : node.children.map(child => {
+        const { key, start, count, text, roles, fallback } = this.nodes.get(child)
+        return { key, start, count, text, roles: clone(roles), fallback }
+      })
+    if (node.count === 1 && (options.offset !== undefined || !this.fits(JSON.stringify(result), maxBytes, maxTokens))) {
+      const content = [...JSON.stringify(result)], offset = options.offset ?? 0
+      check(Number.isSafeInteger(offset) && offset >= 0 && offset < content.length, 'Invalid source page offset')
+      const page = end => ({ kind: 'source_page', id: result.id, source: result.source, role: role(result),
+        offset, text: content.slice(offset, end).join(''), nextOffset: end < content.length ? end : null,
+        totalCodepoints: content.length })
+      let low = offset, high = content.length
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2)
+        if (this.fits(JSON.stringify(page(mid)), maxBytes, maxTokens)) low = mid; else high = mid - 1
+      }
+      check(low > offset, 'Exact-source page metadata exceeds retrieval budget')
+      return page(low)
+    }
+    check(this.fits(JSON.stringify(result), maxBytes, maxTokens), 'Exact-source retrieval budget exceeded')
     return result
   }
 
   checkpoint() {
     check(!this.blocked, 'Context withheld until a valid current source update')
     const state = { version: 1, tokenizerId: this.tokenizer.id, memoryHash: hash(this.memory), limits: this.limits,
+      policy: { revision: this.policy.revision, fingerprint: hash(this.policy) },
       manifest: manifest(this.entries), nodes: [...this.nodes.values()], view: this.view }
     const encoded = JSON.stringify({ state, checksum: hash(state) })
     check(bytes(encoded) <= this.limits.stateBytes, 'Checkpoint byte budget exceeded')
     return encoded
   }
 
-  async restore(encoded, currentEntries, policy = {}) {
+  async restore(encoded, currentEntries, policy) {
     this.blocked = true; this.cache.clear()
-    const secrets = policy.secrets ?? []
+    const currentPolicy = this.acceptPolicy(policy), { disabled, deleted, secrets } = currentPolicy
     check(secrets.every(secret => typeof secret === 'string' && secret.length > 0), 'Invalid secret screen')
     check(!secrets.some(secret => this.memory.includes(secret)), 'Explicit memory requires current source screening')
     this.secrets = clone(secrets)
@@ -208,14 +254,18 @@ export class OfflineContext {
       saved.state.tokenizerId === this.tokenizer.id && saved.state.memoryHash === hash(this.memory) &&
       JSON.stringify(saved.state.limits) === JSON.stringify(this.limits), 'Quarantined incompatible checkpoint; authoritative sources required')
     const state = saved.state
+    check(state.policy && Number.isSafeInteger(state.policy.revision) && state.policy.revision > 0 &&
+      /^[a-f0-9]{64}$/.test(state.policy.fingerprint) && currentPolicy.revision >= state.policy.revision,
+      'Quarantined stale or invalid current policy binding')
     check(Array.isArray(state.manifest) && Array.isArray(state.nodes) && Array.isArray(state.view) &&
       state.manifest.length <= this.limits.entries && state.nodes.length <= this.limits.entries * 2 &&
       state.view.length <= this.limits.entries, 'Quarantined invalid checkpoint structure')
-    const safe = currentEntries.filter(entry => !(policy.disabled ?? []).includes(entry.source.reference) &&
-      !(policy.deleted ?? []).includes(entry.id) && !(policy.secrets ?? []).some(secret => JSON.stringify(entry).includes(secret)))
+    const safe = currentEntries.filter(entry => !disabled.includes(entry.source.reference) &&
+      !deleted.includes(entry.id) && !containsSecret(entry, secrets))
     // A changed source/policy rebuilds; saved summaries containing deleted text are never exposed.
     if (JSON.stringify(manifest(safe)) !== JSON.stringify(state.manifest) ||
-      secrets.some(secret => JSON.stringify(state.nodes).includes(secret))) return this.update(currentEntries, policy)
+      hash(currentPolicy) !== state.policy.fingerprint || containsSecret(state.nodes, secrets))
+      return this.update(currentEntries, currentPolicy)
     const nodes = new Map(state.nodes.map(node => [node.key, node]))
     check(nodes.size === state.nodes.length, 'Quarantined duplicate nodes')
     for (const node of state.nodes) {

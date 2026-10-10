@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { createCorpus } from './fixtures/hierarchical-context-corpus.mjs'
-import { OfflineContext, mockTokenizer, entriesFromRecords } from './fixtures/hierarchical-context.mjs'
+import { OfflineContext, mockTokenizer, entriesFromRecords, emptyPolicy } from './fixtures/hierarchical-context.mjs'
 import { corpusRecord, evaluate } from './fixtures/hierarchical-context-evaluation.mjs'
 
 const fixture = () => { const corpus = createCorpus(); return { ...corpus,
   entries: entriesFromRecords('owned-core14', [corpusRecord(corpus.entries)]) } }
-const make = (options = {}) => new OfflineContext({ memory: fixture().memory, ...options })
+const make = (options = {}) => new OfflineContext({ memory: fixture().memory, policy: emptyPolicy, ...options })
+const changedPolicy = changes => ({ ...emptyPolicy, revision: 2, ...changes })
 
 test('existing records yield stable exact sources/roles; memory and whole recent window remain explicit', async () => {
   const corpus = fixture(), context = make()
@@ -41,7 +42,7 @@ for (const policy of ['deletion', 'disabled', 'revision', 'secret']) test(`${pol
   const target = corpus.entries[8]
   context.search(target.message.content.slice(0, 12))
   const before = new Map(context.nodes), encoded = context.checkpoint()
-  const entries = structuredClone(corpus.entries); const rules = {}
+  const entries = structuredClone(corpus.entries); const rules = changedPolicy({})
   if (policy === 'deletion') rules.deleted = [target.id]
   if (policy === 'disabled') rules.disabled = [target.source.reference]
   if (policy === 'secret') rules.secrets = [target.message.content]
@@ -109,12 +110,12 @@ test('versioned checkpoint preserves saved view, rejects corrupt state and recov
 test('newly screened explicit memory withholds the entire context until refreshed', async () => {
   const corpus = fixture(), context = make({ memory: 'owned screening marker' })
   await context.update(corpus.entries)
-  await assert.rejects(context.update(corpus.entries, { secrets: ['screening marker'] }), /memory.*screening/)
+  await assert.rejects(context.update(corpus.entries, changedPolicy({ secrets: ['screening marker'] })), /memory.*screening/)
   assert.throws(() => context.render(), /withheld/)
   assert.throws(() => context.checkpoint(), /withheld/)
   const unrecognized = make({ memory: 'owned screening marker' }); await unrecognized.update(corpus.entries)
   const saved = unrecognized.checkpoint(), recovered = make({ memory: 'owned screening marker' })
-  await assert.rejects(recovered.restore(saved, corpus.entries, { secrets: ['screening marker'] }), /memory.*screening/)
+  await assert.rejects(recovered.restore(saved, corpus.entries, changedPolicy({ secrets: ['screening marker'] })), /memory.*screening/)
   assert.throws(() => recovered.render(), /withheld/)
 })
 
@@ -122,12 +123,85 @@ test('summary-only discovered secret is screened before stale state reuse or sum
   const corpus = fixture(), context = make({ summarizer: () => 'synthetic-summary-screen-marker' })
   await context.update(corpus.entries); const saved = context.checkpoint()
   assert(saved.includes('synthetic-summary-screen-marker'))
-  await context.update(corpus.entries, { secrets: ['synthetic-summary-screen-marker'] })
+  await context.update(corpus.entries, changedPolicy({ secrets: ['synthetic-summary-screen-marker'] }))
   assert(!context.checkpoint().includes('synthetic-summary-screen-marker'))
   assert(context.stats.failures > 0)
   const recovered = make({ summarizer: () => 'synthetic-summary-screen-marker' })
-  await recovered.restore(saved, corpus.entries, { secrets: ['synthetic-summary-screen-marker'] })
+  await recovered.restore(saved, corpus.entries, changedPolicy({ secrets: ['synthetic-summary-screen-marker'] }))
   assert(!recovered.checkpoint().includes('synthetic-summary-screen-marker'))
+})
+
+test('decoded credential screens cover quotes, newlines, backslashes, tool metadata and restored summaries', async () => {
+  for (const marker of ['owned\nmarker', 'owned"marker', 'owned\\marker']) {
+    const corpus = fixture(), entries = structuredClone(corpus.entries)
+    entries[8].message.content += marker
+    const context = make(); await context.update(entries); const saved = context.checkpoint()
+    await context.update(entries, changedPolicy({ secrets: [marker] }))
+    assert(!context.entries.some(entry => entry.id === entries[8].id))
+    assert.equal(context.search(marker).length, 0)
+    const recovered = make(); await recovered.restore(saved, entries, changedPolicy({ secrets: [marker] }))
+    assert.equal(recovered.search(marker).length, 0)
+    const generated = make({ summarizer: () => marker }); await generated.update(corpus.entries)
+    const generatedSaved = generated.checkpoint()
+    const reloaded = make({ summarizer: () => marker })
+    await reloaded.restore(generatedSaved, corpus.entries, changedPolicy({ secrets: [marker] }))
+    assert(![...reloaded.nodes.values()].some(node => node.text.includes(marker)))
+    const call = entries.find(entry => entry.message.kind === 'assistant' && entry.message.toolCalls.length)
+    call.message.toolCalls[0].arguments.ordinaryScreenMarker = marker
+    await context.update(entries, changedPolicy({ secrets: [marker] }))
+    assert(!context.entries.some(entry => entry.id === call.id))
+  }
+})
+
+test('large subtree zoom omits internal manifests; exact oversized leaf pages reconstruct original source', async () => {
+  const corpus = fixture(), entries = structuredClone(corpus.entries)
+  entries[12].message.content = '頁 / \"verbatim\" / \n'.repeat(400)
+  const context = make(); await context.update(entries)
+  const children = context.zoom('0+64')
+  assert(children.every(child => !Object.hasOwn(child, 'dependencies')))
+  assert(Buffer.byteLength(JSON.stringify(children)) <= context.limits.maxBytes)
+  let page = context.zoom('12+1'), content = ''
+  assert.equal(page.kind, 'source_page')
+  while (true) {
+    assert(Buffer.byteLength(JSON.stringify(page)) <= context.limits.maxBytes)
+    assert(context.tokens(JSON.stringify(page)) <= context.limits.maxTokens)
+    assert.equal(page.id, entries[12].id); assert.deepEqual(page.source, entries[12].source)
+    content += page.text
+    if (page.nextOffset === null) break
+    page = context.zoom('12+1', { offset: page.nextOffset })
+  }
+  assert.deepEqual(JSON.parse(content), entries[12])
+})
+
+test('known policies survive omission and stale checkpoints; clearing requires a newer complete snapshot', async () => {
+  const corpus = fixture(), target = corpus.entries[8]
+  for (const change of [{ deleted: [target.id] }, { disabled: [target.source.reference] }, { secrets: [target.message.content] }]) {
+    const context = make(); await context.update(corpus.entries); const old = context.checkpoint()
+    const policy = changedPolicy(change); await context.update(corpus.entries, policy)
+    await context.update(corpus.entries)
+    assert(!context.entries.some(entry => entry.id === target.id))
+    await context.restore(old, corpus.entries)
+    assert(!context.entries.some(entry => entry.id === target.id))
+    const current = context.checkpoint(), fresh = make()
+    await assert.rejects(fresh.restore(current, corpus.entries), /policy binding/)
+    await fresh.restore(current, corpus.entries, policy)
+    assert(!fresh.entries.some(entry => entry.id === target.id))
+    await assert.rejects(context.update(corpus.entries, emptyPolicy), /policy revision/)
+    await context.update(corpus.entries, { ...emptyPolicy, revision: 3 })
+    assert(context.entries.some(entry => entry.id === target.id))
+  }
+  const missing = make({ policy: undefined })
+  await assert.rejects(missing.update(corpus.entries), /policy snapshot required/)
+  await assert.rejects(missing.restore('{}', corpus.entries), /policy snapshot required/)
+})
+
+test('tight injected token budgets admit only fitting fallbacks and round-trip their generated checkpoint', async () => {
+  const corpus = fixture(), options = { tokenizer: { id: 'mock-double-tight-v1', count: text => [...text].length * 2 },
+    summarizer: () => { throw new Error('owned failure') }, limits: { maxBytes: 10000, maxTokens: 6000, nodeTokens: 16 } }
+  const context = make(options); await context.update(corpus.entries)
+  assert([...context.nodes.values()].every(node => context.tokens(node.text) <= 16))
+  const recovered = make(options); await recovered.restore(context.checkpoint(), corpus.entries)
+  assert.equal(recovered.render(), context.render())
 })
 
 test('mock experiment compares same corpus, budgets and exact-source access without provider conclusions', async () => {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Deterministic structural evidence availability. This never grades generated model answers.
 import { createCorpus } from './hierarchical-context-corpus.mjs'
-import { OfflineContext, FlatArrivalContext, entriesFromRecords, flatCompaction, mockTokenizer, commonPrefixBytes } from './hierarchical-context.mjs'
+import { OfflineContext, FlatArrivalContext, entriesFromRecords, flatCompaction, mockTokenizer, commonPrefixBytes, emptyPolicy } from './hierarchical-context.mjs'
 
 const bytes = value => Buffer.byteLength(value)
 const encodedQuote = quote => JSON.stringify(quote).slice(1, -1)
@@ -15,7 +15,7 @@ export function corpusRecord(entries) {
 export async function evaluate() {
   const corpus = createCorpus()
   const entries = entriesFromRecords('owned-core14', [corpusRecord(corpus.entries)])
-  const options = { memory: corpus.memory }
+  const options = { memory: corpus.memory, policy: emptyPolicy }
   const hierarchy = new OfflineContext(options)
   const flatArrival = new FlatArrivalContext(options)
   const prefixes = [], flatPrefixes = []; let prior = '', priorFlat = ''
