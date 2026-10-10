@@ -1,0 +1,663 @@
+{
+  "schemaVersion": 1,
+  "qualification": "owned synthetic corpus; prefix-only mock; structural source-support availability only",
+  "providerCalls": 0,
+  "providerCacheMetrics": null,
+  "actualProviderCost": null,
+  "actualModelQuality": null,
+  "tokenizer": "mock-unicode-codepoints-v1",
+  "corpusEntries": 95,
+  "queryCount": 12,
+  "limits": {
+    "maxBytes": 6000,
+    "maxTokens": 6000,
+    "recent": 4,
+    "nodeBytes": 160,
+    "nodeTokens": 160,
+    "sourceBytes": 16000,
+    "stateBytes": 1048576,
+    "summaryInputTokens": 32768,
+    "entries": 256,
+    "attempts": 2,
+    "timeoutMs": 20
+  },
+  "queries": [
+    {
+      "id": "correct-marigold-brackets",
+      "category": "correction",
+      "requiredEvidence": 6,
+      "hierarchyViewEvidence": 1,
+      "flatViewEvidence": 2,
+      "flatOneShotRebuildEvidence": 2,
+      "fullHistoryEvidence": 6,
+      "hierarchyWithExactSearch": 6,
+      "flatWithExactSearch": 6,
+      "sourceRoles": [
+        {
+          "id": "marigold-original",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-original",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "marigold-original-ack",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-original-ack",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "marigold-correction",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-correction",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "marigold-stale-assistant",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-stale-assistant",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "marigold-cache-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-cache-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "marigold-cache-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/marigold-cache-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "marigold-correction"
+      ]
+    },
+    {
+      "id": "correct-lantern-recount",
+      "category": "correction",
+      "requiredEvidence": 4,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 3,
+      "fullHistoryEvidence": 4,
+      "hierarchyWithExactSearch": 4,
+      "flatWithExactSearch": 4,
+      "sourceRoles": [
+        {
+          "id": "lantern-original",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/lantern-original",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "lantern-cache-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/lantern-cache-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "lantern-cache-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/lantern-cache-result",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "lantern-correction",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/lantern-correction",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "lantern-correction"
+      ]
+    },
+    {
+      "id": "correct-cinder-format",
+      "category": "correction",
+      "requiredEvidence": 4,
+      "hierarchyViewEvidence": 1,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 2,
+      "fullHistoryEvidence": 4,
+      "hierarchyWithExactSearch": 4,
+      "flatWithExactSearch": 4,
+      "sourceRoles": [
+        {
+          "id": "cinder-original",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/cinder-original",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "cinder-correction",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/cinder-correction",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "cinder-cache-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/cinder-cache-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "cinder-cache-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/cinder-cache-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "cinder-correction"
+      ]
+    },
+    {
+      "id": "retain-command-authority",
+      "category": "conflict",
+      "requiredEvidence": 3,
+      "hierarchyViewEvidence": 2,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 3,
+      "hierarchyWithExactSearch": 3,
+      "flatWithExactSearch": 3,
+      "sourceRoles": [
+        {
+          "id": "command-allowlist-system",
+          "role": "system",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/command-allowlist-system",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "command-external-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/command-external-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "command-external-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/command-external-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "command-allowlist-system"
+      ]
+    },
+    {
+      "id": "retain-tablecloth-choice",
+      "category": "conflict",
+      "requiredEvidence": 4,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 2,
+      "flatOneShotRebuildEvidence": 2,
+      "fullHistoryEvidence": 4,
+      "hierarchyWithExactSearch": 4,
+      "flatWithExactSearch": 4,
+      "sourceRoles": [
+        {
+          "id": "tablecloth-user",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/tablecloth-user",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "tablecloth-ack",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/tablecloth-ack",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "tablecloth-catalog-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/tablecloth-catalog-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "tablecloth-catalog-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/tablecloth-catalog-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "tablecloth-user"
+      ]
+    },
+    {
+      "id": "retain-elm-system-mode",
+      "category": "conflict",
+      "requiredEvidence": 3,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 3,
+      "hierarchyWithExactSearch": 3,
+      "flatWithExactSearch": 3,
+      "sourceRoles": [
+        {
+          "id": "elm-mode-system",
+          "role": "system",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/elm-mode-system",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "elm-external-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/elm-external-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "elm-external-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/elm-external-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "elm-mode-system"
+      ]
+    },
+    {
+      "id": "retain-unfinished-checksum",
+      "category": "unfinished",
+      "requiredEvidence": 7,
+      "hierarchyViewEvidence": 1,
+      "flatViewEvidence": 2,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 7,
+      "hierarchyWithExactSearch": 7,
+      "flatWithExactSearch": 7,
+      "sourceRoles": [
+        {
+          "id": "orchard-user",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-user",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-check-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-check-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-check-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-check-result",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-waiting",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-waiting",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-still-open",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-still-open",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-board-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-board-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "orchard-board-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/orchard-board-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "orchard-user",
+        "orchard-check-result",
+        "orchard-still-open"
+      ]
+    },
+    {
+      "id": "retain-unsaved-draft",
+      "category": "unfinished",
+      "requiredEvidence": 6,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 2,
+      "flatOneShotRebuildEvidence": 2,
+      "fullHistoryEvidence": 6,
+      "hierarchyWithExactSearch": 6,
+      "flatWithExactSearch": 6,
+      "sourceRoles": [
+        {
+          "id": "harbor-user",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-user",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "harbor-promise",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-promise",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "harbor-save-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-save-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "harbor-save-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-save-result",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "harbor-waiting",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-waiting",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "harbor-still-open",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/harbor-still-open",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "harbor-user",
+        "harbor-save-result",
+        "harbor-still-open"
+      ]
+    },
+    {
+      "id": "retain-completed-archive",
+      "category": "unfinished",
+      "requiredEvidence": 6,
+      "hierarchyViewEvidence": 2,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 6,
+      "hierarchyWithExactSearch": 6,
+      "flatWithExactSearch": 6,
+      "sourceRoles": [
+        {
+          "id": "glass-user",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-user",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "glass-archive-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-archive-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "glass-archive-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-archive-result",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "glass-done",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-done",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "glass-board-call",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-board-call",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "glass-board-result",
+          "role": "tool",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/glass-board-result",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "glass-user",
+        "glass-archive-result"
+      ]
+    },
+    {
+      "id": "recover-buried-stationery-detail",
+      "category": "exact",
+      "requiredEvidence": 1,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 1,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 1,
+      "hierarchyWithExactSearch": 1,
+      "flatWithExactSearch": 1,
+      "sourceRoles": [
+        {
+          "id": "binder-exact",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/binder-exact",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "binder-exact"
+      ]
+    },
+    {
+      "id": "preserve-unicode-label",
+      "category": "exact",
+      "requiredEvidence": 2,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 0,
+      "flatOneShotRebuildEvidence": 2,
+      "fullHistoryEvidence": 2,
+      "hierarchyWithExactSearch": 2,
+      "flatWithExactSearch": 2,
+      "sourceRoles": [
+        {
+          "id": "unicode-exact",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/unicode-exact",
+            "revision": "synthetic-v1"
+          }
+        },
+        {
+          "id": "unicode-ack",
+          "role": "assistant",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/unicode-ack",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "unicode-exact"
+      ]
+    },
+    {
+      "id": "preserve-ordinary-part-number",
+      "category": "exact",
+      "requiredEvidence": 1,
+      "hierarchyViewEvidence": 0,
+      "flatViewEvidence": 0,
+      "flatOneShotRebuildEvidence": 1,
+      "fullHistoryEvidence": 1,
+      "hierarchyWithExactSearch": 1,
+      "flatWithExactSearch": 1,
+      "sourceRoles": [
+        {
+          "id": "drawer-exact",
+          "role": "user",
+          "source": {
+            "reference": "fixture://core14-owned-synthetic/drawer-exact",
+            "revision": "synthetic-v1"
+          }
+        }
+      ],
+      "authorityIds": [
+        "drawer-exact"
+      ]
+    }
+  ],
+  "requests": {
+    "hierarchy": {
+      "bytes": 5111,
+      "mockTokens": 5111,
+      "fits": true
+    },
+    "flat": {
+      "bytes": 4963,
+      "mockTokens": 4962,
+      "fits": true
+    },
+    "flatOneShotRebuild": {
+      "bytes": 5872,
+      "mockTokens": 5861,
+      "fits": true
+    },
+    "unchangedFullHistory": {
+      "bytes": 31120,
+      "mockTokens": 31109,
+      "fits": false
+    }
+  },
+  "summaryWork": {
+    "hierarchy": {
+      "calls": 109,
+      "failures": 0,
+      "inputTokens": 27488,
+      "outputTokens": 17440,
+      "batches": 5,
+      "invalidated": 0
+    },
+    "flat": {
+      "calls": 5,
+      "failures": 0,
+      "inputTokens": 18818,
+      "outputTokens": 11040,
+      "batches": 5,
+      "invalidated": 0
+    },
+    "flatOneShotRebuild": {
+      "calls": 1,
+      "failures": 0,
+      "inputTokens": 10852,
+      "outputTokens": 4340,
+      "batches": 0,
+      "invalidated": 0
+    },
+    "explanation": "Mock input/output token work and call counts; dollars and provider latency are unmeasured. Sequential calls are a latency proxy, not milliseconds."
+  },
+  "bytePrefix": {
+    "hierarchy": {
+      "commonBytes": 270995,
+      "possibleBytes": 411755
+    },
+    "flat": {
+      "commonBytes": 284095,
+      "possibleBytes": 416818
+    },
+    "explanation": "Local serialized byte equality only; no tokenizer-prefix or provider cache-hit claim."
+  },
+  "durability": {
+    "savedViewRoundTripEqual": true,
+    "explanation": "Bounded JSON checksum and current-source revalidation; physical locking/fsync/atomic commit and production recovery remain host-owned."
+  }
+}
