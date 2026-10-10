@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/TOOL_PRESENTATION.md', 'examples/tool-presentation.mjs',
+    'src/presentation.ts', 'dist/presentation.js', 'dist/presentation.d.ts',
+    'dist/cjs/presentation.js', 'dist/cjs/presentation.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/AGENT_RECORDS.md', 'examples/agent-records.mjs', 'src/events.ts',
     'dist/events.js', 'dist/events.d.ts', 'dist/cjs/events.js', 'dist/cjs/events.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
@@ -84,10 +89,50 @@ try {
   await writeFile(join(temporary, 'all-subpaths.cjs'), `const assert=require('node:assert/strict')\n${specifiers.map(specifier => `assert(Object.keys(require(${JSON.stringify(specifier)})).length > 0)`).join('\n')}\n`)
   run(process.execPath, ['all-subpaths.mjs'], temporary)
   run(process.execPath, ['all-subpaths.cjs'], temporary)
+  const presentationFixture = JSON.stringify({ version: 1, callId: 'installed-call',
+    name: 'offline', status: 'approval_required', effect: 'unknown',
+    source: { reference: 'owned://installed-source', revision: 'original' },
+    arguments: { kind: 'json', text: '', data: { limit: 2 } },
+    result: { kind: 'future', text: 'Safe fallback', data: { approved: true } } })
+  for (const [extension, importLine] of [
+    ['mjs', "import assert from 'node:assert/strict'; import * as presentation from '@ayayaq/vivi/presentation'"],
+    ['cjs', "const assert=require('node:assert/strict'); const presentation=require('@ayayaq/vivi/presentation')"]
+  ]) {
+    await writeFile(join(temporary, `presentation.${extension}`), `${importLine}
+const snapshot=presentation.decodeToolPresentation(${JSON.stringify(presentationFixture)})
+for (const options of [{}, {collapsed:true}, {detailBytes:0}]) {
+  const text=presentation.renderToolPresentationText(snapshot,options)
+  assert(text.includes('Approval required'))
+  assert(text.includes('Do not retry automatically'))
+  assert(text.includes('owned://installed-source'))
+  assert(text.includes('original'))
+  assert(text.includes('unsupported presentation kind'))
+}
+assert.equal(presentation.toolPresentationView(snapshot).details[1].text,'Safe fallback')
+assert(Object.isFrozen(snapshot.arguments.data))
+`)
+    run(process.execPath, [`presentation.${extension}`], temporary)
+  }
+  run(process.execPath, [join(installed, 'examples/tool-presentation.mjs')], temporary)
   for (const extension of ['mts', 'cts']) {
     await writeFile(join(temporary, `all-subpaths.${extension}`), specifiers.map((specifier, index) =>
       `${extension === 'mts' ? `import * as entry${index} from ${JSON.stringify(specifier)}` : `import entry${index}=require(${JSON.stringify(specifier)})`}\nvoid entry${index}`).join('\n') + '\n')
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `all-subpaths.${extension}`], temporary)
+    await writeFile(join(temporary, `presentation.${extension}`), `${extension === 'mts'
+      ? "import * as presentation from '@ayayaq/vivi/presentation'"
+      : "import presentation=require('@ayayaq/vivi/presentation')"}
+const data: presentation.ToolPresentation = ${presentationFixture}
+const snapshot: presentation.ToolPresentation = presentation.decodeToolPresentation(JSON.stringify(data))
+const view: presentation.ToolPresentationView = presentation.toolPresentationView(snapshot,{collapsed:true,detailBytes:0})
+const text: string = presentation.renderToolPresentationText(snapshot)
+void view; void text
+// @ts-expect-error presentation is immutable
+snapshot.status = 'succeeded'
+// @ts-expect-error approval text cannot grant an executable status
+const status: presentation.ToolPresentationStatus = 'approved'
+void status
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `presentation.${extension}`], temporary)
   }
   assert.deepEqual(manifest.exports['./decisions'], {
     import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
