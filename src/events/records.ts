@@ -4,7 +4,7 @@ import type { Usage } from '../types.js'
 import { assertHistory } from '../validation.js'
 import { assertEventJson, captureEventArray, eventObject, eventText } from './data.js'
 import type {
-  AgentProjection, AgentRecordSource, AgentRunSettlement, CreateRunSettlementOptions,
+  AgentHistoryEntry, AgentProjection, AgentRecordSource, AgentRunSettlement, CreateRunSettlementOptions,
   DurableAgentRecord, AgentOutcomeEvidence, AgentRecordSnapshot
 } from './types.js'
 
@@ -89,23 +89,27 @@ function settlement(value: unknown): asserts value is AgentRunSettlement {
   assertRecord((value.status === 'error') === ('error' in value), 'Settlement error must match run status')
 }
 
+export function assertAgentHistoryEntry(entry: unknown): asserts entry is AgentHistoryEntry {
+  keys(entry, ['id', 'source', 'message'])
+  identity(entry.id); source(entry.source)
+  const message = entry.message
+  assertRecord(eventObject(message), 'Invalid history message')
+  if (message.kind === 'message') keys(message, ['kind', 'role', 'content'])
+  else if (message.kind === 'assistant') {
+    keys(message, ['kind', 'content', 'toolCalls'], ['providerState'])
+    assertRecord(Array.isArray(message.toolCalls), 'Invalid tool calls')
+    for (const call of message.toolCalls) { keys(call, ['id', 'name', 'arguments']); identity(call.id); identity(call.name) }
+    if ('providerState' in message) { keys(message.providerState, ['provider', 'items']); identity(message.providerState.provider) }
+  } else keys(message, ['kind', 'callId', 'name', 'content'], ['isError'])
+}
+
 function snapshot(value: unknown): asserts value is AgentRecordSnapshot {
   keys(value, ['history', 'outcomes', 'usage'])
   assertRecord(Array.isArray(value.history) && value.history.length <= AGENT_RECORD_LIMITS.history, 'History limit exceeded')
   const messageIds = new Set<string>()
   for (const entry of value.history) {
-    keys(entry, ['id', 'source', 'message'])
-    identity(entry.id); source(entry.source)
+    assertAgentHistoryEntry(entry)
     assertRecord(!messageIds.has(entry.id), 'Duplicate history identity'); messageIds.add(entry.id)
-    const message = entry.message
-    assertRecord(eventObject(message), 'Invalid history message')
-    if (message.kind === 'message') keys(message, ['kind', 'role', 'content'])
-    else if (message.kind === 'assistant') {
-      keys(message, ['kind', 'content', 'toolCalls'], ['providerState'])
-      assertRecord(Array.isArray(message.toolCalls), 'Invalid tool calls')
-      for (const call of message.toolCalls) { keys(call, ['id', 'name', 'arguments']); identity(call.id); identity(call.name) }
-      if ('providerState' in message) { keys(message.providerState, ['provider', 'items']); identity(message.providerState.provider) }
-    } else keys(message, ['kind', 'callId', 'name', 'content'], ['isError'])
   }
   assertHistory(value.history.map(entry => entry.message))
   assertRecord(Array.isArray(value.outcomes) && value.outcomes.length <= AGENT_RECORD_LIMITS.outcomes, 'Outcome limit exceeded')
@@ -270,3 +274,12 @@ export function projectAgentRecords(sessionId: string, records: readonly unknown
   for (let index = 0; index < captured.length; index++) output = applyAgentRecord(output, captured[index])
   return output
 }
+
+/** Internal validation boundary for the ordered-run module; not a public persistence decoder. */
+export function isAgentProjection(value: unknown): value is AgentProjection {
+  return value !== null && typeof value === 'object' && projections.has(value)
+}
+
+// Internal shared boundaries; public exports remain defined in events.ts.
+export { keys as assertAgentRecordKeys, identity as assertAgentIdentity, source as assertAgentSource,
+  usage as assertAgentUsage, freeze as freezeAgentData, digest as agentDataDigest, assertRecord }

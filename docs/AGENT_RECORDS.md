@@ -111,9 +111,10 @@ and model-token budgets. `decodeAgentRecord` accepts already parsed plain JSON, 
 
 Full snapshots deliberately trade simplicity for repeated bytes. A history of H bytes across
 N turns costs approximately N × H in the worst case, plus metadata/evidence. The 64 MiB
-limit fails closed; it does not compact, truncate or silently drop history. This API is for
-the small terminal contract proof. Efficient incremental storage, receipt retirement and
-validated sanitized bootstrap need a later versioned contract and host migration proof.
+limit fails closed; it does not compact, truncate or silently drop history. The additive [run stream](AGENT_STREAM.md) stores accepted deltas within each turn and
+retains this terminal session anchor. Session snapshots still repeat cumulative history;
+receipt retirement, efficient cross-turn compaction and validated sanitized bootstrap
+require a later contract and host migration proof.
 
 The [offline example](../examples/agent-records.mjs), decoder tests and paired CLI/Desktop
 fixture adapters demonstrate this contract. They do not change either production host or
