@@ -22,24 +22,19 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.8.0`:
+The latest verified npm release is `0.9.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.8.0
+npm install --save-exact @ayayaq/vivi@0.9.0
 ```
 
-`0.8.0` includes prepared-action routing, optional decision review, trusted tool extensions,
-cache usage counts, model capabilities, memory, and skills. Exact registry bytes, all 215
-installed files, ESM/CommonJS consumers and strict NodeNext declarations were verified; see
-[RELEASING.md](RELEASING.md).
+`0.9.0` adds the optional MCP bridge to prepared-action review, trusted extensions,
+cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
+credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
-## Optional MCP bridge (prepared 0.9.0)
-
-The prepared `0.9.0` `@ayayaq/vivi/extensions/mcp` subpath shares captured catalogs, exact
-operation proposals and bounded untrusted results with host-supplied schema validation
-and approval wiring. It adds no dependencies. Connections, processes, credentials,
-actual sends and UI stay in your host; verified npm `0.8.0` does not include it.
-See [the host contract](docs/MCP.md) and [offline example](examples/mcp.mjs).
+Unreleased source adds owned scopes and the small `/events` terminal-snapshot contract.
+Published `0.9.0` is unchanged; [AGENT_RECORDS.md](docs/AGENT_RECORDS.md) describes
+compatibility, limits and the remaining event-stream/host-migration gates.
 
 ## Optional model capabilities
 

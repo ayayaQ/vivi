@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add bounded opt-in terminal records and pure immutable full/incremental snapshot projections
+  on `/events`; retain final reconciled history/usage, exact host outcome evidence and live callback compatibility
+- Prove paired offline host checkpoint/recovery seams; ordered durable event streaming and
+  production migration remain separate CORE-12/CLI-20/Desktop-14 work
+
 - Add opt-in owned extension scopes with atomic registration, fixed lifetime-bound snapshots,
   combined cancellation and one awaited reverse-cleanup completion, including aggregate failures
 - Cover late acquisitions, candidate rollback and owned CLI/Desktop listener/persistence adapters

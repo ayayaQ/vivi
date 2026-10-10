@@ -25,6 +25,10 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/AGENT_RECORDS.md', 'examples/agent-records.mjs', 'src/events.ts',
+    'dist/events.js', 'dist/events.d.ts', 'dist/cjs/events.js', 'dist/cjs/events.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/EXTENSION_SCOPES.md', 'examples/extension-scope.mjs']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
@@ -125,6 +129,48 @@ try {
 })().catch(error => {console.error(error);process.exitCode=1})
 `)
     run(process.execPath, [`mcp-consumer.${extension}`], temporary)
+  }
+  run(process.execPath, [join(installed, 'examples/agent-records.mjs')], temporary)
+  for (const [extension, importLine] of [
+    ['mjs', "import * as events from '@ayayaq/vivi/events'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const events = require('@ayayaq/vivi/events')\nconst assert = require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `events-consumer.${extension}`), `${importLine}
+const source = {reference:'host/packed-fixture',revision:'1'}
+const result = {status:'completed',history:[{kind:'assistant',content:'Packed terminal',toolCalls:[]}],content:'Packed terminal',rounds:1,usage:{inputTokens:3,outputTokens:1,totalTokens:5}}
+const record = events.createRunSettlement({envelope:{version:1,sessionId:'packed',eventId:'packed-event',sequence:1,previousEventId:null,source},runId:'packed-run',inputHistoryLength:0,result,history:result.history.map((message,index)=>({id:'message-'+index,source,message})),outcomes:[],sessionUsage:result.usage})
+const projected = events.projectAgentRecords('packed',[record])
+assert.deepEqual(projected,events.applyAgentRecord(events.createAgentProjection('packed'),record))
+assert.equal(events.applyAgentRecord(projected,record),projected)
+assert.equal(projected.usage.totalTokens,5)
+assert(Object.isFrozen(projected.history[0].message))
+assert.throws(()=>events.decodeAgentRecord({...record,version:2}))
+`)
+    run(process.execPath, [`events-consumer.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mts', "import * as events from '@ayayaq/vivi/events'"],
+    ['cts', "import events = require('@ayayaq/vivi/events')"]
+  ]) {
+    await writeFile(join(temporary, `events-types.${extension}`), `${importLine}
+const projection: events.AgentProjection = events.createAgentProjection('typed')
+const envelope: events.AgentRecordEnvelope = {version:1,sessionId:'typed',eventId:'typed-event',sequence:1,previousEventId:null,source:{reference:'host/source'}}
+const record: events.DurableAgentRecord = {...envelope,type:'session_snapshot',reason:'legacy_import',snapshot:{history:[],outcomes:[],usage:{inputTokens:0,outputTokens:0,totalTokens:0}}}
+const decoded: events.DurableAgentRecord = events.decodeAgentRecord(record)
+const folded: events.AgentProjection = events.applyAgentRecord(projection,decoded)
+// @ts-expect-error observation cursor is immutable
+folded.sequence = 1
+// @ts-expect-error deeply immutable projected history
+folded.history[0]!.message.content = 'changed'
+// @ts-expect-error immutable projected usage
+folded.usage.totalTokens = 1
+// @ts-expect-error unsupported schema version
+envelope.version = 2
+// @ts-expect-error evidence must identify exact host source/run/call/arguments and effect
+const missingEvidence: events.AgentOutcomeEvidence = {callId:'call',name:'tool',status:'succeeded'}
+void missingEvidence; void events.AGENT_RECORD_LIMITS
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `events-types.${extension}`], temporary)
   }
   await writeFile(join(temporary, 'consumer.mjs'), `
 import assert from 'node:assert/strict'

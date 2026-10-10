@@ -274,3 +274,14 @@ Apache License 2.0. See [LICENSE](../LICENSE), [NOTICE](../NOTICE), and [ATTRIBU
 This extraction originates from Bot Commander Desktop at source commit
 `943e3f84f67e4415a899da8921db84639843c625`. The copyright owner authorized this separate Apache
 release; the upstream desktop application's GPLv3 license is unchanged.
+
+## Terminal records (unreleased CORE-12 slice)
+
+The optional `@ayayaq/vivi/events` subpath exports `decodeAgentRecord`,
+`createRunSettlement`, `createAgentProjection`, `applyAgentRecord`, `projectAgentRecords`,
+`agentArgumentsDigest`, `agentEvidenceDigest` and `AGENT_RECORD_LIMITS`, with typed v1
+envelopes/history/outcome/projection interfaces. It preserves final host-reconciled results
+without altering the live loop. Session aggregate usage is replaced, identical duplicates are
+idempotent, and conflicts/gaps/unknown versions fail safely. See [AGENT_RECORDS.md](AGENT_RECORDS.md)
+for settled-only scope, identity/evidence rules, host privacy/commit authority and storage limits.
+This source API is absent from published 0.9.0; production adoption follows reviewed publication.
