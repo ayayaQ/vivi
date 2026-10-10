@@ -1,4 +1,6 @@
-# Owned extension scopes (unreleased)
+# Owned extension scopes (prepared 0.10.0)
+
+The prepared release is unpublished; verify registry bytes before production adoption.
 
 `createExtensionScope` is an opt-in export of `@ayayaq/vivi/extensions`. It owns explicitly
 imported v1 registrations and host-provided cleanup. It adds no loader, event bus, sandbox,

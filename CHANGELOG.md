@@ -1,25 +1,28 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 (prepared 2026-10-10, not yet published)
 
 - Add bounded opt-in terminal records and pure immutable full/incremental snapshot projections
   on `/events`; retain final reconciled history/usage, exact host outcome evidence and live callback compatibility
 - Add an opt-in canonical accepted-update hook and bounded `/events/stream` run-local deltas,
   with exact session anchors, frozen replay, usage and terminal reconciliation
-- Prove paired offline host append/checkpoint/recovery seams; production migration and
-  sanitized bootstrap remain separately gated CORE-12/CLI-20/Desktop-14 work
+- Prove paired offline host append/checkpoint/recovery, privacy and cursor seams;
+  production CLI-20/Desktop-14 migration follows verified publication
+- Require bounded complete-chain replay; no mid-log bootstrap, compaction or receipt retirement
 
 - Add opt-in owned extension scopes with atomic registration, fixed lifetime-bound snapshots,
   combined cancellation and one awaited reverse-cleanup completion, including aggregate failures
 - Cover late acquisitions, candidate rollback and owned CLI/Desktop listener/persistence adapters
   offline; host permissions, domain cleanup, MCP connections and durable outcome ledgers stay host-owned
 
-## 0.9.0 (prepared 2026-10-09, not yet published)
+## 0.9.0 (2026-10-10)
 
 - Add optional dependency-free MCP catalog, operation-binding, fixed extension and
   bounded untrusted-result helpers with mandatory host review/schema/privacy wiring
 - Keep connections, processes, credentials, actual sends and approval UI host-owned;
   add a metadata-only host capability and offline paired-host adapter checks
+- Publish the reviewed archive; registry metadata, exact bytes and all 262 installed files
+  are verified on Node 22/24 before separately reviewed host adoption
 
 ## 0.8.0 (2026-10-08)
 

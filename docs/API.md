@@ -72,7 +72,7 @@ A `ToolExtension` has an `id`, `apiVersion: 1`, and `tools`. Each tool contains 
 
 See [the registry tests](https://github.com/ayayaQ/vivi/blob/main/test/extensions.test.mjs) for snapshot and cancellation behavior.
 
-### Opt-in owned scopes (unreleased)
+### Opt-in owned scopes (prepared 0.10.0)
 
 `createExtensionScope({ reservedNames? })` on the same subpath adds an explicit lifetime for
 trusted tools and host cleanup. It exposes `signal`, `state`, `register`, `defer`, `snapshot`
@@ -130,7 +130,7 @@ Advertising a tool enables dispatch; it does not authorize an action. Core is no
 system or security sandbox. The host must enforce authorization, approval, data-sharing boundaries,
 and any isolation required by its tools.
 
-## Opt-in canonical acceptance (unreleased)
+## Opt-in canonical acceptance (prepared 0.10.0)
 
 `onAccepted(update)` observes a frozen detached assistant or tool result after canonical
 history/round/usage acceptance and before its existing `onEvent` notification. It is awaited;
@@ -284,7 +284,7 @@ This extraction originates from Bot Commander Desktop at source commit
 `943e3f84f67e4415a899da8921db84639843c625`. The copyright owner authorized this separate Apache
 release; the upstream desktop application's GPLv3 license is unchanged.
 
-## Terminal records (unreleased CORE-12 slice)
+## Session records (prepared 0.10.0)
 
 The optional `@ayayaq/vivi/events` subpath exports `decodeAgentRecord`,
 `createRunSettlement`, `createAgentProjection`, `applyAgentRecord`, `projectAgentRecords`,
@@ -292,5 +292,7 @@ The optional `@ayayaq/vivi/events` subpath exports `decodeAgentRecord`,
 envelopes/history/outcome/projection interfaces. It preserves final host-reconciled results
 without altering the live loop. Session aggregate usage is replaced, identical duplicates are
 idempotent, and conflicts/gaps/unknown versions fail safely. See [AGENT_RECORDS.md](AGENT_RECORDS.md)
-for settled-only scope, identity/evidence rules, host privacy/commit authority and storage limits.
-This source API is absent from published 0.9.0; production adoption follows reviewed publication.
+for settled session anchors, identity/evidence rules, host privacy/commit authority and limits.
+The additive `/events/stream` subpath provides ordered accepted deltas and terminal reconciliation;
+see [AGENT_STREAM.md](AGENT_STREAM.md). Both source APIs are absent from published 0.9.0;
+production adoption follows reviewed 0.10.0 publication and exact registry-byte verification.

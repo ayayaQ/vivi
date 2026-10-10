@@ -32,9 +32,9 @@ npm install --save-exact @ayayaq/vivi@0.9.0
 cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
 credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
-Unreleased source adds owned scopes, `/events` session snapshots and `/events/stream`
-ordered accepted-message replay. Published `0.9.0` is unchanged; see
-[the host commit and migration contract](docs/AGENT_STREAM.md).
+Prepared `0.10.0` batches owned scopes, `/events` session snapshots and `/events/stream`
+ordered accepted-message replay. It is not published; `0.9.0` remains unchanged. See
+[the host commit and bounded replay contract](docs/AGENT_STREAM.md).
 
 ## Optional model capabilities
 
