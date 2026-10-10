@@ -72,6 +72,15 @@ A `ToolExtension` has an `id`, `apiVersion: 1`, and `tools`. Each tool contains 
 
 See [the registry tests](https://github.com/ayayaQ/vivi/blob/main/test/extensions.test.mjs) for snapshot and cancellation behavior.
 
+### Opt-in owned scopes (unreleased)
+
+`createExtensionScope({ reservedNames? })` on the same subpath adds an explicit lifetime for
+trusted tools and host cleanup. It exposes `signal`, `state`, `register`, `defer`, `snapshot`
+and `dispose`. Static `createToolRegistry` behavior is unchanged. See
+[owned scope semantics and host obligations](EXTENSION_SCOPES.md) and the
+[offline example](../examples/extension-scope.mjs). Production host adoption requires a
+reviewed release and verified published bytes.
+
 ## Contracts
 
 - `ToolDefinition`: `{ name, description, parameters: JsonObject }`

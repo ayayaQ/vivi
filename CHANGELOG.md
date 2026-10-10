@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add opt-in owned extension scopes with atomic registration, fixed lifetime-bound snapshots,
+  combined cancellation and one awaited reverse-cleanup completion, including aggregate failures
+- Cover late acquisitions, candidate rollback and owned CLI/Desktop listener/persistence adapters
+  offline; host permissions, domain cleanup, MCP connections and durable outcome ledgers stay host-owned
+
 ## 0.9.0 (prepared 2026-10-09, not yet published)
 
 - Add optional dependency-free MCP catalog, operation-binding, fixed extension and

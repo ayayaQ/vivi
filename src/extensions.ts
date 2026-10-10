@@ -24,6 +24,21 @@ export interface ToolRegistry {
   executeTool(call: ToolCall, context: { signal: AbortSignal }): Promise<ToolResult>
 }
 
+export type ExtensionCleanup = () => void | Promise<void>
+
+/** Opt-in ownership for trusted registrations and host cleanup; grants no permissions. */
+export interface ExtensionScope {
+  readonly signal: AbortSignal
+  readonly state: 'open' | 'closing' | 'closed'
+  register(extension: ToolExtension): void
+  /** Register cleanup immediately when ownership transfers. Requires an open scope. */
+  defer(cleanup: ExtensionCleanup): void
+  /** Fixed tools/executors. Dispatch remains bound to this scope's lifetime. */
+  snapshot(): ToolRegistry
+  /** Synchronously seal and abort; await reverse cleanup with one memoized completion. */
+  dispose(): Promise<void>
+}
+
 function freeze<T>(value: T): T {
   if (value !== null && typeof value === 'object') {
     for (const child of Object.values(value)) freeze(child)
@@ -135,6 +150,132 @@ export function createToolRegistry(
         signal.throwIfAborted()
         return failure('tool_error', detail(error))
       }
+    }
+  })
+}
+
+function linkSignals(caller: AbortSignal, owner: AbortSignal): {
+  signal: AbortSignal
+  release: () => void
+} {
+  const controller = new AbortController()
+  const listeners: { signal: AbortSignal, listener: () => void }[] = []
+  const release = (): void => {
+    for (const { signal, listener } of listeners) signal.removeEventListener('abort', listener)
+    listeners.length = 0
+  }
+  try {
+    for (const signal of new Set([caller, owner])) {
+      if (signal.aborted) {
+        controller.abort(signal.reason)
+        release()
+        break
+      }
+      const listener = (): void => { controller.abort(signal.reason); release() }
+      listeners.push({ signal, listener })
+      signal.addEventListener('abort', listener, { once: true })
+    }
+  } catch (error) {
+    release()
+    throw error
+  }
+  return { signal: controller.signal, release }
+}
+
+/**
+ * Own explicitly imported v1 tools and host-provided cleanup. Registration is atomic and
+ * snapshots never acquire later tools. Closing blocks retained-snapshot dispatch and aborts
+ * admitted calls, but does not await or forcibly stop arbitrary trusted executor promises.
+ */
+export function createExtensionScope(
+  options: { readonly reservedNames?: readonly string[] } = {}
+): ExtensionScope {
+  // Reuse the static registry's complete options validation, then capture reservations once.
+  const emptyRegistry = createToolRegistry([], options)
+  const names = new Set(options.reservedNames ?? [])
+  const ids = new Set<string>()
+  const registrations = new Map<string, ToolRegistry>()
+  const tools: ToolDefinition[] = []
+  const cleanups: ExtensionCleanup[] = []
+  const controller = new AbortController()
+  let state: ExtensionScope['state'] = 'open'
+  let disposal: Promise<void> | undefined
+  const assertOpen = (): void => { assert(state === 'open', 'Extension scope is not open') }
+  return Object.freeze({
+    signal: controller.signal,
+    get state(): ExtensionScope['state'] { return state },
+    register(extension: ToolExtension): void {
+      assertOpen()
+      dataObject(extension, 'Extension must be a plain data object')
+      const id = extension.id
+      assert(identifier(id), 'Extension id must be a nonempty, trimmed string')
+      assert(extension.apiVersion === 1, `Unsupported extension API version: ${id}`)
+      assert(!ids.has(id), `Duplicate extension id: ${id}`)
+      // Validation/capture finishes before publishing any of this candidate's tools.
+      const candidate = createToolRegistry([extension], { reservedNames: [...names] })
+      // Trusted source arrays may reenter through accessors during capture. Recheck the
+      // current owner and all conflicts before the non-reentrant publication phase.
+      assertOpen()
+      assert(!ids.has(id), `Duplicate extension id: ${id}`)
+      for (const definition of candidate.tools) {
+        assert(!names.has(definition.name), `Tool name collision: ${definition.name}`)
+      }
+      ids.add(id)
+      for (const definition of candidate.tools) {
+        names.add(definition.name)
+        registrations.set(definition.name, candidate)
+        tools.push(definition)
+      }
+    },
+    defer(cleanup: ExtensionCleanup): void {
+      assertOpen()
+      assert(typeof cleanup === 'function', 'Extension cleanup must be a function')
+      cleanups.push(cleanup)
+    },
+    snapshot(): ToolRegistry {
+      assertOpen()
+      const capturedTools = Object.freeze([...tools])
+      const capturedRegistrations = new Map(registrations)
+      return Object.freeze({
+        tools: capturedTools,
+        has(name: string): boolean { return capturedRegistrations.has(name) },
+        async executeTool(call: ToolCall, context: { signal: AbortSignal }): Promise<ToolResult> {
+          assert(record(context) && context.signal instanceof AbortSignal,
+            'Tool context requires an AbortSignal')
+          const caller = context.signal
+          controller.signal.throwIfAborted()
+          caller.throwIfAborted()
+          const linked = linkSignals(caller, controller.signal)
+          try {
+            // Preserve static-registry validation/error behavior, including unknown tools.
+            assertJson(call)
+            assertCall(call)
+            const registry = capturedRegistrations.get(call.name) ?? emptyRegistry
+            return await registry.executeTool(call, { signal: linked.signal })
+          } finally {
+            linked.release()
+          }
+        }
+      })
+    },
+    dispose(): Promise<void> {
+      if (disposal) return disposal
+      let resolve!: () => void
+      let reject!: (reason: unknown) => void
+      disposal = new Promise<void>((resolve_, reject_) => { resolve = resolve_; reject = reject_ })
+      state = 'closing'
+      // Publish the shared completion before synchronous abort listeners can reenter dispose.
+      controller.abort()
+      void (async () => {
+        const errors: unknown[] = []
+        while (cleanups.length) {
+          const cleanup = cleanups.pop()!
+          try { await cleanup() } catch (error) { errors.push(error) }
+        }
+        state = 'closed'
+        if (errors.length) throw new AggregateError(errors, 'Extension scope cleanup failed')
+      })().then(resolve, reject)
+      return disposal
     }
   })
 }

@@ -25,6 +25,9 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/EXTENSION_SCOPES.md', 'examples/extension-scope.mjs']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/MCP.md', 'src/extensions/mcp.ts', 'src/extensions/mcp/catalog.ts',
     'src/extensions/mcp/data.ts', 'src/extensions/mcp/operations.ts', 'src/extensions/mcp/content.ts',
     'examples/mcp.mjs', 'dist/extensions/mcp.js', 'dist/extensions/mcp.d.ts',
@@ -72,6 +75,7 @@ try {
     import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
     require: { types: './dist/cjs/decisions.d.ts', default: './dist/cjs/decisions.js' }
   })
+  run(process.execPath, [join(installed, 'examples/extension-scope.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/mcp.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/decisions.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
@@ -386,6 +390,61 @@ const { createOpenRouterProvider } = require('@ayayaq/vivi/providers/openrouter'
 ;(async () => {${cacheConsumer}})().catch(error => {console.error(error);process.exitCode = 1})
 `)
   run(process.execPath, ['cache-consumer.cjs'], temporary)
+  for (const [extension, importLine] of [
+    ['mjs', "import {createExtensionScope} from '@ayayaq/vivi/extensions'\nimport {calculatorExtension} from '@ayayaq/vivi/extensions/calculator'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const {createExtensionScope} = require('@ayayaq/vivi/extensions')\nconst {calculatorExtension} = require('@ayayaq/vivi/extensions/calculator')\nconst assert = require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `scope-consumer.${extension}`), `${importLine}
+;(async () => {
+  const scope = createExtensionScope({reservedNames:['disabled_host']})
+  scope.register(calculatorExtension)
+  const registry = scope.snapshot(), order = []
+  scope.defer(() => {order.push('first')})
+  scope.defer(async () => {await Promise.resolve();order.push('second')})
+  const result = await registry.executeTool({id:'calc',name:'calculate',arguments:{expression:'3+4'}},{signal:new AbortController().signal})
+  assert.equal(result.content,'{"result":7}')
+  const disposed = scope.dispose()
+  assert.equal(scope.signal.aborted,true)
+  assert.equal(scope.dispose(),disposed)
+  await disposed
+  assert.deepEqual(order,['second','first'])
+  assert.equal(scope.state,'closed')
+  await assert.rejects(registry.executeTool({id:'late',name:'calculate',arguments:{expression:'1+1'}},{signal:new AbortController().signal}),{name:'AbortError'})
+  const failed = createExtensionScope(), error = new Error('Cleanup failure')
+  failed.defer(() => {throw error})
+  const completion = failed.dispose()
+  await assert.rejects(completion,value => value instanceof AggregateError && value.errors[0] === error)
+  assert.equal(failed.dispose(),completion)
+  assert.equal(failed.state,'closed')
+})().catch(error => {console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`scope-consumer.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mts', "import * as extensions from '@ayayaq/vivi/extensions'"],
+    ['cts', "import extensions = require('@ayayaq/vivi/extensions')"]
+  ]) {
+    await writeFile(join(temporary, `scope-types.${extension}`), `${importLine}
+const reservedNames: readonly string[] = ['disabled_host']
+const scope: extensions.ExtensionScope = extensions.createExtensionScope({reservedNames})
+const cleanup: extensions.ExtensionCleanup = async () => {}
+scope.defer(cleanup)
+const state: 'open' | 'closing' | 'closed' = scope.state
+const signal: AbortSignal = scope.signal
+const snapshot: extensions.ToolRegistry = scope.snapshot()
+const completion: Promise<void> = scope.dispose()
+// @ts-expect-error owner state is readonly
+scope.state = 'open'
+// @ts-expect-error cleanup must resolve to void
+scope.defer(async () => 1)
+// @ts-expect-error unsupported extension version
+scope.register({id:'invalid',apiVersion:2,tools:[]})
+// @ts-expect-error reserved names are strings
+extensions.createExtensionScope({reservedNames:[1]})
+void state; void signal; void snapshot; void completion
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `scope-types.${extension}`], temporary)
+  }
   await writeFile(join(temporary, 'consumer.ts'), `
 import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition, type Usage } from '@ayayaq/vivi'
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
