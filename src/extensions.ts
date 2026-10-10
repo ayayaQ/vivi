@@ -213,6 +213,13 @@ export function createExtensionScope(
       assert(!ids.has(id), `Duplicate extension id: ${id}`)
       // Validation/capture finishes before publishing any of this candidate's tools.
       const candidate = createToolRegistry([extension], { reservedNames: [...names] })
+      // Trusted source arrays may reenter through accessors during capture. Recheck the
+      // current owner and all conflicts before the non-reentrant publication phase.
+      assertOpen()
+      assert(!ids.has(id), `Duplicate extension id: ${id}`)
+      for (const definition of candidate.tools) {
+        assert(!names.has(definition.name), `Tool name collision: ${definition.name}`)
+      }
       ids.add(id)
       for (const definition of candidate.tools) {
         names.add(definition.name)
@@ -235,9 +242,10 @@ export function createExtensionScope(
         async executeTool(call: ToolCall, context: { signal: AbortSignal }): Promise<ToolResult> {
           assert(record(context) && context.signal instanceof AbortSignal,
             'Tool context requires an AbortSignal')
+          const caller = context.signal
           controller.signal.throwIfAborted()
-          context.signal.throwIfAborted()
-          const linked = linkSignals(context.signal, controller.signal)
+          caller.throwIfAborted()
+          const linked = linkSignals(caller, controller.signal)
           try {
             // Preserve static-registry validation/error behavior, including unknown tools.
             assertJson(call)

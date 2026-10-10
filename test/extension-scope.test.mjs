@@ -65,6 +65,33 @@ test('empty extensions retain identity and invalid contracts never publish', asy
   await scope.dispose()
 })
 
+test('reentrant capture cannot publish after closure or replace newer id/name admissions', async () => {
+  for (const reentry of ['close', 'name', 'id']) {
+    const scope = createExtensionScope(), candidate = extension('candidate', 'collision')
+    scope.register(extension('prior'))
+    const before = scope.snapshot(), tool = candidate.tools[0]
+    Object.defineProperty(candidate.tools, '0', { enumerable: true, get() {
+      if (reentry === 'close') void scope.dispose()
+      else if (reentry === 'name') scope.register(extension('inner', 'collision'))
+      else scope.register({ id: 'candidate', apiVersion: 1, tools: [] })
+      return tool
+    } })
+    assert.throws(() => scope.register(candidate), reentry === 'close'
+      ? /not open/ : reentry === 'name' ? /Tool name collision/ : /Duplicate extension id/)
+    assert.deepEqual(before.tools.map(tool => tool.name), ['prior'])
+    if (reentry === 'close') {
+      assert.equal(scope.signal.aborted, true)
+      await assert.rejects(before.executeTool(call('prior'), context()), { name: 'AbortError' })
+    } else {
+      const after = scope.snapshot()
+      assert.deepEqual(after.tools.map(tool => tool.name), reentry === 'name' ? ['prior', 'collision'] : ['prior'])
+      assert.equal((await after.executeTool(call('prior'), context())).content, 'prior')
+      if (reentry === 'name') assert.equal((await after.executeTool(call('collision'), context())).content, 'collision')
+    }
+    await scope.dispose()
+  }
+})
+
 test('snapshots capture frozen definitions/functions and never acquire later registrations', async () => {
   let validations = 0
   const source = extension('first', 'first', { validateArguments() { validations++ } })
@@ -225,6 +252,27 @@ test('signals release listeners on success, validation failure, tool failure and
     assert.equal(getEventListeners(scope.signal, 'abort').length, 0)
     await scope.dispose()
   }
+})
+
+test('dispatch captures its caller signal and cannot swap cancellation through a context accessor', async () => {
+  const scope = createExtensionScope(), caller = new AbortController(), replacement = new AbortController()
+  const pending = deferred()
+  let reads = 0, received
+  scope.register(extension('fixture', 'fixture', { execute(_call, { signal }) {
+    received = signal
+    return pending.promise
+  } }))
+  const inputContext = { get signal() { return ++reads <= 2 ? caller.signal : replacement.signal } }
+  const execution = scope.snapshot().executeTool(call(), inputContext)
+  const failed = assert.rejects(execution, /Caller stopped/)
+  assert.equal(reads, 2)
+  caller.abort(new Error('Caller stopped'))
+  assert.equal(received.aborted, true)
+  assert.equal(replacement.signal.aborted, false)
+  pending.resolve({ content: 'Late success' })
+  await failed
+  assert.equal(getEventListeners(caller.signal, 'abort').length, 0)
+  await scope.dispose()
 })
 
 test('already aborted caller prevents entry and using the owner signal does not duplicate listeners', async () => {
