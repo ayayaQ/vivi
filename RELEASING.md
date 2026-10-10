@@ -1,44 +1,45 @@
 # Release workflow
 
-## Prepared stable 0.10.0, not yet published
+## Prepared stable 0.11.0, not yet published
 
-This release batches reviewed CORE-11 owned scopes and CORE-12 session/run records.
-Public npm `latest` remains verified `0.9.0`; `0.10.0` was absent in the pre-release
-registry readback. Publish only the separately recorded exact reviewed archive.
+This additive release includes CORE-13's optional `/presentation` contract: bounded
+host-prepared tool display snapshots, safe text fallback, and explicit status/effect,
+provenance and warnings outside collapsed/truncated details. It imports no runtime
+modules or host UI and grants no approval/execution authority. See
+[TOOL_PRESENTATION.md](docs/TOOL_PRESENTATION.md) and [PR #30](https://github.com/ayayaQ/vivi/pull/30).
+The foundation merged at `4684a3cc6b87f89846e6879855b91285d00a1b23`, tree
+`1acbe3405d3bf468952c5e58733ac78b69d7c97d`: full Node22/24 checks each passed 635 tests,
+all examples and installed ESM/CommonJS/NodeNext consumers across 13 public subpaths;
+independent review and exact-head/post-main Linux/Windows22/24 CI passed.
 
-Foundations are [PR #26](https://github.com/ayayaQ/vivi/pull/26),
-[PR #27](https://github.com/ayayaQ/vivi/pull/27) and
-[PR #28](https://github.com/ayayaQ/vivi/pull/28). Ordered records merged at
-`26fedb48322e310313e2b002202db63b5a18d5de`, approved source tree
-`845f804e455342205b42cfdef1d0d27499a07cdb`. Full Node22/24 checks each passed
-578 tests, all examples and packed ESM/CommonJS/strict NodeNext consumers; independent
-review and exact-head/post-main Ubuntu/Windows22/24 CI passed. Release metadata/docs
-and the final 0.10.0 archive require their own exact-tree/archive review and CI.
+Public npm latest remains verified `0.10.0`. The final `0.11.0` metadata/docs and
+archive require their own exact-tree/archive review and CI. Publish only the exact
+separately recorded reviewed archive, not a repacked working directory. The user
+performs npm authentication/security challenges and publication; no credentials
+are shared. After publication, verify public tags, exact archive/installed bytes and
+Node22/24 consumers before independent CLI-21/Desktop-15 adapter changes.
+Runtime dependencies and all earlier registry archives remain unchanged.
 
-The additive root `onAccepted` hook preserves the existing scheduling path when absent.
-`createExtensionScope` remains on `/extensions`; `/events` and `/events/stream` add bounded
-pure immutable session/run projections. Existing callbacks, provider-native receipts and
-MCP intent/outcome authority remain compatible. Hosts own IO, current privacy/policy,
-physical durability, actual send/approval, admission/CAS and sidecar acknowledgement.
+## Published stable 0.10.0
 
-Recovery requires complete screened chains and explicit budget/quarantine handling.
-Mid-log bootstrap, compaction and receipt retirement are not implemented or needed for
-bounded first adoption. Removing earlier bodies prevents that chain's restoration;
-continued same-session recovery afterward needs a separately reviewed future contract.
-See [AGENT_STREAM.md](docs/AGENT_STREAM.md) and [EXTENSION_SCOPES.md](docs/EXTENSION_SCOPES.md).
-No generic event bus, loader, execution/approval restoration or exactly-once claim is added.
+`@ayayaq/vivi@0.10.0` is published and registry-verified, with latest observed at `0.10.0`.
+Publication time: `2026-10-10T17:54:04.509Z`. It batches reviewed owned scopes and bounded
+session/run records. Public archive bytes and all 334 installed files match the reviewed
+archive; installed Node22/24 ESM/CommonJS/NodeNext consumers passed.
 
-Only `yaml@2.9.1` is a runtime dependency. The official MCP SDK remains development-only.
-The external release record captures source commit/tree, complete archive file identities,
-SHA-256/SHA-1/SHA-512 integrity and installed consumer evidence. Archives are not committed
-to Git. The user performs npm authentication/security challenges and publication; no
-credentials are shared. After publication, verify public metadata/tags, exact bytes and all
-installed files on Node22/24 before separate CLI-19/20 and Desktop-13/14 adoption. No live,
-native, Mac/CUA or historical restricted assessment is included.
+- Source: `a7d49edc5f784a915cd90258cc7e49a23464d3fe`, tree `5f87edbccb53f3c5694a07958b98ff96ef6fdc8a`
+- Archive: `ayayaq-vivi-0.10.0.tgz`, 297166 bytes, 334 files
+- SHA-256: `cc5c6e89a0e54cd7685cecbf712119049132bb972d684889e019a2aa1c9ea366`
+- SHA-1: `28a5012e97fc389a81c748f8e95e56c41c7ce126`
+- Integrity: `sha512-oK3NY4hpzlOIuW7/YkIonTVaFjVzEAkjEtYV24KjE6Ei48e5vJ9bx7kLtKTrHOeK0/+XgwQRLUsh87kn2v7epQ==`
+
+Earlier prepared text remains in the immutable npm archive. This repository record does
+not repack or replace it. See [AGENT_STREAM.md](docs/AGENT_STREAM.md) for bounded replay,
+complete-chain recovery and host-owned privacy/durability/outcome responsibilities.
 
 ## Published stable 0.9.0
 
-`@ayayaq/vivi@0.9.0` is published and verified. Public npm `latest` is `0.9.0`;
+`@ayayaq/vivi@0.9.0` is published and verified. Public npm `latest` was `0.9.0` at publication;
 publication time was `2026-10-10T02:08:06.620Z`. The actual registry archive equals the
 reviewed frozen archive byte-for-byte and all 262 installed file identities match.
 
@@ -294,7 +295,7 @@ npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
 npm pack --json --pack-destination "$RELEASE_DIR"
-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.10.0.tgz"
+sha256sum "$RELEASE_DIR/ayayaq-vivi-0.11.0.tgz"
 git rev-parse HEAD HEAD^{tree}
 git status --short
 ```
@@ -313,7 +314,7 @@ Any source, metadata, documentation or archive change requires a new pack, hash 
 
 ## Account-holder publication
 
-Use the exact approved `ayayaq-vivi-0.10.0.tgz` and its supplied release record on your trusted
+Use the exact approved `ayayaq-vivi-0.11.0.tgz` and its supplied release record on your trusted
 computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
 Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
 or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
@@ -324,18 +325,18 @@ If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm
 npm login --auth-type=web --registry=https://registry.npmjs.org/
 npm whoami --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
-sha256sum ./ayayaq-vivi-0.10.0.tgz
+sha256sum ./ayayaq-vivi-0.11.0.tgz
 ```
 
-Match SHA-256 to the approved release record. If `0.10.0` already exists, stop and compare registry
+Match SHA-256 to the approved release record. If `0.11.0` already exists, stop and compare registry
 integrity and bytes before taking another action. Name/version pairs are immutable even after
 unpublication. Do not change the version or archive without another review.
 
 ```sh
-npm publish ./ayayaq-vivi-0.10.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+npm publish ./ayayaq-vivi-0.11.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This publishes all archive contents and updates `latest` to `0.10.0`. See
+This publishes all archive contents and updates `latest` to `0.11.0`. See
 [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
 A client-side failure can follow a successful upload; inspect the registry before retrying,
 and never substitute a newly packed working directory for the reviewed archive.
@@ -343,19 +344,19 @@ and never substitute a newly packed working directory for the reviewed archive.
 ## Verify registry bytes and integrate hosts
 
 ```sh
-npm view @ayayaq/vivi@0.10.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.11.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
-npm pack @ayayaq/vivi@0.10.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
-cmp ./ayayaq-vivi-0.10.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.10.0.tgz"
+npm pack @ayayaq/vivi@0.11.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+cmp ./ayayaq-vivi-0.11.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.11.0.tgz"
 ```
 
 Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
-`@ayayaq/vivi@0.10.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+`@ayayaq/vivi@0.11.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
 NodeNext declaration, extension/cache and headless-example checks. Record the verified release
 without repacking or replacing published bytes.
 
-Only then set exact `"@ayayaq/vivi": "0.10.0"` in authorized CLI/desktop changes and regenerate
+Only then set exact `"@ayayaq/vivi": "0.11.0"` in authorized CLI/desktop changes and regenerate
 lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
 preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
 Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local

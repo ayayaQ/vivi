@@ -5,9 +5,9 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-The optional `/presentation` source addition provides bounded, UI-neutral tool display
-snapshots and safe text fallback. It is not in published `0.10.0`; CLI/Desktop adapters
-follow reviewed publication. See [the presentation contract](docs/TOOL_PRESENTATION.md).
+Prepared `0.11.0` adds optional `/presentation` bounded, UI-neutral tool display snapshots
+and safe text fallback. It is not published; CLI/Desktop adapters follow verified publication.
+See [the presentation contract](docs/TOOL_PRESENTATION.md).
 
 ## Optional decision review
 
@@ -26,18 +26,18 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.9.0`:
+The latest verified npm release is `0.10.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.9.0
+npm install --save-exact @ayayaq/vivi@0.10.0
 ```
 
-`0.9.0` adds the optional MCP bridge to prepared-action review, trusted extensions,
+`0.10.0` includes the optional MCP bridge with prepared-action review, trusted extensions,
 cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
 credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
-Prepared `0.10.0` batches owned scopes, `/events` session snapshots and `/events/stream`
-ordered accepted-message replay. It is not published; `0.9.0` remains unchanged. See
+`0.10.0` also adds owned scopes, `/events` session snapshots and `/events/stream`
+ordered accepted-message replay. Its registry bytes are verified and unchanged. See
 [the host commit and bounded replay contract](docs/AGENT_STREAM.md).
 
 ## Optional model capabilities
