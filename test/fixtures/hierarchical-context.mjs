@@ -257,6 +257,8 @@ export class OfflineContext {
     check(state.policy && Number.isSafeInteger(state.policy.revision) && state.policy.revision > 0 &&
       /^[a-f0-9]{64}$/.test(state.policy.fingerprint) && currentPolicy.revision >= state.policy.revision,
       'Quarantined stale or invalid current policy binding')
+    check(currentPolicy.revision !== state.policy.revision || hash(currentPolicy) === state.policy.fingerprint,
+      'Quarantined conflicting current policy fingerprint')
     check(Array.isArray(state.manifest) && Array.isArray(state.nodes) && Array.isArray(state.view) &&
       state.manifest.length <= this.limits.entries && state.nodes.length <= this.limits.entries * 2 &&
       state.view.length <= this.limits.entries, 'Quarantined invalid checkpoint structure')
