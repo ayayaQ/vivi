@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 (prepared 2026-10-10, not yet published)
 
 - Add optional `/presentation` bounded display-only tool snapshots, safe plain-text views,
   and paired CLI/Desktop fixtures; status, effect warnings and provenance remain outside
   collapsed/truncated details. No host UI, execution, consent or production adapter changes
 
-## 0.10.0 (prepared 2026-10-10, not yet published)
+## 0.10.0 (2026-10-10)
 
 - Add bounded opt-in terminal records and pure immutable full/incremental snapshot projections
   on `/events`; retain final reconciled history/usage, exact host outcome evidence and live callback compatibility

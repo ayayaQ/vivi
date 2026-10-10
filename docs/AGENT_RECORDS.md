@@ -1,4 +1,4 @@
-# Session records and projections (prepared 0.10.0)
+# Session records and projections (published 0.10.0)
 
 `@ayayaq/vivi/events` is an additive, data-only contract for **settled snapshots**. The
 existing `runAgent`, `AgentEvent`, awaited callbacks and provider-native receipts are
@@ -6,7 +6,7 @@ unchanged. A live callback is neither a complete journal nor proof of a disk che
 Build a terminal record from the final **host-reconciled** result after admitted outcome
 work drains, even when cancellation or a callback failure suppressed later live events.
 
-The prepared 0.10.0 contract supplies bounded v1 session records, stable source identities,
+The published 0.10.0 contract supplies bounded v1 session records, stable source identities,
 exact outcome evidence and immutable full/incremental projection. Its additive
 [run stream](AGENT_STREAM.md) records ordered accepted assistant/results separately from
 transient progress. Published 0.9.0 contains neither these APIs nor CORE-11 owned scopes.
