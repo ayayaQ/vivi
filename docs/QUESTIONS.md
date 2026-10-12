@@ -1,8 +1,9 @@
-# Optional clarification question extension (unreleased)
+# Optional clarification question extension (prepared 0.12.0)
 
 `@ayayaq/vivi/extensions/questions` is an opt-in, renderer-neutral v1 `ToolExtension`.
 It has no terminal, desktop, DOM, provider, persistence or decision-service dependency.
-The main loop and default tools remain unchanged. This extension is unreleased.
+The main loop and default tools remain unchanged. This extension is prepared for `0.12.0`,
+not yet published, and absent from published `0.11.0`.
 
 ## API
 
@@ -132,5 +133,5 @@ copies, current-request binding, FIFO waits and owner/run cancellation. Packaged
 and strict NodeNext consumers cover runtime exports and declarations. These fixtures verify the
 shared contract; they do not constitute production CLI/Desktop UI adoption or real-model tests.
 
-No release number or npm publication is included. Adopt through a separate reviewed host change
-only after the shared version is published and its registry package is verified.
+Version `0.12.0` is prepared; npm publication is still pending. Adopt through a separate reviewed
+host change only after that version is published and its registry package is verified.
