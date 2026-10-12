@@ -2,7 +2,7 @@
 
 `@ayayaq/vivi/extensions/questions` is an opt-in, renderer-neutral v1 `ToolExtension`.
 It has no terminal, desktop, DOM, provider, persistence or decision-service dependency.
-The main loop and default tools remain unchanged. Published `0.11.0` does not include it.
+The main loop and default tools remain unchanged. This extension is unreleased.
 
 ## API
 
