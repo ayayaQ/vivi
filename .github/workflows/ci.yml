@@ -41,6 +41,9 @@ jobs:
       - run: node examples/agent-records.mjs
       - run: node examples/agent-stream.mjs
       - run: node examples/tool-presentation.mjs
+      - run: node --test test/questions.test.mjs test/question-hosts.test.mjs
+      - run: node examples/questions.mjs
+      - run: node -e "const {createQuestionExtension} = require('./dist/cjs/extensions/questions.js'); if(createQuestionExtension().tools.length!==0) process.exit(1)"
       - run: node -e "const mcp = require('./dist/cjs/extensions/mcp.js'); const result = JSON.parse(mcp.mcpFailure('offline', 'Synthetic unknown outcome', true).content); if (!result.untrusted || !result.unknownOutcome || !result.doNotRetry) process.exit(1)"
       - run: node -e "const {createExtensionScope} = require('./dist/cjs/extensions.js'); const scope = createExtensionScope(); const completion = scope.dispose(); if (!scope.signal.aborted || completion !== scope.dispose()) process.exit(1); completion.catch(error => {console.error(error); process.exitCode=1})"
       - run: node -e "const events=require('./dist/cjs/events.js'); const state=events.createAgentProjection('windows-offline'); if(state.sequence!==0 || !Object.isFrozen(state.usage)) process.exit(1)"

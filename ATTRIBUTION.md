@@ -1,5 +1,11 @@
 # Source attribution
 
+## Optional clarification questions
+
+The renderer-neutral question types, bounded tool schema, response binding, cancellation queue,
+and synthetic CLI/Desktop host fixtures are original Apache-2.0 work. They reuse vivi's existing
+trusted extension and owned-scope contracts. No third-party implementation or host UI is copied.
+
 ## Optional skills foundation
 
 The instruction-only skills module prepared for `0.6.0` follows the public

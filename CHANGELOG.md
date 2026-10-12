@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add the opt-in `/extensions/questions` clarification tool with bounded choices, free text,
+  explicit skip/cancel, frozen request snapshots, exact response binding and abort-aware FIFO
+  waits. Hosts retain human-input UI, owner/run lifecycle and the shared approval-dialog queue
+- Add offline CLI/Desktop-shaped hosts and packaged ESM/CommonJS/type consumers. No default
+  registration, action authorization, host adoption, version change or publication is included
+
 ## 0.11.0 (prepared 2026-10-10, not yet published)
 
 - Add optional `/presentation` bounded display-only tool snapshots, safe plain-text views,
