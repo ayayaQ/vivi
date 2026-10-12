@@ -9,6 +9,16 @@ Prepared `0.11.0` adds optional `/presentation` bounded, UI-neutral tool display
 and safe text fallback. It is not published; CLI/Desktop adapters follow verified publication.
 See [the presentation contract](docs/TOOL_PRESENTATION.md).
 
+## Optional clarification questions (unreleased)
+
+The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral
+`request_user_input` tool for 1–3 questions, choices, free text and explicit skip/cancel.
+A host callback collects actual human input; without one, no tool is advertised. Answers are
+ordinary tool results and never authorize actions or change approval modes. Both normal and
+Plan-mode hosts can use the extension under their own tool policy. See the
+[question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
+This addition is not in the published package; host adoption follows a reviewed release.
+
 ## Optional decision review
 
 This module is published in verified stable `0.7.0` and absent from immutable `0.6.0`.

@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/QUESTIONS.md', 'examples/questions.mjs',
+    'src/extensions/questions.ts', 'dist/extensions/questions.js', 'dist/extensions/questions.d.ts',
+    'dist/cjs/extensions/questions.js', 'dist/cjs/extensions/questions.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/TOOL_PRESENTATION.md', 'examples/tool-presentation.mjs',
     'src/presentation.ts', 'dist/presentation.js', 'dist/presentation.d.ts',
     'dist/cjs/presentation.js', 'dist/cjs/presentation.d.ts']) {
@@ -139,6 +144,7 @@ void status
     require: { types: './dist/cjs/decisions.d.ts', default: './dist/cjs/decisions.js' }
   })
   run(process.execPath, [join(installed, 'examples/extension-scope.mjs')], temporary)
+  run(process.execPath, [join(installed, 'examples/questions.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/mcp.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/decisions.mjs')], temporary)
   run(process.execPath, [join(installed, 'examples/headless.mjs')], temporary)
@@ -600,6 +606,58 @@ extensions.createExtensionScope({reservedNames:[1]})
 void state; void signal; void snapshot; void completion
 `)
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `scope-types.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mjs', "import {createQuestionExtension, QUESTION_LIMITS} from '@ayayaq/vivi/extensions/questions'\nimport {createToolRegistry} from '@ayayaq/vivi/extensions'\nimport assert from 'node:assert/strict'"],
+    ['cjs', "const {createQuestionExtension, QUESTION_LIMITS} = require('@ayayaq/vivi/extensions/questions')\nconst {createToolRegistry} = require('@ayayaq/vivi/extensions')\nconst assert = require('node:assert/strict')"]
+  ]) {
+    await writeFile(join(temporary, `question-consumer.${extension}`), `${importLine}
+;(async () => {
+  assert.equal(createQuestionExtension().tools.length,0)
+  assert.equal(QUESTION_LIMITS.questions,3)
+  const registry = createToolRegistry([createQuestionExtension({ask(request,{signal}) {
+    signal.throwIfAborted()
+    assert(Object.isFrozen(request.questions[0]))
+    return {requestId:request.requestId,status:'answered',answers:[{id:'format',answer:{kind:'text',text:'Checklist'}}]}
+  }})])
+  const result = await registry.executeTool({id:'question',name:'request_user_input',arguments:{questions:[{id:'format',header:'Format',question:'Which format?'}]}},{signal:new AbortController().signal})
+  const response = JSON.parse(result.content)
+  assert.equal(response.status,'answered')
+  assert.deepEqual(response.answers,[{id:'format',answer:{kind:'text',text:'Checklist'}}])
+  assert.equal(result.isError,undefined)
+  assert.equal(response.approval,undefined)
+})().catch(error => {console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`question-consumer.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mts', "import * as questions from '@ayayaq/vivi/extensions/questions'"],
+    ['cts', "import questions = require('@ayayaq/vivi/extensions/questions')"]
+  ]) {
+    await writeFile(join(temporary, `question-types.${extension}`), `${importLine}
+import type {ToolExtension} from '@ayayaq/vivi/extensions'
+const choice: questions.QuestionOption = {id:'short',label:'Short',description:'A concise plan'}
+const question: questions.Question = {id:'format',header:'Format',question:'Which format?',options:[choice,{id:'long',label:'Long'}]}
+const entry: questions.QuestionAnswerEntry = {id:'format',answer:{kind:'skipped'}}
+const host: questions.QuestionHost = async (request, {signal}) => {
+  const typedRequest: questions.QuestionRequest = request
+  signal.throwIfAborted()
+  const answer: questions.QuestionAnswer = {kind:'text',text:'Checklist'}
+  const response: questions.QuestionResponse = {requestId:typedRequest.requestId,status:'answered',answers:[{id:question.id,answer}]}
+  // @ts-expect-error request data is readonly
+  request.questions.push(question)
+  return response
+}
+const extension: ToolExtension = questions.createQuestionExtension({ask:host})
+// @ts-expect-error host must return a response, not approval
+questions.createQuestionExtension({ask:async () => true})
+// @ts-expect-error an option answer requires its exact option id
+const incomplete: questions.QuestionAnswer = {kind:'option'}
+// @ts-expect-error cancellation cannot supply selected answers
+const cancelled: questions.QuestionResponse = {requestId:'id',status:'cancelled',answers:[entry]}
+void extension; void incomplete; void cancelled; void questions.QUESTION_LIMITS
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `question-types.${extension}`], temporary)
   }
   await writeFile(join(temporary, 'consumer.ts'), `
 import { runAgent, type AgentEvent, type AgentResult, type HistoryMessage, type JsonObject, type ModelProvider, type ToolCall, type ToolDefinition, type Usage } from '@ayayaq/vivi'

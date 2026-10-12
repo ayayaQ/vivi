@@ -56,6 +56,13 @@ versions. See [the precise boundary](docs/MCP.md).
 
 ## Reviewed and kept host-owned
 
+The unreleased optional `/extensions/questions` module shares only clarification data, bounded
+validation, frozen snapshots, exact request/result binding and cancellation-aware serialization.
+It uses the existing v1 extension and owned-scope primitives. The host collects genuine human
+input, binds the callback to the active owner/run, dismisses cancelled prompts and shares a UI
+queue with approval dialogs. There is no default registration, generic plugin framework,
+approval recommendation, permission grant or mode change. See [QUESTIONS.md](docs/QUESTIONS.md).
+
 - Tool argument validation: core checks the JSON envelope; calculator/notes and bot resources
   need different semantic constraints. A generic schema engine would add weight without replacing
   either host's domain checks. Advertising a tool never authorizes it
