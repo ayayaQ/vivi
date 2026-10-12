@@ -56,8 +56,9 @@ versions. See [the precise boundary](docs/MCP.md).
 
 ## Reviewed and kept host-owned
 
-The unreleased optional `/extensions/questions` module shares only clarification data, bounded
-validation, frozen snapshots, exact request/result binding and cancellation-aware serialization.
+The optional `/extensions/questions` module prepared for `0.12.0` shares only clarification
+data, bounded validation, frozen snapshots, exact request/result binding and cancellation-aware
+serialization.
 It uses the existing v1 extension and owned-scope primitives. The host collects genuine human
 input, binds the callback to the active owner/run, dismisses cancelled prompts and shares a UI
 queue with approval dialogs. There is no default registration, generic plugin framework,

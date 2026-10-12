@@ -1,14 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.12.0 (prepared 2026-10-12, not yet published)
 
 - Add the opt-in `/extensions/questions` clarification tool with bounded choices, free text,
   explicit skip/cancel, frozen request snapshots, exact response binding and abort-aware FIFO
   waits. Hosts retain human-input UI, owner/run lifecycle and the shared approval-dialog queue
 - Add offline CLI/Desktop-shaped hosts and packaged ESM/CommonJS/type consumers. No default
-  registration, action authorization, host adoption, version change or publication is included
+  registration, action authorization, host adoption or publication is included
+- Retain the offline CORE-14 source experiment and documentation; it adds no public export
+  or runtime context-selection behavior. Runtime dependencies remain unchanged
 
-## 0.11.0 (prepared 2026-10-10, not yet published)
+## 0.11.0 (2026-10-10)
 
 - Add optional `/presentation` bounded display-only tool snapshots, safe plain-text views,
   and paired CLI/Desktop fixtures; status, effect warnings and provenance remain outside

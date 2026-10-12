@@ -1,6 +1,6 @@
 # Tool presentation (CORE-13)
 
-Prepared `0.11.0` adds optional `@ayayaq/vivi/presentation`, absent from published `0.10.0`.
+Published `0.11.0` adds optional `@ayayaq/vivi/presentation`, absent from published `0.10.0`.
 It imports no runtime modules or UI frameworks and works in a browser renderer.
 It is display-only: hosts own privacy screening, exact call/run binding, approvals, tool
 execution, persistence and outcome evidence. A snapshot, source reference, result, warning

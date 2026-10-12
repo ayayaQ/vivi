@@ -5,11 +5,12 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Prepared `0.11.0` adds optional `/presentation` bounded, UI-neutral tool display snapshots
-and safe text fallback. It is not published; CLI/Desktop adapters follow verified publication.
-See [the presentation contract](docs/TOOL_PRESENTATION.md).
+Published `0.11.0` includes optional `/presentation` bounded, UI-neutral tool display snapshots
+and safe text fallback. See [the presentation contract](docs/TOOL_PRESENTATION.md).
+Prepared `0.12.0` adds the optional clarification question extension below. It is not yet
+published; host adoption follows verified publication.
 
-## Optional clarification questions (unreleased)
+## Optional clarification questions (prepared 0.12.0)
 
 The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral
 `request_user_input` tool for 1–3 questions, choices, free text and explicit skip/cancel.
@@ -17,7 +18,7 @@ A host callback collects actual human input; without one, no tool is advertised.
 ordinary tool results and never authorize actions or change approval modes. Both normal and
 Plan-mode hosts can use the extension under their own tool policy. See the
 [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
-This addition is not in the published package; host adoption follows a reviewed release.
+This addition is absent from published `0.11.0`; host adoption follows a reviewed release.
 
 ## Optional decision review
 
@@ -36,13 +37,13 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.10.0`:
+The latest verified npm release is `0.11.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.10.0
+npm install --save-exact @ayayaq/vivi@0.11.0
 ```
 
-`0.10.0` includes the optional MCP bridge with prepared-action review, trusted extensions,
+`0.11.0` includes the optional MCP bridge with prepared-action review, trusted extensions,
 cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
 credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
