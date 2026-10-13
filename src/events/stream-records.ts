@@ -49,15 +49,19 @@ export function decodeAgentRunRecord(input: unknown): AgentRunRecord {
     check(Array.isArray(input.input) && input.input.length <= AGENT_RECORD_LIMITS.history, 'Invalid canonical run input')
     for (const item of input.input) { entry(item); check(item.message.kind === 'message', 'Run input must contain only new user/system messages') }
     assertHistory(input.input.map(item => item.message))
-  } else if (input.type === 'assistant_accepted' || input.type === 'tool_result_accepted') {
+  } else if (input.type === 'assistant_accepted' || input.type === 'tool_result_accepted' || input.type === 'user_message_accepted') {
     keys(input, [...envelopeKeys, 'type', 'entry', 'round'], input.type === 'assistant_accepted' ? ['usage', 'aggregateUsage'] : [])
     entry(input.entry)
-    check(input.entry.message.kind === (input.type === 'assistant_accepted' ? 'assistant' : 'tool_result'), 'Accepted record message kind mismatch')
+    check(input.entry.message.kind === (input.type === 'assistant_accepted' ? 'assistant' :
+      input.type === 'user_message_accepted' ? 'message' : 'tool_result'), 'Accepted record message kind mismatch')
     check(Number.isSafeInteger(input.round) && (input.round as number) >= 1 && (input.round as number) <= 1000, 'Invalid accepted round')
     if (input.type === 'assistant_accepted') {
       check(Object.hasOwn(input, 'aggregateUsage'), 'Accepted assistant must carry aggregate usage')
       usage(input.aggregateUsage); if ('usage' in input) usage(input.usage)
       assertHistory([input.entry.message], true)
+    } else if (input.type === 'user_message_accepted') {
+      check(input.entry.message.kind === 'message' && input.entry.message.role === 'user', 'Accepted user message must have the user role')
+      assertHistory([input.entry.message])
     } else {
       const message = input.entry.message
       check(message.kind === 'tool_result' && typeof message.content === 'string', 'Invalid accepted tool result')
@@ -91,7 +95,7 @@ export function createAgentAcceptedRecord(options: CreateAgentAcceptedRecordOpti
   identity(options.historyId); source(options.source)
   const update = options.update
   keys(update, ['type', 'message', 'round'], update.type === 'assistant_accepted' ? ['usage', 'aggregateUsage'] : [])
-  check(update.type === 'assistant_accepted' || update.type === 'tool_result_accepted', 'Unsupported canonical acceptance update')
+  check(update.type === 'assistant_accepted' || update.type === 'tool_result_accepted' || update.type === 'user_message_accepted', 'Unsupported canonical acceptance update')
   const common = { ...options.envelope, type: update.type, round: update.round,
     entry: { id: options.historyId, source: options.source, message: update.message } }
   return decodeAgentRunRecord(update.type === 'assistant_accepted' ? {
@@ -166,24 +170,29 @@ function validateTerminal(previous: AgentRunProjection, terminal: DurableAgentRe
   // A hook failure/cancellation may leave accepted messages and cleanup closures unseen.
   // Their final transcript must obey the same canonical transitions as recorded deltas.
   let expected = pending(previous.history)
-  let lastAssistant = previous.history.slice(previous.inputHistoryLength)
-    .filter(item => item.message.kind === 'assistant').at(-1)?.message
+  let lastTurn = previous.history.slice(previous.inputHistoryLength)
+    .filter(item => item.message.kind !== 'tool_result').at(-1)?.message
+  let observedRounds = previous.rounds
   for (const item of final.slice(previous.history.length)) {
     const message = item.message
     if (message.kind === 'assistant') {
-      check(expected.length === 0 && (!lastAssistant ||
-        (lastAssistant.kind === 'assistant' && lastAssistant.toolCalls.length > 0)),
+      check(expected.length === 0 && (!lastTurn || lastTurn.kind === 'message' ||
+        (lastTurn.kind === 'assistant' && lastTurn.toolCalls.length > 0)),
         'Terminal assistant cannot discard pending calls or follow a text-only assistant')
       expected = message.toolCalls.map(call => ({ id: call.id, name: call.name }))
-      lastAssistant = message
+      lastTurn = message; observedRounds++
+    } else if (message.kind === 'message') {
+      check(message.role === 'user' && observedRounds > 0 && expected.length === 0,
+        'Terminal user message requires an accepted round and no pending calls')
+      lastTurn = message
     } else {
       check(message.kind === 'tool_result' && expected[0]?.id === message.callId &&
         expected[0]?.name === message.name, 'Terminal result must match the next pending call')
       expected = expected.slice(1)
     }
   }
-  if (terminal.settlement.status === 'completed') check(lastAssistant?.kind === 'assistant' &&
-    lastAssistant.toolCalls.length === 0 && terminal.settlement.rounds > 0,
+  if (terminal.settlement.status === 'completed') check(final.at(-1)?.message.kind === 'assistant' &&
+    lastTurn?.kind === 'assistant' && lastTurn.toolCalls.length === 0 && terminal.settlement.rounds > 0,
     'Completed run requires an accepted text-only final assistant')
   check(terminal.settlement.rounds >= previous.rounds, 'Terminal cannot lose accepted rounds')
   if (terminal.settlement.rounds === previous.rounds) check(digest(terminal.settlement.usage) === digest(previous.runUsage), 'Terminal usage conflicts with accepted rounds')
@@ -221,13 +230,17 @@ export function applyAgentRunRecord(previous: AgentRunProjection, input: unknown
   } else {
     check(previous.state === 'running', 'Run must start before accepting records')
     if (next.type === 'assistant_accepted') {
-      const lastAssistant = history.slice(previous.inputHistoryLength).filter(item => item.message.kind === 'assistant').at(-1)?.message
-      check(!lastAssistant || (lastAssistant.kind === 'assistant' && lastAssistant.toolCalls.length > 0), 'Acceptance cannot follow a text-only assistant')
+      const lastTurn = history.slice(previous.inputHistoryLength).filter(item => item.message.kind !== 'tool_result').at(-1)?.message
+      check(!lastTurn || lastTurn.kind === 'message' || (lastTurn.kind === 'assistant' && lastTurn.toolCalls.length > 0), 'Acceptance cannot follow a text-only assistant')
       check(pending(history).length === 0, 'Accepted assistant cannot discard pending calls')
       check(next.round === rounds + 1, 'Accepted assistant round gap')
       const total = aggregate(previous, next.usage)
       check(digest(total) === digest(next.aggregateUsage), 'Accepted aggregate usage mismatch')
       history = [...history, next.entry]; rounds = next.round; runUsage = total
+    } else if (next.type === 'user_message_accepted') {
+      check(rounds > 0 && next.round === rounds, 'Accepted user message must match the current completed round')
+      check(pending(history).length === 0, 'Accepted user message cannot split pending calls')
+      history = [...history, next.entry]
     } else if (next.type === 'tool_result_accepted') {
       const expected = pending(history)[0], message = next.entry.message
       check(next.round === rounds && expected && message.kind === 'tool_result' &&

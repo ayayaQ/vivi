@@ -20,6 +20,7 @@ export type AgentRunRecord = AgentRunRecordEnvelope & (
   | { readonly type: 'assistant_accepted'; readonly entry: AgentHistoryEntry; readonly round: number;
       readonly usage?: Readonly<Usage>; readonly aggregateUsage: Readonly<Usage> }
   | { readonly type: 'tool_result_accepted'; readonly entry: AgentHistoryEntry; readonly round: number }
+  | { readonly type: 'user_message_accepted'; readonly entry: AgentHistoryEntry; readonly round: number }
   | { readonly type: 'run_settled'; readonly terminal: DurableAgentRecord }
 )
 
