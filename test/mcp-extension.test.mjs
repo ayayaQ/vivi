@@ -143,7 +143,7 @@ test('mandatory host wiring and synchronous checks reject malformed adapters', a
   assert.throws(()=>createMcpExtension(s.host,[s.snapshot],async()=>({content:''}),{validateSchema}))
   const asyncPrivacy = await subject(CliAdapter,{extension:{assertAllowed:async()=>{}}})
   assert.equal(asyncPrivacy.registry.has(asyncPrivacy.call.name),false)
-  assert.deepEqual(MCP_RESOURCE_TOOL_NAMES,['list_mcp_resources','read_mcp_resource'])
+  assert.deepEqual(MCP_RESOURCE_TOOL_NAMES,['list_mcp_resources','read_mcp_resource','read_mcp_resource_template'])
 })
 
 test('a throwing host review cannot become a retryable unavailable result', async () => {

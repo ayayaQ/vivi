@@ -3,15 +3,19 @@
 // These pure preparation/comparison helpers grant no approval, connection ownership or send guarantee.
 import type { JsonObject, ToolCall } from '../../types.js'
 import { compileMcpToolDescriptor, MCP_LIMITS } from './catalog.js'
-import type { McpCatalogEntry, McpCatalogSnapshot, McpSchemaValidator } from './catalog.js'
+import type { McpCatalogEntry, McpCatalogKind, McpCatalogSnapshot, McpSchemaValidator } from './catalog.js'
 import { MCP_OPERATION_LIMITS } from './content.js'
 import { assertMcpJson, mcpDigest, mcpFreeze, mcpRecord, mcpText } from './data.js'
+import { assertMcpResourceUri, assertMcpTemplateValues, expandMcpResourceTemplate } from './templates.js'
+import type { McpTemplateExpander } from './templates.js'
 
 export interface McpPreparedOperation {
   readonly call: ToolCall
   readonly serverId: string
-  readonly catalogKind: 'tools' | 'resources'
+  readonly catalogKind: McpCatalogKind
   readonly remoteKey: string
+  /** Template reads only: exact resources/read URI, separate from the template catalog identity. */
+  readonly resourceUri?: string
   readonly descriptor: Readonly<Record<string, unknown>>
   readonly snapshot: McpCatalogSnapshot
   readonly binding: JsonObject
@@ -50,32 +54,43 @@ function assertCall(call: unknown): asserts call is ToolCall {
   if (!mcpRecord(call) || Object.keys(call).length !== 3 || !mcpText(call.id, 1024) || !mcpText(call.name, 64) || !mcpRecord(call.arguments)) throw new Error('Invalid MCP tool call')
   assertMcpJson(call.arguments, MCP_OPERATION_LIMITS.argumentBytes)
 }
-function assertSelection(snapshot: McpCatalogSnapshot, entry: McpCatalogEntry, kind: 'tools' | 'resources', call: ToolCall): void {
-  if (kind !== 'tools' && kind !== 'resources' || snapshot.categories[kind].state !== 'ready' ||
+function assertSelection(snapshot: McpCatalogSnapshot, entry: McpCatalogEntry, kind: McpCatalogKind, call: ToolCall): void {
+  if (!kinds.includes(kind) || snapshot.categories[kind].state !== 'ready' ||
     !snapshot.categories[kind].entries.includes(entry) || entry.state !== 'available') throw new Error('MCP catalog entry is unavailable')
   if (kind === 'tools') {
     if (call.name !== entry.alias || !mcpRecord(entry.descriptor.inputSchema) || entry.descriptor.inputSchema.type !== 'object') throw new Error('MCP tool call differs from the captured alias or schema')
+  } else if (kind === 'resourceTemplates') {
+    if (call.name !== 'read_mcp_resource_template' || Object.keys(call.arguments).sort().join(',') !== 'serverId,uriTemplate,variables' ||
+      call.arguments.serverId !== snapshot.serverId || call.arguments.uriTemplate !== entry.remoteKey || !mcpRecord(call.arguments.variables)) throw new Error('MCP template selection differs from the captured template')
+    assertMcpTemplateValues(entry.remoteKey, call.arguments.variables)
   } else if (call.name !== 'read_mcp_resource' || Object.keys(call.arguments).sort().join(',') !== 'serverId,uri' ||
     call.arguments.serverId !== snapshot.serverId || call.arguments.uri !== entry.remoteKey) throw new Error('MCP resource selection differs from the captured URI')
 }
 function capturedOperation(operation: McpPreparedOperation) {
   return { call: operation.call, serverId: operation.serverId, catalogKind: operation.catalogKind,
-    remoteKey: operation.remoteKey, descriptor: operation.descriptor, snapshot: operation.snapshot }
+    remoteKey: operation.remoteKey, ...(operation.catalogKind === 'resourceTemplates' ? { resourceUri: operation.resourceUri } : {}),
+    descriptor: operation.descriptor, snapshot: operation.snapshot }
 }
 function assertPrepared(operation: McpPreparedOperation): void {
-  assertMcpJson(operation, snapshotBytes + MCP_LIMITS.descriptorBytes + MCP_OPERATION_LIMITS.argumentBytes + 4096, snapshotLimits)
+  assertMcpJson(operation, snapshotBytes + MCP_LIMITS.descriptorBytes + MCP_OPERATION_LIMITS.argumentBytes + 8192, snapshotLimits)
   assertMcpCatalogSnapshot(operation.snapshot); assertCall(operation.call)
-  if (operation.catalogKind !== 'tools' && operation.catalogKind !== 'resources' || operation.serverId !== operation.snapshot.serverId ||
+  const operationKeys = ['call', 'serverId', 'catalogKind', 'remoteKey', 'descriptor', 'snapshot', 'binding',
+    ...(operation.catalogKind === 'resourceTemplates' ? ['resourceUri'] : [])]
+  if (!kinds.includes(operation.catalogKind) || Object.keys(operation).length !== operationKeys.length ||
+    !operationKeys.every(key => Object.hasOwn(operation, key)) || operation.serverId !== operation.snapshot.serverId ||
     !mcpRecord(operation.binding) || Object.keys(operation.binding).length !== bindingKeys.length ||
     !bindingKeys.every(key => Object.hasOwn(operation.binding, key))) throw new Error('Invalid MCP prepared operation binding')
   const entry = operation.snapshot.categories[operation.catalogKind].entries.find(value => value.remoteKey === operation.remoteKey)
   if (!entry || mcpDigest(entry.descriptor) !== mcpDigest(operation.descriptor)) throw new Error('MCP operation descriptor differs from its captured entry')
   assertSelection(operation.snapshot, entry, operation.catalogKind, operation.call)
+  if (operation.catalogKind === 'resourceTemplates') assertMcpResourceUri(operation.resourceUri)
+  if (operation.binding.operationDigest !== mcpDigest(capturedOperation(operation))) throw new Error('MCP operation became stale; captured operation binding changed')
 }
 
 /** Capture one exact local proposal. Host policy must separately approve, recheck and send it. */
 export function prepareMcpOperation(snapshot: McpCatalogSnapshot, entry: McpCatalogEntry,
-  kind: 'tools' | 'resources', call: ToolCall, launchDigest: string, validateSchema: McpSchemaValidator): McpPreparedOperation {
+  kind: McpCatalogKind, call: ToolCall, launchDigest: string, validateSchema: McpSchemaValidator,
+  expandTemplate?: McpTemplateExpander): McpPreparedOperation {
   assertMcpCatalogSnapshot(snapshot); assertCall(call)
   if (!mcpText(launchDigest, 4096) || typeof validateSchema !== 'function') throw new Error('Invalid MCP operation host identity')
   assertSelection(snapshot, entry, kind, call)
@@ -84,6 +99,7 @@ export function prepareMcpOperation(snapshot: McpCatalogSnapshot, entry: McpCata
   const capturedEntry = capturedSnapshot.categories[kind].entries.find(value => value.remoteKey === entry.remoteKey)!
   if (kind === 'tools') compileMcpToolDescriptor(capturedEntry.descriptor, validateSchema)(capturedCall.arguments)
   const captured = { call: capturedCall, serverId: capturedSnapshot.serverId, catalogKind: kind, remoteKey: capturedEntry.remoteKey,
+    ...(kind === 'resourceTemplates' ? { resourceUri: expandMcpResourceTemplate(capturedEntry.remoteKey, capturedCall.arguments.variables, expandTemplate!) } : {}),
     descriptor: capturedEntry.descriptor, snapshot: capturedSnapshot }
   const binding: JsonObject = { serverId: capturedSnapshot.serverId, configRevision: capturedSnapshot.configRevision,
     connectionGeneration: capturedSnapshot.connectionGeneration, protocolVersion: capturedSnapshot.protocolVersion,
@@ -94,8 +110,9 @@ export function prepareMcpOperation(snapshot: McpCatalogSnapshot, entry: McpCata
 
 /** Revision evidence for a host prepared-action review. It is neither approval nor a freshness lease. */
 export function mcpOperationRevisions(operation: McpPreparedOperation, currentSnapshot: McpCatalogSnapshot | undefined,
-  launchDigest: string, connected: boolean, configRevision: string): JsonObject {
+  launchDigest: string, connected: boolean, configRevision: string, expandTemplate?: McpTemplateExpander): JsonObject {
   assertPrepared(operation)
+  if (operation.catalogKind === 'resourceTemplates' && expandMcpResourceTemplate(operation.remoteKey, operation.call.arguments.variables, expandTemplate!) !== operation.resourceUri) throw new Error('MCP template expansion changed; request fresh approval')
   if (currentSnapshot !== undefined) assertMcpCatalogSnapshot(currentSnapshot)
   if (typeof connected !== 'boolean' || typeof launchDigest !== 'string' || typeof configRevision !== 'string') throw new Error('Invalid MCP host revision state')
   const category = currentSnapshot?.categories[operation.catalogKind]
@@ -110,8 +127,17 @@ export function mcpOperationRevisions(operation: McpPreparedOperation, currentSn
 
 /** Fail closed on every CLI binding field; the host still owns the final-send recheck and revocation. */
 export function assertMcpOperationCurrent(operation: McpPreparedOperation, currentSnapshot: McpCatalogSnapshot | undefined,
-  launchDigest: string, connected: boolean, configRevision: string): void {
-  const current = mcpOperationRevisions(operation, currentSnapshot, launchDigest, connected, configRevision)
+  launchDigest: string, connected: boolean, configRevision: string, expandTemplate?: McpTemplateExpander): void {
+  const current = mcpOperationRevisions(operation, currentSnapshot, launchDigest, connected, configRevision, expandTemplate)
   if (!current.connected || !current.categoryReady || currentSnapshot?.configRevision !== configRevision || !mcpText(launchDigest, 4096) ||
     bindingKeys.some(key => current[key] !== operation.binding[key])) throw new Error('MCP operation became stale; request fresh approval after metadata refresh')
+}
+
+/** Exact wire method/params only. This does not grant approval or include SDK protocol metadata. */
+export function mcpOperationRequest(operation: McpPreparedOperation): Readonly<{ method: 'tools/call' | 'resources/read'; params: JsonObject }> {
+  assertPrepared(operation)
+  if (operation.catalogKind === 'tools') return mcpFreeze({ method: 'tools/call', params: { name: operation.remoteKey, arguments: structuredClone(operation.call.arguments) } })
+  const uri = operation.catalogKind === 'resourceTemplates' ? operation.resourceUri : operation.remoteKey
+  if (!mcpText(uri, 4096)) throw new Error('Invalid MCP resource read URI')
+  return mcpFreeze({ method: 'resources/read', params: { uri } })
 }

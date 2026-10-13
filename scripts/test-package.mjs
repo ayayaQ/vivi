@@ -47,7 +47,7 @@ try {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   for (const required of ['docs/MCP.md', 'src/extensions/mcp.ts', 'src/extensions/mcp/catalog.ts',
-    'src/extensions/mcp/data.ts', 'src/extensions/mcp/operations.ts', 'src/extensions/mcp/content.ts',
+    'src/extensions/mcp/data.ts', 'src/extensions/mcp/operations.ts', 'src/extensions/mcp/content.ts', 'src/extensions/mcp/templates.ts',
     'examples/mcp.mjs', 'dist/extensions/mcp.js', 'dist/extensions/mcp.d.ts',
     'dist/cjs/extensions/mcp.js', 'dist/cjs/extensions/mcp.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
@@ -191,6 +191,14 @@ void status
   assert.equal(reviews,1);assert.equal(JSON.parse(result.content).doNotRetry,true)
   const projected = mcp.projectMcpResult('fixture','tools/call','echo/name',{content:[{type:'image',mimeType:'image/png',data:'omitted'}]},()=>{})
   assert.equal(JSON.parse(projected.content).content[0].binaryOmitted,true)
+  const templates = await mcp.collectMcpCategory('fixture','resourceTemplates',async () => ({resourceTemplates:[{uriTemplate:'docs://{id}'}]}),signal,compile)
+  const templateSnapshot = {...snapshot,categories:{...snapshot.categories,resourceTemplates:templates}}
+  const expand = (_template,values) => 'docs://' + encodeURIComponent(values.id)
+  const templateCall = {id:'template-1',name:'read_mcp_resource_template',arguments:{serverId:'fixture',uriTemplate:'docs://{id}',variables:{id:'x/y'}}}
+  const templateOperation = mcp.prepareMcpOperation(templateSnapshot,templates.entries[0],'resourceTemplates',templateCall,'launch-1',compile,expand)
+  mcp.assertMcpOperationCurrent(templateOperation,templateSnapshot,'launch-1',true,'config-1',expand)
+  assert.deepEqual(mcp.mcpOperationRequest(templateOperation),{method:'resources/read',params:{uri:'docs://x%2Fy'}})
+  assert.deepEqual(mcp.mcpTemplateVariables('docs://{id}'),['id'])
 })().catch(error => {console.error(error);process.exitCode=1})
 `)
     run(process.execPath, [`mcp-consumer.${extension}`], temporary)
@@ -809,8 +817,9 @@ void result
   ]) {
     await writeFile(join(temporary, `mcp-types.${extension}`), `${importLine}
 const compiler: mcp.McpSchemaValidator = () => () => {}
+const expand: mcp.McpTemplateExpander = (_template, variables) => 'docs://' + encodeURIComponent(variables.id ?? '')
 const host: mcp.McpExtensionHost = {async captureCatalogs(){return []},prepareOperation(){throw new Error('No connected server')}}
-const result = mcp.createMcpExtension(host,[],async () => ({content:''}),{validateSchema:compiler,assertAllowed(){},operationsEnabled:false})
+const result = mcp.createMcpExtension(host,[],async () => ({content:''}),{validateSchema:compiler,assertAllowed(){},operationsEnabled:false,expandTemplate:expand})
 // @ts-expect-error a review callback is mandatory
 mcp.createMcpExtension(host,[],undefined,{validateSchema:compiler,assertAllowed(){}})
 // @ts-expect-error a privacy callback is mandatory

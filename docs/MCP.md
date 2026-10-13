@@ -2,8 +2,8 @@
 
 `@ayayaq/vivi/extensions/mcp` shares the catalog, proposal and content pieces of the
 CLI MCP implementation. It adds no runtime dependencies and does not import the MCP
-SDK. This source prepares `0.9.0`; verified npm `0.8.0` does not
-include this subpath. Consumer adoption waits for a reviewed registry publication.
+SDK. The bridge is published in `0.12.0`; this source adds opt-in template reads for
+the next release. Consumer adoption waits for that reviewed registry publication.
 
 ## Boundary
 
@@ -11,8 +11,9 @@ The module supplies bounded explicit-page discovery, stable per-server aliases,
 conservative schema quarantine, immutable exact-operation bindings, a fixed turn
 extension, local resource metadata and bounded untrusted result projection. Tool
 schemas and constraints are preserved. Unsupported schemas are quarantined rather
-than weakened. Only already-discovered concrete resource URIs can be proposed;
-templates stay metadata-only. Binary bodies are omitted and links are never followed.
+than weakened. Concrete reads retain their exact discovered-URI contract. Hosts can
+opt in to one exact URI expanded from an admitted captured template. Binary bodies
+are omitted and links are never followed.
 
 Hosts own every connection, installed process, configuration and persistence,
 protocol negotiation, credentials, privacy policy, human approval, active-run checks,
@@ -27,7 +28,8 @@ Create one extension for the catalogs captured at the start of a host turn:
 ```js
 const extension = createMcpExtension(host, capturedCatalogs, reviewOperation, {
   validateSchema, assertAllowed,
-  operationsEnabled: true
+  operationsEnabled: true,
+  expandTemplate // optional trusted synchronous scalar RFC 6570 adapter
 })
 ```
 
@@ -37,6 +39,11 @@ const extension = createMcpExtension(host, capturedCatalogs, reviewOperation, {
   its current connection and launch identity. The exported `prepareMcpOperation`
   helper creates the frozen exact binding; `assertMcpOperationCurrent` and
   `mcpOperationRevisions` support repeated host comparisons
+- `expandTemplate(uriTemplate, variables)` opts in to template proposals. It must be
+  deterministic, synchronous and perform no I/O, returning one exact absolute URI.
+  Pass the same adapter as the final optional argument to `prepareMcpOperation`,
+  `mcpOperationRevisions` and `assertMcpOperationCurrent`; template comparisons fail
+  closed without it or when expansion changes. The core does not bundle an expander
 - `validateSchema(schema)` returns a synchronous argument assertion. It must enforce
   every supported constraint, perform no fetching, throw on invalid schemas/arguments
   and return `undefined` on success. The host can adapt its own validator; for the
@@ -70,6 +77,39 @@ the turn. Capture new catalogs and construct a new registry on the next turn. Ke
 fixed `MCP_RESOURCE_TOOL_NAMES` unavailable to unrelated built-in/extensions even when
 no resource tools are currently advertised. Use the ordinary fixed `createToolRegistry`
 for collision checks and frozen definitions.
+
+## Exact template reads
+
+`read_mcp_resource_template` accepts `serverId`, the exact discovered `uriTemplate`,
+and a `variables` object containing every named variable as a string, with no extras.
+It is withheld unless the host supplies `expandTemplate` and enables operations.
+The local list includes admitted variable names and `metadataOnly: false`; all other
+templates remain metadata-only. Malformed or unsupported discovery entries are quarantined.
+
+This slice admits scalar RFC 6570 Level 1–3 expressions (simple, `+`, `#`, `.`, `/`,
+`;`, `?`, `&`), including comma-separated and repeated variables. All variables are
+required, even query variables; empty strings are allowed. Literals must be URI-safe
+ASCII and the template must have a literal absolute scheme. Variable names use ASCII
+letters, digits, underscores and dot-separated components. Prefix/explode modifiers,
+percent-encoded names, composite values, relative references and Unicode literals are
+withheld. Unicode values work when the adapter correctly percent-encodes them. There
+are at most 32 distinct variables, 64 characters per name, 4096 UTF-8 bytes per value
+and expanded URI, within the existing 16 KiB total argument bound.
+
+The operation retains `catalogKind: 'resourceTemplates'` and the template `remoteKey`
+for catalog comparison. Its separate `resourceUri`, frozen call values, descriptor and
+snapshot are included in the operation digest. Show the exact template, values and
+expanded URI for human approval. `mcpOperationRequest(operation)` supplies only the
+exact wire method/params: template and concrete reads both use `resources/read` with
+`{ uri }`. It does not approve or send anything. Use that concrete wire URI for result
+projection, actual-send comparisons and the host's attempt/outcome ledger; never send
+the template identity or add values to the wire request. Preserve URI text exactly,
+without normalization, relative resolution, direct HTTP fetches or linked reads.
+Expanded URI components are checked against [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986.html),
+including authority, IPv6/IPvFuture, port, path, query and fragment syntax. Bracketed
+zone identifiers are outside this slice. The scalar expression grammar follows
+[RFC 6570](https://www.rfc-editor.org/rfc/rfc6570.html); expansion semantics remain
+the trusted adapter's responsibility.
 
 ## The actual send remains host-owned
 
@@ -124,7 +164,8 @@ tasks, subscriptions, input fulfilment, authentication, HTTP and installation ar
 provided by this shared slice.
 
 [The offline example](../examples/mcp.mjs) uses a synthetic schema assertion and fake
-host responses. Tests include CLI-shaped and desktop-shaped adapters, mutable source
+host responses. Tests include CLI-shaped and desktop-shaped adapters, exact scalar template
+requests, mutable source
 catalogs, schema rejection, stale bindings, host denial, metadata-only capability and
 unknown-outcome preservation. They do not establish real-server, native-process or
 live-provider readiness. Hosts are adopted and reviewed separately after publication. CLI adoption must add this

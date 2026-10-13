@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add opt-in exact scalar MCP resource-template reads with a trusted synchronous
+  no-I/O expander, immutable template/value/expanded-URI binding, fresh expansion
+  checks and a pure exact wire-request projection. Concrete reads stay unchanged
+- Quarantine malformed/unsupported templates; cover offline CLI/Desktop one-shot
+  sends, denial, stale metadata, Unicode escaping, privacy and unknown outcomes.
+  No transport SDK runtime dependency, live MCP, publication or host adoption
+
 ## 0.12.0 (prepared 2026-10-12, not yet published)
 
 - Add the opt-in `/extensions/questions` clarification tool with bounded choices, free text,
