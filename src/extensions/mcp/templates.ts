@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Bounded scalar RFC 6570 admission only. Expansion is trusted host code, never I/O.
 import { assertMcpJson, mcpFreeze, mcpRecord, mcpText } from './data.js'
+import { isIP } from 'node:net'
 
 export const MCP_TEMPLATE_LIMITS = Object.freeze({ uriBytes: 4096, variables: 32, valueBytes: 4096 })
 /** Expand synchronously without I/O. Throw on unsupported templates or values. */
@@ -47,6 +48,35 @@ export function assertMcpResourceUri(uri: unknown): asserts uri is string {
   if (!mcpText(uri, MCP_TEMPLATE_LIMITS.uriBytes) || Buffer.byteLength(uri) > MCP_TEMPLATE_LIMITS.uriBytes ||
     !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(uri) || /[^A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]/.test(uri) ||
     /%(?![0-9A-Fa-f]{2})/.test(uri)) throw new Error('MCP template expander must return one bounded absolute URI synchronously')
+  // RFC 3986 component syntax, not WHATWG URL normalization or network resolution.
+  // Preserve generic reg-names, opaque/custom schemes, empty authorities and IPvFuture.
+  let remainder = uri.slice(uri.indexOf(':') + 1)
+  const hash = remainder.indexOf('#')
+  if (hash !== -1) {
+    const fragment = remainder.slice(hash + 1)
+    if (/[^A-Za-z0-9\-._~!$&'()*+,;=:@/?%]/.test(fragment)) throw new Error('Invalid MCP resource URI fragment')
+    remainder = remainder.slice(0, hash)
+  }
+  const question = remainder.indexOf('?')
+  if (question !== -1) {
+    const query = remainder.slice(question + 1)
+    if (/[^A-Za-z0-9\-._~!$&'()*+,;=:@/?%]/.test(query)) throw new Error('Invalid MCP resource URI query')
+    remainder = remainder.slice(0, question)
+  }
+  if (remainder.startsWith('//')) {
+    const slash = remainder.indexOf('/', 2)
+    const authority = remainder.slice(2, slash === -1 ? undefined : slash)
+    remainder = slash === -1 ? '' : remainder.slice(slash)
+    const at = authority.indexOf('@')
+    if (at !== authority.lastIndexOf('@') || at !== -1 && /[^A-Za-z0-9\-._~!$&'()*+,;=:%]/.test(authority.slice(0, at))) throw new Error('Invalid MCP resource URI userinfo')
+    const hostPort = authority.slice(at + 1)
+    if (hostPort.startsWith('[')) {
+      const close = hostPort.indexOf(']'), address = hostPort.slice(1, close), port = hostPort.slice(close + 1)
+      if (close === -1 || address.includes('%') || isIP(address) !== 6 && !/^v[0-9A-F]+\.[A-Za-z0-9\-._~!$&'()*+,;=:]+$/i.test(address) ||
+        port !== '' && !/^:[0-9]*$/.test(port)) throw new Error('Invalid MCP resource URI IP-literal or port')
+    } else if (!/^[A-Za-z0-9\-._~!$&'()*+,;=%]*(?::[0-9]*)?$/.test(hostPort)) throw new Error('Invalid MCP resource URI host or port')
+  }
+  if (/[^A-Za-z0-9\-._~!$&'()*+,;=:@/%]/.test(remainder)) throw new Error('Invalid MCP resource URI path')
 }
 /** Exact required values and one bounded absolute URI, with no normalization or resolution. */
 export function expandMcpResourceTemplate(uriTemplate: string, variables: unknown, expand: McpTemplateExpander): string {

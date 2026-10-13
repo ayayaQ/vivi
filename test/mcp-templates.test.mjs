@@ -76,6 +76,12 @@ test('host expansion must be synchronous and return one bounded absolute URI wit
   for (const value of [undefined, false, {}, 'relative', 'docs://{id}', 'docs://bad space', 'docs://bad%xx', 'docs://' + 'x'.repeat(4096), 'docs://汉', Promise.resolve('docs://x'), Promise.reject(new Error('invalid async adapter'))]) {
     assert.throws(() => prepare(s, call(), () => value))
   }
+  for (const uri of ['docs://[::1/x', 'docs://[not-an-ip]/x', 'docs:/path/x#first#second', 'docs:/raw[brackets]',
+    'docs://one@two@three/x', 'docs://host:abc/x', 'docs://[::1]:abc/x', 'docs://[vX.addr]/x', 'docs://[fe80::1%25eth0]/x']) assert.throws(() => prepare(s, call(), () => uri), /Invalid MCP resource URI/)
+  for (const uri of ['docs:opaque', 'docs:', 'urn:example:a%20b', 'docs:///absolute', 'docs://[::1]/x',
+    'docs://[vF.custom:addr]/x', 'docs://user:pass@name:12/x?first?second#part/ok?yes', 'docs://reg!$&\'()*+,;=name:/x']) {
+    assert.equal(prepare(s, call(), () => uri).resourceUri, uri)
+  }
   let captured
   const original = { id: 'x', q: '' }
   const operation = prepare(s, call(original), (template, variables) => { captured = variables; assert(Object.isFrozen(variables)); return expand(template, variables) })

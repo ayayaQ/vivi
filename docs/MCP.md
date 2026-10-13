@@ -105,6 +105,11 @@ exact wire method/params: template and concrete reads both use `resources/read` 
 projection, actual-send comparisons and the host's attempt/outcome ledger; never send
 the template identity or add values to the wire request. Preserve URI text exactly,
 without normalization, relative resolution, direct HTTP fetches or linked reads.
+Expanded URI components are checked against [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986.html),
+including authority, IPv6/IPvFuture, port, path, query and fragment syntax. Bracketed
+zone identifiers are outside this slice. The scalar expression grammar follows
+[RFC 6570](https://www.rfc-editor.org/rfc/rfc6570.html); expansion semantics remain
+the trusted adapter's responsibility.
 
 ## The actual send remains host-owned
 
