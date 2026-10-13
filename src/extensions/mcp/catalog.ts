@@ -4,6 +4,7 @@
 import { createHash } from 'node:crypto'
 import type { JsonObject } from '../../types.js'
 import { assertMcpHostCheck, assertMcpJson, mcpDigest, mcpFreeze, mcpRecord, mcpText } from './data.js'
+import { mcpTemplateVariables } from './templates.js'
 
 export const MCP_LIMITS = Object.freeze({ pages: 16, entries: 256, bytes: 1024 * 1024,
   descriptorBytes: 64 * 1024, cursorBytes: 4096, depth: 32, nodes: 4096, categoryMs: 10000, pageMs: 5000 })
@@ -168,7 +169,10 @@ export async function collectMcpCategory(serverId: string, kind: McpCatalogKind,
       const alias = aliasFor(serverId, kind, remoteKey)
       if (typeof alias !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(alias) || aliases.has(alias)) throw new Error('MCP catalog alias collision')
       aliases.add(alias)
-      const reason = kind === 'tools' ? toolReason(item, validateSchema) : undefined
+      let reason = kind === 'tools' ? toolReason(item, validateSchema) : undefined
+      if (kind === 'resourceTemplates') {
+        try { mcpTemplateVariables(remoteKey) } catch { reason = 'Invalid or unsupported resource template' }
+      }
       assertTime()
       entries.push(mcpFreeze({ remoteKey, alias, descriptor: item, state: reason ? 'quarantined' : 'available', ...(reason ? { reason } : {}) }))
     }
