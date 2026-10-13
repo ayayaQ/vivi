@@ -41,6 +41,13 @@ original run for later evidence without inventing legacy run IDs. Session usage 
 by the host. Token totals are independent reported counters; optional cache fields stay
 omitted when unreported. Repeating a record never adds history or usage again.
 
+For compatibility, `decodeAgentRecord` preserves the legacy no-steering settlement
+suffix checks for round count and final content without enforcing the ordered run's
+assistant acceptance transitions, including stopping after a text-only assistant.
+Successful snapshot decoding or session projection alone does not establish full run
+acceptance validity. Use `applyAgentRunRecord` or `projectAgentRunRecords` from the
+[run stream](AGENT_STREAM.md) to validate ordered acceptance and terminal transitions.
+
 ## Outcome authority
 
 Outcome evidence names original `runId` (or null if genuinely absent), `callId`, tool name,

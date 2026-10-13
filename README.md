@@ -20,6 +20,9 @@ Plan-mode hosts can use the extension under their own tool policy. See the
 [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
 This addition is absent from published `0.11.0`; host adoption follows a reviewed release.
 
+Unreleased optional queued-message steering is prepared separately for review. Hosts own
+queue acknowledgement and force-send cancellation; see [STEERING.md](docs/STEERING.md).
+
 ## Optional decision review
 
 This module is published in verified stable `0.7.0` and absent from immutable `0.6.0`.

@@ -6,6 +6,7 @@ import type {
   AgentResult,
   AssistantMessage,
   HistoryMessage,
+  Message,
   ProviderResult,
   ProviderProgress,
   RunAgentOptions,
@@ -15,7 +16,7 @@ import type {
   ToolResultMessage,
   Usage
 } from './types.js'
-import { assert, assertCall, assertHistory, assertJson, assertProviderState, identifier, record } from './validation.js'
+import { assert, assertCall, assertCanonicalHistory, assertHistory, assertJson, assertProviderState, identifier, record } from './validation.js'
 
 class RunFailure extends Error {
   constructor(readonly code: AgentError['code'], message: string) {
@@ -150,6 +151,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   let pending: ToolCall[] = []
   let signal: AbortSignal = new AbortController().signal
   let onAccepted: RunAgentOptions['onAccepted']
+  let getSteeringMessages: RunAgentOptions['getSteeringMessages']
 
   const result = (status: AgentResult['status'], error?: AgentError): AgentResult => ({
     status, history, content, rounds, usage, ...(error ? { error } : {})
@@ -166,6 +168,11 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       assert(options.onEvent === undefined || typeof options.onEvent === 'function', 'onEvent must be a function')
       onAccepted = options.onAccepted
       assert(onAccepted === undefined || typeof onAccepted === 'function', 'onAccepted must be a function')
+      getSteeringMessages = options.getSteeringMessages
+      assert(getSteeringMessages === undefined || typeof getSteeringMessages === 'function', 'getSteeringMessages must be a function')
+      // The new steering option requires record-compatible input without tightening
+      // published callers that omit it and retain application JSON metadata.
+      if (getSteeringMessages) assertCanonicalHistory(history)
       assert(options.signal === undefined || options.signal instanceof AbortSignal, 'signal must be an AbortSignal')
       const limit = options.maxRounds === undefined ? 25 : options.maxRounds
       assert(Number.isInteger(limit) && limit >= 1 && limit <= 1000, 'maxRounds must be an integer from 1 to 1000')
@@ -206,6 +213,34 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       } catch (error) {
         if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
         throw new RunFailure('event_error', detail(error))
+      }
+    }
+
+    const pullSteering = async (): Promise<Message[]> => {
+      let output: unknown
+      try {
+        output = await wait(() => getSteeringMessages!({ signal }), signal)
+        checkAbort()
+      } catch (error) {
+        if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
+        throw new RunFailure('event_error', detail(error))
+      }
+      try {
+        // Validate JSON descriptors before cloning, then validate only the detached
+        // canonical data. Semantic checks must not trust a host collection's methods
+        // or inherited iteration behavior. No message is admitted until all pass.
+        assertJson(output)
+        const messages: unknown = structuredClone(output)
+        assertCanonicalHistory(messages)
+        for (let index = 0; index < messages.length; index++) {
+          const message = messages[index]!
+          assert(message.kind === 'message' && message.role === 'user',
+            'Steering messages must contain only user messages')
+        }
+        // Each FIFO occurrence owns its data even if the host repeats one object.
+        return messages.map(message => structuredClone(message)) as Message[]
+      } catch (error) {
+        throw new RunFailure('invalid_input', detail(error))
       }
     }
 
@@ -355,7 +390,20 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 
       await emit({ type: 'round_completed', ...(turn.usage ? { usage: turn.usage } : {}) })
       checkAbort()
-      if (assistant.toolCalls.length === 0) return result('completed')
+      let steered = false
+      // No initial pull, no tool-batch splitting, and no queue consumption if the budget
+      // cannot run another generation. The absent-option path adds no awaited no-op.
+      if (getSteeringMessages && rounds < maxRounds) {
+        const messages = await pullSteering()
+        checkAbort()
+        for (const message of messages) {
+          checkAbort()
+          history.push(message)
+          steered = true
+          if (onAccepted) await accept({ type: 'user_message_accepted', message, round: rounds })
+        }
+      }
+      if (assistant.toolCalls.length === 0 && !steered) return result('completed')
     }
     throw new RunFailure('max_rounds', `Agent exceeded the ${maxRounds}-round limit`)
   } catch (error) {
