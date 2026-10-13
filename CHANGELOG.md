@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.0 (prepared 2026-10-13, not yet published)
 
 - Add opt-in exact scalar MCP resource-template reads with a trusted synchronous
   no-I/O expander, immutable template/value/expanded-URI binding, fresh expansion
@@ -9,7 +9,7 @@
   sends, denial, stale metadata, Unicode escaping, privacy and unknown outcomes.
   No transport SDK runtime dependency, live MCP, publication or host adoption
 
-## 0.12.0 (prepared 2026-10-12, not yet published)
+## 0.12.0 (2026-10-12)
 
 - Add the opt-in `/extensions/questions` clarification tool with bounded choices, free text,
   explicit skip/cancel, frozen request snapshots, exact response binding and abort-aware FIFO
