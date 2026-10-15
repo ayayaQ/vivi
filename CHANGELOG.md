@@ -1,6 +1,19 @@
 # Changelog
 
-## 0.13.0 (prepared 2026-10-13, not yet published)
+## 0.14.0 (prepared 2026-10-15, not yet published)
+
+- Add complete provider-projected context estimates, honest known/unknown capacity metadata,
+  output reservation and pure next-request measurement independent of cumulative usage
+- Add opt-in automatic/manual portable compaction with separate source/projection-bound
+  checkpoints, preserved current instructions and complete recent tool groups, and immutable
+  summary inputs using the same model with tools disabled
+- Preserve canonical raw history and host approval/outcome authority; report summary usage
+  separately and allow one strictly smaller retry after classified context overflow
+- Preserve compacted-away canonical tool IDs for provider normalization, avoid redundant or
+  futile compaction, and cover cancellation, crash/resume, privacy, model switches and failure
+- No new runtime dependencies, live providers, npm publication or host adoption are included
+
+## 0.13.0 (2026-10-13)
 
 - Add opt-in exact scalar MCP resource-template reads with a trusted synchronous
   no-I/O expander, immutable template/value/expanded-URI binding, fresh expansion

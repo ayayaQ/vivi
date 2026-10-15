@@ -297,7 +297,7 @@ The additive `/events/stream` subpath provides ordered accepted deltas and termi
 see [AGENT_STREAM.md](AGENT_STREAM.md). Both source APIs are absent from published 0.9.0;
 production adoption follows reviewed 0.10.0 publication and exact registry-byte verification.
 
-## Context management (unreleased)
+## Context management (prepared 0.14.0)
 
 The root API exports `measureContext`, `prepareContext`, `compactContext`,
 `estimateContext`, `validateContextCheckpoint`, `ContextError` and their context types.

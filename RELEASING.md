@@ -1,22 +1,33 @@
 # Release workflow
 
-## Prepared stable 0.13.0, not yet published
+## Prepared stable 0.14.0, not yet published
 
-This additive release includes opt-in exact scalar MCP resource-template reads, a trusted
-synchronous no-I/O expander, immutable template/value/expanded-URI binding, fresh expansion
-checks and a pure exact wire-request projection. Concrete reads stay unchanged. Hosts retain
-human approval, privacy policy, transport and outcome handling. See [MCP.md](docs/MCP.md)
-and [PR #36](https://github.com/ayayaQ/vivi/pull/36).
-The foundation merged at `4969a1d731f01dcf666260969f5cab95ec34c199`, tree
-`b619699225cbeeae4a481b914ec03ab56aa5c7e5`: independent review, 707 tests, all examples,
-14 public export consumers and Linux/Windows Node22/24 CI passed. The separate release
-metadata and frozen archive require exact-source review and checks before publication.
+This additive release includes optional complete provider-request occupancy, explicit estimated
+and unknown states, verified capacity metadata and output reservation, portable manual/automatic
+compaction, separately persisted source/projection-bound checkpoints and one classified-overflow
+retry. Canonical history, host approvals and actual outcomes remain authoritative. Summary calls
+use the same model with tools disabled; summary usage is separate from accepted-round usage.
+See [CONTEXT.md](docs/CONTEXT.md) and [PR #39](https://github.com/ayayaQ/vivi/pull/39).
 
-Public npm latest is `0.12.0` as observed 2026-10-13; `0.13.0` is not published. Publish
-only the separately reviewed archive, without repacking. The account holder handles npm
-login, security challenges and publication. Verify actual public bytes and clean Node22/24
-consumers afterward before separate host adoption. Runtime dependencies remain unchanged;
-no live MCP, credentials, transport SDK runtime dependency or host integration is added.
+The feature merged at `89e2e7d4850089dfe156a08fefb02c5a7ebf9d9f`, tree
+`baa2ca20f8aba9c6d69f41fc0f31c274a3458b87`. Independent exact-source and exact-remote
+review, 758 tests, all offline examples, packed ESM/CommonJS runtime and TypeScript consumers
+across 14 public subpaths, and Linux/Windows Node 22/24 PR CI passed. Release metadata and
+frozen archive require their own independent review and checks before publication.
+
+Public npm `latest` is `0.13.0` as observed 2026-10-15; `0.14.0` is not published. The account
+holder handles npm login, security challenges and publication of the separately reviewed frozen
+archive, without repacking. Verify exact public registry bytes and clean supported consumers
+before separate CLI/Desktop adoption. Runtime dependencies remain unchanged. No live providers,
+credentials, raw-history archival policy or host integration is added by this package release.
+
+## Published stable 0.13.0
+
+Public npm lists `@ayayaq/vivi@0.13.0`, published `2026-10-13T06:10:39.317Z`, with
+`latest` observed at `0.13.0` on 2026-10-15. Its immutable archive remains unchanged.
+It includes the opt-in exact scalar MCP resource-template reads, trusted synchronous no-I/O
+expander and exact wire-request projection from [PR #36](https://github.com/ayayaQ/vivi/pull/36).
+Earlier preparation wording remains in that archive; this repository record does not repack it.
 
 ## Published stable 0.12.0
 
