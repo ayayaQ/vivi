@@ -79,10 +79,14 @@ export interface SkillSaveHost {
   /** Review the exact content and create/overwrite destination. Resolve true only if approved. */
   authorize(proposal: SkillSaveProposal, context: { readonly signal: AbortSignal }): boolean | Promise<boolean>
   /**
-   * Save only <owned-skills-root>/<name>/SKILL.md. Under the host's file transaction/lock,
-   * recheck the on-disk revision (or nonexistence for null) AFTER approval, then commit atomically.
-   * Built-ins are immutable. Resolve only if committed; reject only before commit. Cancellation
-   * after a committed rename must not imply rollback. Do not activate inside the current turn.
+   * Save only the named SKILL.md document in the host-owned skill store. A filesystem host
+   * may use <owned-skills-root>/<name>/SKILL.md; a database host may store its exact UTF-8 source.
+   * Under the host's storage transaction/lock, recheck the stored revision (or nonexistence for
+   * null) AFTER approval, then commit atomically. Built-ins and imported sources are immutable.
+   * Resolve only if committed. Recover an indeterminate commit using durable operation evidence
+   * where possible; otherwise report an explicit unknown outcome with correlation and no blind
+   * retry, never a claimed rollback. Cancellation after commit must not imply rollback. Do not
+   * activate inside the current turn.
    */
   commit(proposal: SkillSaveProposal, context: { readonly signal: AbortSignal }): void | Promise<void>
 }
