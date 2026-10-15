@@ -5,12 +5,11 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Published `0.11.0` includes optional `/presentation` bounded, UI-neutral tool display snapshots
-and safe text fallback. See [the presentation contract](docs/TOOL_PRESENTATION.md).
-Prepared `0.12.0` adds the optional clarification question extension below. It is not yet
-published; host adoption follows verified publication.
+Published `0.13.0` includes the optional clarification question extension and exact scalar
+MCP resource-template reads. Prepared `0.14.0` adds portable provider-facing context
+management below; it is not yet published, and host adoption follows verified publication.
 
-## Optional context management (unreleased)
+## Optional context management (prepared 0.14.0)
 
 The root API adds full projected-request occupancy, explicit known/unknown capacities,
 `measureContext`, manual/automatic portable compaction, separate source-bound checkpoints,
@@ -18,7 +17,7 @@ and one classified-overflow retry. Canonical raw history and tool/approval evide
 unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
 See [CONTEXT.md](docs/CONTEXT.md). This source feature is not yet published.
 
-## Optional clarification questions (prepared 0.12.0)
+## Optional clarification questions (since 0.12.0)
 
 The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral
 `request_user_input` tool for 1–3 questions, choices, free text and explicit skip/cancel.
@@ -26,7 +25,7 @@ A host callback collects actual human input; without one, no tool is advertised.
 ordinary tool results and never authorize actions or change approval modes. Both normal and
 Plan-mode hosts can use the extension under their own tool policy. See the
 [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
-This addition is absent from published `0.11.0`; host adoption follows a reviewed release.
+This addition is available from published `0.12.0`; hosts adopt it under their own policy.
 
 ## Optional decision review
 
