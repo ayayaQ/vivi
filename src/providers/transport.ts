@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 ayayaQ
-import type { JsonObject } from '../types.js'
+import type { ContextEstimate, JsonObject, ProviderGenerateOptions } from '../types.js'
 import type { Provider } from './shared.js'
 
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
@@ -27,21 +27,90 @@ export interface ProviderOptions<E extends EnabledReasoningEffort = EnabledReaso
   fetch?: typeof fetch
 }
 
-export interface ProgressOptions {
-  onProgress?(event: { type: 'text_delta'; text: string }): void | Promise<void>
-}
+export type ProgressOptions = ProviderGenerateOptions
 
 /** Sanitized errors never retain raw response bodies, credential values, URLs, or causes. */
 export class ProviderRequestError extends Error {
   constructor(
     readonly provider: Provider,
-    readonly code: 'configuration' | 'http' | 'transport' | 'invalid_response' | 'timeout' | 'aborted',
+    readonly code: 'configuration' | 'http' | 'transport' | 'invalid_response' | 'timeout' | 'aborted' | 'context_overflow',
     message: string,
     readonly status?: number
   ) {
     super(message)
     this.name = code === 'aborted' ? 'AbortError' : 'ProviderRequestError'
   }
+}
+
+export { isContextOverflow } from '../validation.js'
+
+function dataField(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const descriptor = Object.getOwnPropertyDescriptor(value, key)
+  return descriptor && 'value' in descriptor ? descriptor.value : undefined
+}
+
+/** Only explicit machine-readable overflow identifiers trigger context recovery.
+ * OpenRouter additionally carries the canonical identifier in error.metadata.error_type.
+ * Message text, raw upstream bodies, generic token limits, and HTTP status alone do not.
+ */
+export function throwIfContextOverflow(value: unknown, provider: Provider, status?: number): void {
+  const error = dataField(value, 'error')
+  const responseError = dataField(dataField(value, 'response'), 'error')
+  const candidates = [value, error, responseError]
+  for (const candidate of candidates) {
+    const metadata = dataField(candidate, 'metadata')
+    if ([dataField(candidate, 'code'), dataField(candidate, 'type'),
+      dataField(candidate, 'error_type'), dataField(metadata, 'error_type')]
+      .some((code) => code === 'context_length_exceeded')) {
+      throw new ProviderRequestError(provider, 'context_overflow', `${provider} request exceeded the context window`, status)
+    }
+  }
+}
+
+/** Same validated output bound is used by generation and effective-request estimation. */
+export function outputTokenLimit(provider: Provider, options?: { maxOutputTokens?: number }): number | undefined {
+  const limit = options?.maxOutputTokens
+  if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 1)) {
+    throw new ProviderRequestError(provider, 'configuration', `${provider} maxOutputTokens must be a positive safe integer`)
+  }
+  return limit
+}
+
+/** Preserve canonical identities that are no longer visible in a compacted provider view. */
+export function reservedToolCallIds(provider: Provider, options?: ProviderGenerateOptions): readonly string[] {
+  const ids = options?.reservedToolCallIds
+  if (ids === undefined) return []
+  const invalid = (): never => { throw new ProviderRequestError(provider, 'configuration', `${provider} reservedToolCallIds must contain canonical identifier strings`) }
+  if (!Array.isArray(ids)) invalid()
+  const captured: string[] = []
+  for (let index = 0; index < ids.length; index++) {
+    const descriptor = Object.getOwnPropertyDescriptor(ids, String(index))
+    if (!descriptor || !('value' in descriptor) || typeof descriptor.value !== 'string' ||
+      !descriptor.value || descriptor.value !== descriptor.value.trim()) invalid()
+    captured.push(descriptor!.value as string)
+  }
+  return Object.freeze(captured)
+}
+
+/** Approximate the final projected prompt, not transport bytes or cumulative billing.
+ * ASCII uses three bytes/token, non-ASCII two, plus framing allowances. This is a
+ * conservative multilingual heuristic, not a tokenizer or guaranteed upper bound.
+ * In particular, opaque native reasoning cannot be measured exactly from its encoding.
+ */
+export function estimateRequestContext(body: JsonObject): ContextEstimate {
+  const prompt: JsonObject = {}
+  for (const key of ['input', 'messages', 'tools', 'tool_choice', 'reasoning']) {
+    if (body[key] !== undefined) prompt[key] = body[key]!
+  }
+  const text = JSON.stringify(prompt)
+  let ascii = 0
+  for (let index = 0; index < text.length; index++) if (text.charCodeAt(index) < 128) ascii++
+  const bytes = new TextEncoder().encode(text).byteLength
+  const messages = body.input ?? body.messages
+  const framing = 32 + (Array.isArray(messages) ? messages.length * 8 : 0) +
+    (Array.isArray(body.tools) ? body.tools.length * 16 : 0)
+  return { inputTokens: Math.ceil(ascii / 3 + (bytes - ascii) / 2) + framing, estimated: true }
 }
 
 export interface Config {
@@ -233,7 +302,8 @@ export async function post(
     throw error
   }
   if (!response.ok) {
-    if (response.body) void response.body.cancel().catch(() => {})
+    const error = await readHttpError(response, context)
+    throwIfContextOverflow(error, config.provider, response.status)
     throw new ProviderRequestError(config.provider, 'http',
       `${config.provider} request failed (HTTP ${response.status})`, response.status)
   }
@@ -242,6 +312,41 @@ export async function post(
 
 export const MAX_BODY_BYTES = 16_777_216
 export const MAX_EVENT_CHARS = 1_048_576
+const MAX_ERROR_BODY_BYTES = 65_536
+
+/** Error classification is bounded and best-effort; malformed/large bodies remain HTTP errors. */
+async function readHttpError(response: Response, context: RequestContext): Promise<unknown> {
+  if (!response.body) return undefined
+  const reader = response.body.getReader()
+  const cancel = (): void => { void reader.cancel().catch(() => {}) }
+  context.signal.addEventListener('abort', cancel, { once: true })
+  try {
+    const decoder = new TextDecoder('utf-8', { fatal: true })
+    let text = ''
+    let bytes = 0
+    while (true) {
+      context.check()
+      const next = await reader.read()
+      context.check()
+      if (next.done) break
+      bytes += next.value.byteLength
+      if (bytes > MAX_ERROR_BODY_BYTES) return undefined
+      text += decoder.decode(next.value, { stream: true })
+    }
+    text += decoder.decode()
+    context.check()
+    const value: unknown = JSON.parse(text)
+    context.check()
+    return value
+  } catch {
+    context.check()
+    return undefined
+  } finally {
+    context.signal.removeEventListener('abort', cancel)
+    cancel()
+    try { reader.releaseLock() } catch { /* An abort-ignoring injected reader can remain pending. */ }
+  }
+}
 
 async function bodyReader<T>(
   response: Response, context: RequestContext, provider: Provider,

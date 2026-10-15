@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 ayayaQ
-import type { HistoryMessage, JsonObject, ModelProvider, ProviderResult } from '../types.js'
+import type { HistoryMessage, JsonObject, ModelProvider, ProviderResult, ToolDefinition } from '../types.js'
 import {
   fail, identifier, isJsonValue, isRecord, MAX_ARGUMENT_CHARS, MAX_ITEMS,
   normalizeCallIds, parseOpenRouterMessage, parseReasoningDetail, projectOpenRouterHistory, usage
 } from './shared.js'
-import { configure, eventJson, post, readJson, readSse, request, ProviderRequestError } from './transport.js'
-import type { ProgressOptions, ProviderOptions } from './transport.js'
+import { configure, estimateRequestContext, eventJson, outputTokenLimit, post, readJson, readSse, request, reservedToolCallIds, ProviderRequestError, throwIfContextOverflow } from './transport.js'
+import type { Config, ProgressOptions, ProviderOptions } from './transport.js'
 
 export { projectOpenRouterHistory } from './shared.js'
-export { ProviderRequestError } from './transport.js'
+export { ProviderRequestError, isContextOverflow } from './transport.js'
 export type { ReasoningEffort, EnabledReasoningEffort, ReasoningSelection } from './transport.js'
 export interface OpenRouterProviderOptions extends ProviderOptions {
   attribution?: { referer?: string; title?: string }
@@ -17,24 +17,27 @@ export interface OpenRouterProviderOptions extends ProviderOptions {
   requireSupportedParameters?: boolean
 }
 
-function result(value: unknown, model: string, messages: readonly HistoryMessage[]): ProviderResult {
+function result(value: unknown, model: string, messages: readonly HistoryMessage[], reservedIds: readonly string[] = []): ProviderResult {
+  throwIfContextOverflow(value, 'OpenRouter')
   if (!isRecord(value) || !Array.isArray(value.choices) || value.choices.length !== 1 || !isRecord(value.choices[0])) {
     fail('OpenRouter', 'response contained no single agent message')
   }
   const choice = value.choices[0]
+  throwIfContextOverflow(choice, 'OpenRouter')
   if (value.error || choice.error || (choice.finish_reason !== 'stop' && choice.finish_reason !== 'tool_calls')) {
     fail('OpenRouter', 'agent response was not completed')
   }
   const parsed = parseOpenRouterMessage(choice.message)
   const hasReasoning = Boolean(parsed.item.reasoning || parsed.item.reasoning_content) ||
     (Array.isArray(parsed.item.reasoning_details) && parsed.item.reasoning_details.length > 0)
-  if (normalizeCallIds(parsed.toolCalls, messages, 'OpenRouter', !hasReasoning)) {
+  if (normalizeCallIds(parsed.toolCalls, messages, 'OpenRouter', !hasReasoning, reservedIds)) {
     parsed.item.tool_calls = (parsed.item.tool_calls as JsonObject[]).map((call, index) => ({
       ...call, id: parsed.toolCalls[index]!.id
     }))
   }
+  const tokenUsage = usage(value.usage, 'OpenRouter')
   return {
-    content: parsed.content, toolCalls: parsed.toolCalls, usage: usage(value.usage, 'OpenRouter'),
+    content: parsed.content, toolCalls: parsed.toolCalls, ...(tokenUsage !== undefined ? { usage: tokenUsage } : {}),
     providerState: { provider: `openrouter:${model}`, items: [parsed.item] }
   }
 }
@@ -68,6 +71,7 @@ class ChatStream {
   tokenUsage: unknown
 
   async add(value: Record<string, unknown>, progress: (text: string) => Promise<void>): Promise<void> {
+    throwIfContextOverflow(value, 'OpenRouter')
     if (value.error) fail('OpenRouter', 'agent response was not completed')
     if (value.usage !== undefined && value.usage !== null) this.tokenUsage = value.usage
     if (!Array.isArray(value.choices) || value.choices.length > 1) fail('OpenRouter', 'invalid stream choices')
@@ -76,6 +80,7 @@ class ChatStream {
       return
     }
     const choice = value.choices[0]
+    throwIfContextOverflow(choice, 'OpenRouter')
     if (!isRecord(choice) || choice.error || (choice.index !== undefined && choice.index !== 0)) {
       fail('OpenRouter', 'invalid stream choice')
     }
@@ -157,6 +162,26 @@ class ChatStream {
   }
 }
 
+function requestBody(
+  config: Config, requireSupportedParameters: boolean,
+  input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
+  options?: { maxOutputTokens?: number }
+): JsonObject {
+  const maxOutputTokens = outputTokenLimit('OpenRouter', options)
+  // Automatic tool choice is the gateway default. Strict routing need not require tool_choice.
+  return {
+    model: config.model, messages: projectOpenRouterHistory(input.messages, config.model),
+    ...(input.tools.length ? { tools: input.tools.map((tool) => ({ type: 'function', function: {
+      name: tool.name, description: tool.description, parameters: tool.parameters
+    } })) } : {}),
+    stream: config.stream,
+    ...(config.stream ? { stream_options: { include_usage: true } } : {}),
+    ...(config.reasoning ? { reasoning: config.reasoning } : {}),
+    ...(requireSupportedParameters ? { provider: { require_parameters: true } } : {}),
+    ...(maxOutputTokens !== undefined ? { max_tokens: maxOutputTokens } : {})
+  }
+}
+
 /** OpenRouter Chat Completions API. Native reasoning is retained for tool continuation. */
 export function createOpenRouterProvider(options: OpenRouterProviderOptions): ModelProvider {
   const config = configure(options, 'OpenRouter', 'https://openrouter.ai/api/v1', 'chat/completions',
@@ -180,27 +205,24 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions): Mo
     }
   }
   return {
+    estimateContext(input, options) {
+      return estimateRequestContext(requestBody(config, requireSupportedParameters, input, options))
+    },
     generate(input, signal, progress?: ProgressOptions) {
+      const reservedIds = reservedToolCallIds('OpenRouter', progress)
       return request(config, signal, progress, async (context, key) => {
-        // OpenRouter defaults to automatic tool choice. Omit that optional parameter so
-        // strict routing does not require tool_choice support in addition to tools support.
-        const body: JsonObject = {
-          model: config.model, messages: projectOpenRouterHistory(input.messages, config.model),
-          ...(input.tools.length ? { tools: input.tools.map((tool) => ({ type: 'function', function: {
-            name: tool.name, description: tool.description, parameters: tool.parameters
-          } })) } : {}),
-          stream: config.stream,
-          ...(config.stream ? { stream_options: { include_usage: true } } : {}),
-          ...(config.reasoning ? { reasoning: config.reasoning } : {}),
-          ...(requireSupportedParameters ? { provider: { require_parameters: true } } : {})
-        }
+        const body = requestBody(config, requireSupportedParameters, input, progress)
         const response = await post(config, context, key, body, headers)
-        if (!config.stream) return result(await readJson(response, context, 'OpenRouter'), config.model, input.messages)
+        if (!config.stream) return result(await readJson(response, context, 'OpenRouter'), config.model, input.messages, reservedIds)
         const stream = new ChatStream()
         return readSse(response, context, 'OpenRouter', async (frame) => {
-          if (frame.event === 'error') fail('OpenRouter', 'agent response was not completed')
-          if (frame.data === '[DONE]') return result(stream.completed(), config.model, input.messages)
-          await stream.add(eventJson(frame, 'OpenRouter'), (text) => context.progress(text))
+          if (frame.data === '[DONE]') return result(stream.completed(), config.model, input.messages, reservedIds)
+          const event = eventJson(frame, 'OpenRouter')
+          if (frame.event === 'error') {
+            throwIfContextOverflow(event, 'OpenRouter')
+            fail('OpenRouter', 'agent response was not completed')
+          }
+          await stream.add(event, (text) => context.progress(text))
           return undefined
         })
       })

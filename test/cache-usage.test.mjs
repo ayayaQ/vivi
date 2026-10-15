@@ -83,7 +83,7 @@ for (const kind of ['openai', 'openrouter']) {
       }
       for (const missing of [undefined, null, {}]) {
         const turn = await provider(kind, stream, [response(kind, stream, missing)]).generate(input, signal())
-        assert.deepEqual(turn.usage, empty)
+        assert.equal(turn.usage, undefined)
       }
       const counts = wireUsage(kind, { cached_tokens: 7, cache_write_tokens: 5 }, { total_tokens: null })
       const turn = await provider(kind, stream, [response(kind, stream, counts)]).generate(input, signal())

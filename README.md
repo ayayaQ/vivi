@@ -10,6 +10,14 @@ and safe text fallback. See [the presentation contract](docs/TOOL_PRESENTATION.m
 Prepared `0.12.0` adds the optional clarification question extension below. It is not yet
 published; host adoption follows verified publication.
 
+## Optional context management (unreleased)
+
+The root API adds full projected-request occupancy, explicit known/unknown capacities,
+`measureContext`, manual/automatic portable compaction, separate source-bound checkpoints,
+and one classified-overflow retry. Canonical raw history and tool/approval evidence stay
+unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
+See [CONTEXT.md](docs/CONTEXT.md). This source feature is not yet published.
+
 ## Optional clarification questions (prepared 0.12.0)
 
 The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral

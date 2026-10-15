@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import type { ContextCheckpoint, ContextOptions, ContextUsage, ContextEvent } from './context.js'
 /** Values that adapters can persist without application-specific serialization. */
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject
 export interface JsonObject {
@@ -63,7 +64,18 @@ export interface ProviderResult {
   providerState?: ProviderState
 }
 
+export interface ContextEstimate {
+  inputTokens: number
+  /** False only for a provider/tokenizer measurement of this entire effective request. */
+  estimated: boolean
+}
+
 export interface ModelProvider {
+  /** Pure effective-request measurement; must apply the same projection as generate. */
+  estimateContext?(
+    input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
+    options?: { maxOutputTokens?: number }
+  ): ContextEstimate
   generate(
     input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
     signal: AbortSignal,
@@ -78,6 +90,12 @@ export interface ProviderProgress {
 }
 
 export interface ProviderGenerateOptions {
+  /** Host metadata only. Summary requests never represent a canonical accepted assistant round. */
+  purpose?: 'response' | 'context-summary'
+  /** Host-only canonical call IDs reserved outside a compacted view. Never part of the model prompt. */
+  reservedToolCallIds?: readonly string[]
+  /** Explicit request output bound, including any reasoning tokens where supported. */
+  maxOutputTokens?: number
   /** Awaited in order. Providers must not call this after generation settles. */
   onProgress?(event: ProviderProgress): void | Promise<void>
 }
@@ -88,6 +106,7 @@ export interface ToolResult {
 }
 
 export type AgentEvent =
+  | ContextEvent
   | ProviderProgress
   | { type: 'assistant'; message: AssistantMessage }
   | { type: 'tool_started'; call: ToolCall }
@@ -100,6 +119,8 @@ export type AgentAcceptedUpdate =
   | { type: 'tool_result_accepted'; message: ToolResultMessage; round: number }
 
 export interface RunAgentOptions {
+  /** Opt-in provider-facing context management. Canonical messages are never replaced. */
+  context?: ContextOptions
   provider: ModelProvider
   messages: readonly HistoryMessage[]
   tools: readonly ToolDefinition[]
@@ -122,15 +143,22 @@ export interface AgentError {
     | 'provider_error'
     | 'event_error'
     | 'max_rounds'
+    | 'context_error'
+    | 'context_cannot_fit'
   message: string
 }
 
 export interface AgentResult {
+  /** Last prepared dispatch snapshot; remeasure for next-request occupancy after completion. */
+  contextUsage?: ContextUsage
+  /** Latest prepared checkpoint. Omission is no update, never an instruction to delete a host checkpoint. */
+  checkpoint?: ContextCheckpoint
   status: 'completed' | 'cancelled' | 'error'
   history: HistoryMessage[]
   content: string
   rounds: number
-  /** Sums committed rounds. Each cache count is included only if every such round reports it. */
+  /** Sum of reported committed-round usage, not occupancy or guaranteed complete billing.
+   * A round without usage contributes no known count. Cache counts require every round to report them. */
   usage: Usage
   error?: AgentError
 }

@@ -32,6 +32,13 @@ export interface ModelCapabilities {
   protocol: ApiProtocol
   /** Exact catalog ID. No trimming, aliases, prefixes, or case folding. */
   id: string
+  /** Shared input + output window, when explicitly documented. Omitted means unknown. */
+  contextWindow?: number
+  /** Separate endpoint prompt cap; never inferred by subtracting maximum output. */
+  maxInputTokens?: number
+  /** Maximum generation allowance, not a reservation or a guaranteed remaining budget. */
+  maxOutputTokens?: number
+  contextLimitsSource?: CapabilitySource
   /** Text conversation through this particular provider and protocol. */
   chat: Capability
   tools: Capability
@@ -51,15 +58,18 @@ export interface ModelCapabilities {
 }
 
 const REVIEWED_ON = '2026-10-05'
+const LIMITS_REVIEWED_ON = '2026-10-15'
 const EFFORTS: readonly ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 const OPENROUTER_MODELS = 'https://openrouter.ai/docs/guides/overview/models'
 const OPENROUTER_REASONING = 'https://openrouter.ai/docs/guides/best-practices/reasoning-tokens'
+const OPENROUTER_ENDPOINTS = 'https://openrouter.ai/docs/api/api-reference/endpoints/list-all-endpoints-for-a-model'
 
 type Facts = Pick<ModelCapabilities, 'chat' | 'tools' | 'stream' | 'reasoning'>
 interface DocumentedFacts {
   ids: readonly string[]
   protocols: readonly ApiProtocol[]
-  facts: Facts
+  facts?: Facts
+  limits: { contextWindow: number; maxOutputTokens: number }
   url: string
 }
 
@@ -69,6 +79,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
   {
     ids: ['gpt-5', 'gpt-5-2025-08-07'],
     protocols: ['responses', 'chat-completions'],
+    limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
     facts: {
       chat: 'supported', tools: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'unsupported', effortSelection: 'supported',
@@ -79,6 +90,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
   {
     ids: ['gpt-5.1', 'gpt-5.1-2025-11-13'],
     protocols: ['responses', 'chat-completions'],
+    limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
     facts: {
       chat: 'supported', tools: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'supported', effortSelection: 'supported',
@@ -89,6 +101,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
   {
     ids: ['gpt-4.1', 'gpt-4.1-2025-04-14'],
     protocols: ['responses', 'chat-completions'],
+    limits: { contextWindow: 1_047_576, maxOutputTokens: 32_768 },
     facts: {
       chat: 'supported', tools: 'supported', stream: 'supported',
       reasoning: { support: 'unsupported', disable: 'unsupported', effortSelection: 'unsupported',
@@ -99,6 +112,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
   {
     ids: ['gpt-5-pro', 'gpt-5-pro-2025-10-06'],
     protocols: ['responses'],
+    limits: { contextWindow: 400_000, maxOutputTokens: 272_000 },
     facts: {
       chat: 'supported', tools: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'unsupported', effortSelection: 'supported',
@@ -109,12 +123,21 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
   {
     ids: ['o3-pro', 'o3-pro-2025-06-10'],
     protocols: ['responses'],
+    limits: { contextWindow: 200_000, maxOutputTokens: 100_000 },
     facts: {
       chat: 'supported', tools: 'supported', stream: 'unsupported',
       reasoning: { support: 'supported', disable: 'unknown', effortSelection: 'unknown',
         efforts: [], requirement: 'unknown' }
     },
     url: 'https://developers.openai.com/api/docs/models/o3-pro'
+  },
+  {
+    // Capacity-only addition for the desktop host's existing default; keep its
+    // separately reviewed reasoning/feature enrichment host-owned.
+    ids: ['gpt-5.4-nano', 'gpt-5.4-nano-2026-03-17'],
+    protocols: ['responses', 'chat-completions'],
+    limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
+    url: 'https://developers.openai.com/api/docs/models/gpt-5.4-nano'
   }
 ]
 const EMBEDDING_URL = 'https://developers.openai.com/api/docs/models/text-embedding-3-small'
@@ -178,19 +201,45 @@ function openai(result: ModelCapabilities): void {
   }
   const entry = DOCUMENTED_OPENAI.find((candidate) => candidate.ids.includes(result.id))
   if (!entry) return
-  result.sources = [source('official-model-documentation', entry.url)]
+  if (entry.facts) result.sources = [source('official-model-documentation', entry.url)]
   if (!entry.protocols.includes(result.protocol)) {
     unsupported(result)
     return
   }
-  Object.assign(result, entry.facts)
-  result.reasoning = { ...entry.facts.reasoning, efforts: [...entry.facts.reasoning.efforts] }
+  Object.assign(result, entry.limits)
+  result.contextLimitsSource = {
+    kind: 'official-model-documentation', url: entry.url, reviewedOn: LIMITS_REVIEWED_ON
+  }
+  if (entry.facts) {
+    Object.assign(result, entry.facts)
+    result.reasoning = { ...entry.facts.reasoning, efforts: [...entry.facts.reasoning.efforts] }
+  }
+}
+
+function tokenLimit(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined
 }
 
 function openrouter(result: ModelCapabilities, model: unknown): void {
   // The reviewed model-catalog fields describe the Chat Completions gateway.
   // They do not prove support on OpenRouter's separate Responses endpoint.
   if (result.protocol !== 'chat-completions') return
+  // /models context_length is a shared window. top_provider's completion cap is
+  // catalog routing metadata, not proof of account access or endpoint pinning.
+  const window = tokenLimit(field(model, 'context_length'))
+  const outputLimit = tokenLimit(field(field(model, 'top_provider'), 'max_completion_tokens'))
+  // max_prompt_tokens is documented for endpoint entries. Hosts may supply that
+  // explicit endpoint fact alongside the exact model ID; never derive it from a window.
+  const inputLimit = tokenLimit(field(model, 'max_prompt_tokens'))
+  if (window !== undefined) result.contextWindow = window
+  if (outputLimit !== undefined && (window === undefined || outputLimit <= window)) result.maxOutputTokens = outputLimit
+  if (inputLimit !== undefined && (window === undefined || inputLimit <= window)) result.maxInputTokens = inputLimit
+  if (result.contextWindow !== undefined || result.maxInputTokens !== undefined || result.maxOutputTokens !== undefined) {
+    result.contextLimitsSource = {
+      kind: 'provider-catalog', url: result.maxInputTokens !== undefined ? OPENROUTER_ENDPOINTS : OPENROUTER_MODELS,
+      reviewedOn: LIMITS_REVIEWED_ON
+    }
+  }
   const parameters = stringList(field(model, 'supported_parameters'))
   const architecture = field(model, 'architecture')
   const input = stringList(field(architecture, 'input_modalities'))
@@ -274,6 +323,7 @@ export function normalizeModelCapabilities(input: CapabilityInput): ModelCapabil
   Object.freeze(result.reasoning)
   for (const item of result.sources) Object.freeze(item)
   Object.freeze(result.sources)
+  if (result.contextLimitsSource) Object.freeze(result.contextLimitsSource)
   return Object.freeze(result)
 }
 

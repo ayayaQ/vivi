@@ -25,6 +25,8 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/CONTEXT.md', 'src/context.ts', 'dist/context.js', 'dist/context.d.ts',
+    'dist/cjs/context.js', 'dist/cjs/context.d.ts']) assert(paths.has(required), `Package is missing ${required}`)
   for (const required of ['docs/QUESTIONS.md', 'examples/questions.mjs',
     'src/extensions/questions.ts', 'dist/extensions/questions.js', 'dist/extensions/questions.d.ts',
     'dist/cjs/extensions/questions.js', 'dist/cjs/extensions/questions.d.ts']) {
@@ -117,6 +119,23 @@ assert.equal(presentation.toolPresentationView(snapshot).details[1].text,'Safe f
 assert(Object.isFrozen(snapshot.arguments.data))
 `)
     run(process.execPath, [`presentation.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mjs', "import assert from 'node:assert/strict'; import * as core from '@ayayaq/vivi'"],
+    ['cjs', "const assert=require('node:assert/strict'); const core=require('@ayayaq/vivi')"]
+  ]) {
+    await writeFile(join(temporary, `context.${extension}`), `${importLine}
+;(async()=>{
+  const messages=Array.from({length:12},(_,i)=>({kind:'message',role:'user',content:'old '+i+' '+('x'.repeat(200))}))
+  const provider={async generate(input,signal,options){assert.deepEqual(input.tools,[]);assert.equal(options.purpose,'context-summary');return {content:'compact facts',toolCalls:[]}}}
+  const input={provider,messages,tools:[],context:{sourceId:'packed',keepRecentMessages:2}}
+  const result=await core.compactContext(input)
+  core.validateContextCheckpoint(result.checkpoint)
+  assert.equal(result.checkpoint.version,1)
+  assert(core.measureContext({...input,context:{...input.context,checkpoint:result.checkpoint}}).usage.inputTokens<core.measureContext(input).usage.inputTokens)
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`context.${extension}`], temporary)
   }
   run(process.execPath, [join(installed, 'examples/tool-presentation.mjs')], temporary)
   for (const extension of ['mts', 'cts']) {

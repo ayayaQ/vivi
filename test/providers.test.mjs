@@ -219,13 +219,13 @@ for (const kind of ['openai', 'openrouter']) {
     }
   });
 
-  test(`${kind} defaults absent usage to zero, derives totals, and keeps explicit zero`, async () => {
+  test(`${kind} preserves absent usage, derives totals, and keeps explicit zero`, async () => {
     const native = kind === 'openai'
       ? (counts) => aiResponse([], { usage: counts })
       : (counts) => routerResponse(undefined, { usage: counts });
     const fields = kind === 'openai' ? { input_tokens: 10, output_tokens: 4 } : { prompt_tokens: 10, completion_tokens: 4 };
     const h = harness(kind, [native(undefined), native(fields), native({ ...fields, total_tokens: 0 })]);
-    assert.deepEqual((await h.run()).usage, { inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+    assert.equal((await h.run()).usage, undefined);
     assert.deepEqual((await h.run()).usage, { inputTokens: 10, outputTokens: 4, totalTokens: 14 });
     assert.deepEqual((await h.run()).usage, { inputTokens: 10, outputTokens: 4, totalTokens: 0 });
   });
