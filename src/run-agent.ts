@@ -15,6 +15,9 @@ import type {
   ToolResultMessage,
   Usage
 } from './types.js'
+import { isContextOverflow as providerContextOverflow } from './validation.js'
+import { prepareContext, compactContext, ContextError } from './context.js'
+import type { ContextCheckpoint, ContextUsage, ContextOptions, PreparedContext } from './context.js'
 import { assert, assertCall, assertHistory, assertJson, assertProviderState, identifier, record } from './validation.js'
 
 class RunFailure extends Error {
@@ -150,9 +153,12 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   let pending: ToolCall[] = []
   let signal: AbortSignal = new AbortController().signal
   let onAccepted: RunAgentOptions['onAccepted']
+  let checkpoint: ContextCheckpoint | undefined
+  let contextUsage: ContextUsage | undefined
 
   const result = (status: AgentResult['status'], error?: AgentError): AgentResult => ({
-    status, history, content, rounds, usage, ...(error ? { error } : {})
+    status, history, content, rounds, usage,
+    ...(checkpoint ? { checkpoint } : {}), ...(contextUsage ? { contextUsage } : {}), ...(error ? { error } : {})
   })
 
   try {
@@ -209,8 +215,35 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       }
     }
 
-    for (let round = 0; round < maxRounds; round++) {
-      checkAbort()
+    const isContextOverflow = (error: unknown): boolean => {
+      // Adapters expose a sanitized structured classification. Never inspect arbitrary error text.
+      try { return providerContextOverflow(error) } catch { return false }
+    }
+    const context: ContextOptions | undefined = options.context ? {
+      ...options.context,
+      ...(options.context.checkpoint ? { checkpoint: snapshot(options.context.checkpoint) } : {}),
+      ...(options.context.limits ? { limits: snapshot(options.context.limits) } : {}),
+      ...(options.context.prefixMessages ? { prefixMessages: snapshot(options.context.prefixMessages) } : {})
+    } : undefined
+    const prepare = async (overflow = false): Promise<PreparedContext> => {
+      try {
+        const input = { provider: options.provider, messages: history, tools, context: {
+          ...context!, ...(checkpoint ? { checkpoint } : {})
+        }, signal, onEvent: emit }
+        const prepared = await (overflow ? compactContext(input, 'overflow') : prepareContext(input))
+        checkpoint = prepared.checkpoint
+        contextUsage = prepared.usage
+        return prepared
+      } catch (error) {
+        if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
+        if (error instanceof RunFailure) throw error
+        if (error instanceof ContextError) {
+          throw new RunFailure(error.code === 'cannot_fit' ? 'context_cannot_fit' : 'context_error', error.message)
+        }
+        throw new RunFailure('context_error', 'Context preparation failed; no provider request was dispatched')
+      }
+    }
+    const generateTurn = async (messages: readonly HistoryMessage[], maxOutputTokens?: number): Promise<ProviderResult> => {
       let turn: ProviderResult
       const roundController = new AbortController()
       const abortRound = (): void => roundController.abort()
@@ -258,7 +291,9 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       }
       try {
         const output: unknown = await wait(() => Promise.race([
-          generate(snapshot({ messages: history, tools }), roundController.signal, Object.freeze({ onProgress })),
+          generate(snapshot({ messages, tools }), roundController.signal, Object.freeze({ onProgress,
+            ...(context ? { reservedToolCallIds: snapshot([...seenIds]) } : {}),
+            ...(maxOutputTokens !== undefined ? { maxOutputTokens } : {}) })),
           progressFailure
         ]), signal)
         acceptingProgress = false
@@ -286,11 +321,36 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       } catch (error) {
         if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
         if (error instanceof RunFailure) throw error
+        if (isContextOverflow(error)) throw error
         throw new RunFailure('provider_error', detail(error))
       } finally {
         acceptingProgress = roundLive = false
         signal.removeEventListener('abort', abortRound)
         roundController.abort()
+      }
+      return turn
+    }
+
+    for (let round = 0; round < maxRounds; round++) {
+      checkAbort()
+      let prepared = context ? await prepare() : undefined
+      let turn: ProviderResult
+      try {
+        turn = await generateTurn(prepared?.messages ?? history, prepared?.maxOutputTokens)
+      } catch (error) {
+        if (!isContextOverflow(error)) throw error
+        if (!context || context.autoCompact === false) {
+          throw new RunFailure('context_cannot_fit', 'The provider rejected the request context. Enable context compaction, reduce instructions/tools, or choose a larger-context model.')
+        }
+        // No assistant or tool has been accepted for this request. Retry only this generation,
+        // once, after making its effective input smaller; never replay completed tool effects.
+        prepared = await prepare(true)
+        try { turn = await generateTurn(prepared.messages, prepared.maxOutputTokens) } catch (retryError) {
+          if (isContextOverflow(retryError)) {
+            throw new RunFailure('context_cannot_fit', 'The provider still rejected the smaller request. Reduce instructions/tools or recent content, or choose a larger-context model.')
+          }
+          throw retryError
+        }
       }
 
       checkAbort()

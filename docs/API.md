@@ -296,3 +296,13 @@ for settled session anchors, identity/evidence rules, host privacy/commit author
 The additive `/events/stream` subpath provides ordered accepted deltas and terminal reconciliation;
 see [AGENT_STREAM.md](AGENT_STREAM.md). Both source APIs are absent from published 0.9.0;
 production adoption follows reviewed 0.10.0 publication and exact registry-byte verification.
+
+## Context management (unreleased)
+
+The root API exports `measureContext`, `prepareContext`, `compactContext`,
+`estimateContext`, `validateContextCheckpoint`, `ContextError` and their context types.
+`RunAgentOptions.context` enables provider-facing measurement/compaction without replacing
+canonical history. Model providers can implement `estimateContext`; generate options accept
+`maxOutputTokens` and the host-only `purpose` discriminator. Derived result checkpoint/occupancy
+metadata is excluded from canonical settlements. See [CONTEXT.md](CONTEXT.md) for the contract,
+unknown-limit behavior, persistence, failures, billing and host integration.

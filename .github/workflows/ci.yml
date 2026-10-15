@@ -41,7 +41,7 @@ jobs:
       - run: node examples/agent-records.mjs
       - run: node examples/agent-stream.mjs
       - run: node examples/tool-presentation.mjs
-      - run: node --test test/questions.test.mjs test/question-hosts.test.mjs
+      - run: node --test test/questions.test.mjs test/question-hosts.test.mjs test/context.test.mjs test/provider-context.test.mjs
       - run: node examples/questions.mjs
       - run: node -e "const {createQuestionExtension} = require('./dist/cjs/extensions/questions.js'); if(createQuestionExtension().tools.length!==0) process.exit(1)"
       - run: node -e "const mcp = require('./dist/cjs/extensions/mcp.js'); const result = JSON.parse(mcp.mcpFailure('offline', 'Synthetic unknown outcome', true).content); if (!result.untrusted || !result.unknownOutcome || !result.doNotRetry) process.exit(1)"

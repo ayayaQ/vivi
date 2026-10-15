@@ -61,18 +61,19 @@ export function normalizeCallIds(
   calls: ToolCall[],
   messages: readonly HistoryMessage[],
   provider: Provider,
-  allowRename = false
+  allowRename = false,
+  reservedIds: readonly string[] = []
 ): boolean {
   const turnIds = new Set<string>()
   for (const call of calls) {
     if (turnIds.has(call.id)) fail(provider, 'duplicate tool call ID')
     turnIds.add(call.id)
   }
-  const historyIds = new Set(
-    messages.flatMap((message) =>
+  const historyIds = new Set([
+    ...reservedIds, ...messages.flatMap((message) =>
       message.kind === 'assistant' ? message.toolCalls.map((call) => call.id) : []
     )
-  )
+  ])
   const usedIds = new Set([...historyIds, ...turnIds])
   let renamed = false
   for (const call of calls) {
@@ -96,17 +97,19 @@ export function tokenCount(value: unknown, provider: Provider): number {
   return value
 }
 
-export function usage(value: unknown, provider: Provider): NonNullable<ProviderResult['usage']> {
+export function usage(value: unknown, provider: Provider): ProviderResult['usage'] {
   if (value !== undefined && value !== null && !isRecord(value)) {
     fail(provider, 'token usage must be an object')
   }
   const counts = isRecord(value) ? value : {}
+  const inputValue = counts[provider === 'OpenAI' ? 'input_tokens' : 'prompt_tokens']
+  const outputValue = counts[provider === 'OpenAI' ? 'output_tokens' : 'completion_tokens']
   const inputTokens = tokenCount(
-    counts[provider === 'OpenAI' ? 'input_tokens' : 'prompt_tokens'],
+    inputValue,
     provider
   )
   const outputTokens = tokenCount(
-    counts[provider === 'OpenAI' ? 'output_tokens' : 'completion_tokens'],
+    outputValue,
     provider
   )
   const details = counts[provider === 'OpenAI' ? 'input_tokens_details' : 'prompt_tokens_details']
@@ -124,14 +127,17 @@ export function usage(value: unknown, provider: Provider): NonNullable<ProviderR
       }
     }
   }
+  // Validate any supplied field even when the accounting snapshot is incomplete.
+  const total = counts.total_tokens === undefined || counts.total_tokens === null
+    ? tokenCount(inputTokens + outputTokens, provider)
+    : tokenCount(counts.total_tokens, provider)
+  // Absence is not a provider measurement of zero. Preserve complete explicit zeros.
+  if (inputValue === undefined || inputValue === null || outputValue === undefined || outputValue === null) return undefined
   return {
     inputTokens,
     outputTokens,
     ...cacheCounts,
-    totalTokens:
-      counts.total_tokens === undefined || counts.total_tokens === null
-        ? tokenCount(inputTokens + outputTokens, provider)
-        : tokenCount(counts.total_tokens, provider)
+    totalTokens: total
   }
 }
 

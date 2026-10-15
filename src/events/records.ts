@@ -83,7 +83,7 @@ function settlement(value: unknown): asserts value is AgentRunSettlement {
   usage(value.usage)
   if ('error' in value) {
     keys(value.error, ['code', 'message'])
-    assertRecord(['invalid_input', 'invalid_provider_output', 'provider_error', 'event_error', 'max_rounds'].includes(value.error.code as string) &&
+    assertRecord(['invalid_input', 'invalid_provider_output', 'provider_error', 'event_error', 'max_rounds', 'context_error', 'context_cannot_fit'].includes(value.error.code as string) &&
       typeof value.error.message === 'string', 'Invalid settled error')
   }
   assertRecord((value.status === 'error') === ('error' in value), 'Settlement error must match run status')
@@ -165,9 +165,9 @@ export function createRunSettlement(options: CreateRunSettlementOptions): Durabl
   assertEventJson(options, AGENT_RECORD_LIMITS.bytes * 3, { nodes: AGENT_RECORD_LIMITS.nodes * 3, depth: AGENT_RECORD_LIMITS.depth })
   keys(options, ['envelope', 'runId', 'inputHistoryLength', 'result', 'history', 'outcomes', 'sessionUsage'])
   keys(options.envelope, ['version', 'sessionId', 'eventId', 'sequence', 'previousEventId', 'source'])
-  keys(options.result, ['status', 'history', 'content', 'rounds', 'usage'], ['error'])
+  keys(options.result, ['status', 'history', 'content', 'rounds', 'usage'], ['error', 'contextUsage', 'checkpoint'])
   assertRecord(Array.isArray(options.history) && same(options.history.map(entry => entry.message), options.result.history), 'Settlement must preserve the exact reconciled result history')
-  const { history: _history, ...final } = options.result
+  const { history: _history, contextUsage: _contextUsage, checkpoint: _checkpoint, ...final } = options.result
   return decodeAgentRecord({ ...options.envelope, type: 'run_settled', runId: options.runId, inputHistoryLength: options.inputHistoryLength, settlement: final,
     snapshot: { history: options.history, outcomes: options.outcomes, usage: options.sessionUsage } })
 }
