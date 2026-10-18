@@ -6,7 +6,7 @@ export type { ReasoningEffort, ReasoningSelection } from './transport.js'
 
 /** A documented capability is not an assertion of account access or request success. */
 export type Capability = 'supported' | 'unsupported' | 'unknown'
-export type CapabilityProvider = 'openai' | 'openrouter'
+export type CapabilityProvider = 'openai' | 'openrouter' | 'deepseek'
 export type ApiProtocol = 'responses' | 'chat-completions'
 export type ReasoningRequirement = 'required' | 'optional' | 'unknown'
 
@@ -63,6 +63,11 @@ const EFFORTS: readonly ReasoningEffort[] = ['none', 'minimal', 'low', 'medium',
 const OPENROUTER_MODELS = 'https://openrouter.ai/docs/guides/overview/models'
 const OPENROUTER_REASONING = 'https://openrouter.ai/docs/guides/best-practices/reasoning-tokens'
 const OPENROUTER_ENDPOINTS = 'https://openrouter.ai/docs/api/api-reference/endpoints/list-all-endpoints-for-a-model'
+const DEEPSEEK_MODELS = 'https://api-docs.deepseek.com/api/list-models/'
+const DEEPSEEK_CHAT = 'https://api-docs.deepseek.com/api/create-chat-completion/'
+const DEEPSEEK_THINKING = 'https://api-docs.deepseek.com/guides/thinking_mode/'
+const DEEPSEEK_REVIEWED_ON = '2026-10-18'
+const DEEPSEEK_DOCUMENTED_IDS = ['deepseek-flash', 'deepseek-v4-pro']
 
 type Facts = Pick<ModelCapabilities, 'chat' | 'tools' | 'stream' | 'reasoning'>
 interface DocumentedFacts {
@@ -304,6 +309,65 @@ function openrouter(result: ModelCapabilities, model: unknown): void {
   // endpoint honors it. Neither it nor modalities establish per-model streaming.
 }
 
+function deepseek(result: ModelCapabilities, model: unknown): void {
+  // This integration is reviewed for Chat Completions only. DeepSeek's partial
+  // Responses compatibility has a different feature/parameter contract.
+  if (result.protocol !== 'chat-completions') return
+  const documented = DEEPSEEK_DOCUMENTED_IDS.includes(result.id)
+  const provenance = (kind: CapabilitySource['kind'], url: string): CapabilitySource =>
+    ({ kind, url, reviewedOn: DEEPSEEK_REVIEWED_ON })
+  if (documented) {
+    result.chat = 'supported'
+    result.tools = 'supported'
+    result.stream = 'supported'
+    result.reasoning = {
+      support: 'supported', disable: 'supported', effortSelection: 'supported',
+      efforts: [...EFFORTS], requirement: 'optional'
+    }
+    result.sources = [provenance('official-model-documentation', DEEPSEEK_CHAT),
+      provenance('official-model-documentation', DEEPSEEK_THINKING)]
+  }
+  // Limits are host-fetched catalog facts, never guessed from an ID or obtained
+  // by subtracting generation allowance from the shared context window.
+  const window = tokenLimit(field(model, 'context_window'))
+  const outputLimit = tokenLimit(field(model, 'max_output_tokens'))
+  if (window !== undefined) result.contextWindow = window
+  if (outputLimit !== undefined && (window === undefined || outputLimit <= window)) result.maxOutputTokens = outputLimit
+  if (result.contextWindow !== undefined || result.maxOutputTokens !== undefined) {
+    result.contextLimitsSource = provenance('provider-catalog', DEEPSEEK_MODELS)
+  }
+  const input = stringList(field(model, 'input_modalities'))
+  const output = stringList(field(model, 'output_modalities'))
+  let catalogEvidence = false
+  if (input && !input.includes('text') || output && !output.includes('text')) {
+    result.chat = 'unsupported'
+    catalogEvidence = true
+  } else if (input && output) {
+    result.chat = 'supported'
+    catalogEvidence = true
+  }
+  const levels = stringList(field(field(model, 'effort'), 'supported_levels'))
+  if (levels) {
+    // The catalog lists enabled-thinking levels only. Absence of none does not
+    // establish mandatory reasoning or disprove the separate thinking toggle.
+    result.reasoning.support = 'supported'
+    result.reasoning.effortSelection = 'supported'
+    result.reasoning.efforts = EFFORTS.filter((effort) => {
+      if (effort === 'none') return documented
+      if (levels.includes(effort)) return true
+      // Compatibility aliases are reviewed protocol facts for the exact IDs,
+      // not capabilities inferred for an arbitrary future catalog model.
+      if (!documented) return false
+      const mapped = effort === 'minimal' ? 'low' : effort === 'medium' || effort === 'xhigh' ? 'high' : effort
+      return levels.includes(mapped)
+    })
+    catalogEvidence = true
+  }
+  // default_level describes the server's omitted-effort behavior, not an
+  // explicit selection or evidence that any unlisted effort is accepted.
+  if (catalogEvidence) result.sources = [provenance('provider-catalog', DEEPSEEK_MODELS), ...result.sources]
+}
+
 /** Pure per-entry normalization. Fetching, access, caching, filtering and policy remain host-owned. */
 export function normalizeModelCapabilities(input: CapabilityInput): ModelCapabilities {
   if (!record(input) || field(input, 'apiVersion') !== 1) {
@@ -313,12 +377,13 @@ export function normalizeModelCapabilities(input: CapabilityInput): ModelCapabil
   const protocol = field(input, 'protocol')
   const model = field(input, 'model')
   const id = field(model, 'id')
-  if (provider !== 'openai' && provider !== 'openrouter') throw new TypeError('Unsupported capability provider')
+  if (provider !== 'openai' && provider !== 'openrouter' && provider !== 'deepseek') throw new TypeError('Unsupported capability provider')
   if (protocol !== 'responses' && protocol !== 'chat-completions') throw new TypeError('Unsupported API protocol')
   if (!identifier(id)) throw new TypeError('Model must contain a valid exact ID')
   const result = unknown(provider, protocol, id)
   if (provider === 'openai') openai(result)
-  else openrouter(result, model)
+  else if (provider === 'openrouter') openrouter(result, model)
+  else deepseek(result, model)
   Object.freeze(result.reasoning.efforts)
   Object.freeze(result.reasoning)
   for (const item of result.sources) Object.freeze(item)

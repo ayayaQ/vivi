@@ -4,7 +4,7 @@
 import type { HistoryMessage, JsonObject, JsonValue, ProviderResult, ToolCall } from '../types.js'
 import { ProviderRequestError } from './transport.js'
 
-export type Provider = 'OpenAI' | 'OpenRouter'
+export type Provider = 'OpenAI' | 'OpenRouter' | 'DeepSeek'
 export const MAX_ARGUMENT_CHARS = 1_048_576
 export const MAX_ITEMS = 4_096
 

@@ -7,6 +7,10 @@
   cancellation, sanitized errors and uncertain-request outcomes
 - Keep paid-provider selection, credentials, privacy/URL approvals, retry policy and host
   adoption explicit; no new dependencies, live provider calls, fallback or npm publication
+- Add an optional DeepSeek Chat Completions model provider with exact native
+  reasoning/tool continuation, streaming, cache-hit usage, context estimation,
+  bounded tool-free summaries, and conservative host-catalog capability metadata
+- Keep chat generation independent of web retrieval and approval-decision providers
 
 ## 0.14.0 (prepared 2026-10-15, not yet published)
 

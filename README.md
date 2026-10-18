@@ -60,6 +60,11 @@ ordered accepted-message replay. Its registry bytes are verified and unchanged. 
 
 ## Optional model capabilities
 
+The prepared `@ayayaq/vivi/providers/deepseek` adapter supports ordinary DeepSeek
+Chat Completions independently of web retrieval and decision review, with native
+all-turn reasoning retention and catalog-derived capabilities. It is not yet
+published. See [the DeepSeek host contract](docs/DEEPSEEK.md).
+
 The optional `@ayayaq/vivi/providers/models` subpath is published in verified registry `0.4.0`
 and absent from immutable `0.3.0`. Hosts can adopt it through separate reviewed changes that
 preserve their documented capability coverage and selection behavior.
