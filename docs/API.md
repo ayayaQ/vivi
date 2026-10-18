@@ -205,6 +205,12 @@ inside the host's own consistency boundary.
 
 ## Shared provider factories
 
+The prepared `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
+and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
+of web retrieval and decision review. It retains every native assistant turn's
+reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
+history, usage, context, and host-adoption details. This addition is not yet published.
+
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'

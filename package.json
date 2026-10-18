@@ -48,6 +48,16 @@
         "default": "./dist/cjs/providers/openrouter.js"
       }
     },
+    "./providers/deepseek": {
+      "import": {
+        "types": "./dist/providers/deepseek.d.ts",
+        "default": "./dist/providers/deepseek.js"
+      },
+      "require": {
+        "types": "./dist/cjs/providers/deepseek.d.ts",
+        "default": "./dist/cjs/providers/deepseek.js"
+      }
+    },
     "./extensions": {
       "import": {
         "types": "./dist/extensions.d.ts",

@@ -163,6 +163,54 @@ void [consume,model]
 `)
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `web-types.${extension}`], temporary)
   }
+  for (const required of ['docs/DEEPSEEK.md', 'src/providers/deepseek.ts', 'dist/providers/deepseek.js',
+    'dist/providers/deepseek.d.ts', 'dist/cjs/providers/deepseek.js', 'dist/cjs/providers/deepseek.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
+  for (const [extension, imports] of [
+    ['mjs', "import assert from 'node:assert/strict'\nimport {createDeepSeekProvider} from '@ayayaq/vivi/providers/deepseek'\nimport {normalizeModelCapabilities} from '@ayayaq/vivi/providers/models'"],
+    ['cjs', "const assert=require('node:assert/strict')\nconst {createDeepSeekProvider}=require('@ayayaq/vivi/providers/deepseek')\nconst {normalizeModelCapabilities}=require('@ayayaq/vivi/providers/models')"]
+  ]) {
+    await writeFile(join(temporary, `deepseek-consumer.${extension}`), `${imports}
+;(async () => {
+  const body=[]
+  const provider=createDeepSeekProvider({apiKey:'offline',model:'deepseek-flash',fetch:async (url,init)=>{
+    assert.equal(url,'https://api.deepseek.com/chat/completions');body.push(JSON.parse(init.body))
+    return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'Done',reasoning_content:'Retained'}}],usage:{prompt_tokens:3,completion_tokens:2,prompt_cache_hit_tokens:1,prompt_cache_miss_tokens:2}}))
+  }})
+  const input={messages:[{kind:'message',role:'user',content:'Continue'}],tools:[]}
+  const result=await provider.generate(input,new AbortController().signal,{maxOutputTokens:100})
+  assert.equal(result.providerState.provider,'deepseek:deepseek-flash');assert.equal(result.usage.cachedInputTokens,1)
+  assert.equal(result.usage.cacheWriteInputTokens,undefined);assert.equal(body[0].max_tokens,100)
+  const capabilities=normalizeModelCapabilities({apiVersion:1,provider:'deepseek',protocol:'chat-completions',model:{id:'deepseek-flash',context_window:1048576,max_output_tokens:393216}})
+  assert.equal(capabilities.contextWindow,1048576);assert.equal(capabilities.tools,'supported')
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`deepseek-consumer.${extension}`], temporary)
+  }
+  for (const [extension, imports] of [
+    ['mts', "import * as core from '@ayayaq/vivi'\nimport * as deepseek from '@ayayaq/vivi/providers/deepseek'\nimport * as models from '@ayayaq/vivi/providers/models'\nimport * as decisions from '@ayayaq/vivi/decisions'"],
+    ['cts', "import core = require('@ayayaq/vivi')\nimport deepseek = require('@ayayaq/vivi/providers/deepseek')\nimport models = require('@ayayaq/vivi/providers/models')\nimport decisions = require('@ayayaq/vivi/decisions')"]
+  ]) {
+    await writeFile(join(temporary, `deepseek-types.${extension}`), `${imports}
+const options: deepseek.DeepSeekProviderOptions = {apiKey:'offline',model:'deepseek-flash',stream:true,reasoning:{mode:'effort',effort:'high'},supportedReasoningEfforts:['none','low','high','max']}
+const provider: core.ModelProvider = deepseek.createDeepSeekProvider(options)
+const capabilities: models.ModelCapabilities = models.normalizeModelCapabilities({apiVersion:1,provider:'deepseek',protocol:'chat-completions',model:{id:'deepseek-flash'}})
+const native: core.JsonObject[] = deepseek.projectDeepSeekHistory([],options.model)
+const historyOptions: deepseek.DeepSeekHistoryOptions = {tools:true,thinking:true}
+deepseek.projectDeepSeekHistory([],options.model,historyOptions)
+// @ts-expect-error effective history settings are boolean
+deepseek.projectDeepSeekHistory([],options.model,{tools:'enabled'})
+// @ts-expect-error default is a separate reasoning mode
+deepseek.createDeepSeekProvider({...options,reasoning:{mode:'effort',effort:'default'}})
+// @ts-expect-error OpenRouter routing is not a DeepSeek option
+deepseek.createDeepSeekProvider({...options,requireSupportedParameters:true})
+// @ts-expect-error chat support does not add a decision reviewer
+decisions.createDeepSeekDecisionProvider({apiKey:'offline'})
+void provider;void capabilities;void native
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `deepseek-types.${extension}`], temporary)
+  }
   const presentationFixture = JSON.stringify({ version: 1, callId: 'installed-call',
     name: 'offline', status: 'approval_required', effect: 'unknown',
     source: { reference: 'owned://installed-source', revision: 'original' },
