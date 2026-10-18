@@ -25,6 +25,11 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/WEB.md', 'src/web.ts', 'src/web/deepseek.ts',
+    'dist/web.js', 'dist/web.d.ts', 'dist/web/deepseek.js', 'dist/web/deepseek.d.ts',
+    'dist/cjs/web.js', 'dist/cjs/web.d.ts', 'dist/cjs/web/deepseek.js', 'dist/cjs/web/deepseek.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
   for (const required of ['docs/CONTEXT.md', 'src/context.ts', 'dist/context.js', 'dist/context.d.ts',
     'dist/cjs/context.js', 'dist/cjs/context.d.ts']) assert(paths.has(required), `Package is missing ${required}`)
   for (const required of ['docs/QUESTIONS.md', 'examples/questions.mjs',
@@ -96,6 +101,68 @@ try {
   await writeFile(join(temporary, 'all-subpaths.cjs'), `const assert=require('node:assert/strict')\n${specifiers.map(specifier => `assert(Object.keys(require(${JSON.stringify(specifier)})).length > 0)`).join('\n')}\n`)
   run(process.execPath, ['all-subpaths.mjs'], temporary)
   run(process.execPath, ['all-subpaths.cjs'], temporary)
+  for (const [extension, importLine] of [
+    ['mjs', "import assert from 'node:assert/strict'; import {WebProviderError} from '@ayayaq/vivi/web'; import {createDeepSeekWebProvider} from '@ayayaq/vivi/web/deepseek'"],
+    ['cjs', "const assert=require('node:assert/strict'); const {WebProviderError}=require('@ayayaq/vivi/web'); const {createDeepSeekWebProvider}=require('@ayayaq/vivi/web/deepseek')"]
+  ]) {
+    await writeFile(join(temporary, `web.${extension}`), `${importLine}
+async function main() {
+  let calls=0
+  const web=createDeepSeekWebProvider({apiKey:'offline-key',fetch:async(url,init)=>{
+    calls++
+    assert.equal(url,'https://api.deepseek.com/v1/tools/fetch')
+    assert.equal(init.redirect,'error')
+    assert.deepEqual(JSON.parse(init.body),{url:'https://example.test/'})
+    return new Response(JSON.stringify({title:'Page',content:'# Offline'}))
+  }})
+  const result=await web.fetch({url:'https://example.test/'})
+  assert.equal(result.contentMarkdown,'# Offline')
+  assert.equal(result.provenance.untrusted,true)
+  assert.equal(result.provenance.upstreamTruncation,'unknown')
+  await assert.rejects(web.search({query:' '}),error=>error instanceof WebProviderError && error.requestState==='not_started')
+  assert.equal(calls,1)
+}
+main().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`web.${extension}`], temporary)
+  }
+  for (const extension of ['mts', 'cts']) {
+    await writeFile(join(temporary, `web-types.${extension}`), `
+import {createDeepSeekWebProvider} from '@ayayaq/vivi/web/deepseek'
+import type {DeepSeekWebProviderOptions} from '@ayayaq/vivi/web/deepseek'
+import {WebProviderError} from '@ayayaq/vivi/web'
+import type {WebProvider,WebSearchRequest,WebFetchRequest,WebSearchResponse,WebFetchResponse,WebRequestState,WebProviderErrorCode} from '@ayayaq/vivi/web'
+import type {ModelProvider} from '@ayayaq/vivi'
+const options:DeepSeekWebProviderOptions={apiKey:async()=>'offline-key',maxContentChars:1000,beforeRequest:async(intent,signal)=>{
+  const operation:'search'|'fetch'=intent.operation
+  if(intent.operation==='search') { const count:number=intent.request.count; void count }
+  else { const url:string=intent.request.url; void url }
+  void [operation,signal]
+}}
+const web:WebProvider=createDeepSeekWebProvider(options)
+const search:WebSearchRequest={query:'Vivi',count:5,includeContent:true}
+const fetchRequest:WebFetchRequest={url:'https://example.test/'}
+async function consume():Promise<void>{
+  const results:WebSearchResponse=await web.search(search,new AbortController().signal)
+  const page:WebFetchResponse=await web.fetch(fetchRequest)
+  const evidence:true=results.provenance.untrusted
+  const completeness:'unknown'=page.provenance.upstreamTruncation
+  const content:string=page.contentMarkdown
+  const code:WebProviderErrorCode='timeout'
+  const state:WebRequestState='unknown'
+  const error=new WebProviderError('offline',code,'Sanitized',state)
+  void [evidence,completeness,content,error]
+}
+// @ts-expect-error WebProvider is independent of the model-generation protocol.
+const model:ModelProvider=web
+// @ts-expect-error API endpoints are fixed, not part of the host factory contract.
+createDeepSeekWebProvider({apiKey:'offline-key',baseURL:'https://example.test/'})
+// @ts-expect-error The original user question is not part of the search request.
+web.search({query:'Vivi',ori_question:'Private question'})
+void [consume,model]
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `web-types.${extension}`], temporary)
+  }
   const presentationFixture = JSON.stringify({ version: 1, callId: 'installed-call',
     name: 'offline', status: 'approval_required', effect: 'unknown',
     source: { reference: 'owned://installed-source', revision: 'original' },
