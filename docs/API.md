@@ -2,7 +2,8 @@
 
 ## Optional web retrieval (unreleased)
 
-`@ayayaq/vivi/web` defines a small `WebProvider` search/fetch contract independent of
+Prepared `0.15.0` (not yet published): `@ayayaq/vivi/web` defines a small
+`WebProvider` search/fetch contract independent of
 `ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
 bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
 Hosts retain paid-provider consent, secure keys, privacy/URL screening and outcome authority.
@@ -205,7 +206,7 @@ inside the host's own consistency boundary.
 
 ## Shared provider factories
 
-The prepared `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
+The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
 and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
 of web retrieval and decision review. It retains every native assistant turn's
 reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
@@ -311,7 +312,7 @@ The additive `/events/stream` subpath provides ordered accepted deltas and termi
 see [AGENT_STREAM.md](AGENT_STREAM.md). Both source APIs are absent from published 0.9.0;
 production adoption follows reviewed 0.10.0 publication and exact registry-byte verification.
 
-## Context management (prepared 0.14.0)
+## Context management (since 0.14.0)
 
 The root API exports `measureContext`, `prepareContext`, `compactContext`,
 `estimateContext`, `validateContextCheckpoint`, `ContextError` and their context types.

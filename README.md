@@ -5,17 +5,18 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Published `0.13.0` includes the optional clarification question extension and exact scalar
-MCP resource-template reads. Prepared `0.14.0` adds portable provider-facing context
-management below; it is not yet published, and host adoption follows verified publication.
+Published `0.14.0` includes portable provider-facing context management, clarification
+questions and exact scalar MCP resource-template reads. Prepared `0.15.0` adds the
+independent DeepSeek chat adapter and optional web search/fetch provider. It is not yet
+published; production host adoption follows verified publication.
 
-## Optional context management (prepared 0.14.0)
+## Optional context management (since 0.14.0)
 
 The root API adds full projected-request occupancy, explicit known/unknown capacities,
 `measureContext`, manual/automatic portable compaction, separate source-bound checkpoints,
 and one classified-overflow retry. Canonical raw history and tool/approval evidence stay
 unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
-See [CONTEXT.md](docs/CONTEXT.md). This source feature is not yet published.
+See [CONTEXT.md](docs/CONTEXT.md). This feature is available in published `0.14.0`.
 
 ## Optional clarification questions (since 0.12.0)
 
@@ -44,14 +45,15 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.11.0`:
+The latest verified npm release is `0.14.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.11.0
+npm install --save-exact @ayayaq/vivi@0.14.0
 ```
 
-`0.11.0` includes the optional MCP bridge with prepared-action review, trusted extensions,
-cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
+`0.14.0` includes context management, clarification questions, the optional MCP bridge
+with prepared-action review, trusted extensions, cache usage, model capabilities, memory
+and skills. Hosts retain connections, processes,
 credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
 `0.10.0` also adds owned scopes, `/events` session snapshots and `/events/stream`
@@ -60,7 +62,7 @@ ordered accepted-message replay. Its registry bytes are verified and unchanged. 
 
 ## Optional model capabilities
 
-The prepared `@ayayaq/vivi/providers/deepseek` adapter supports ordinary DeepSeek
+The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` adapter supports ordinary DeepSeek
 Chat Completions independently of web retrieval and decision review, with native
 all-turn reasoning retention and catalog-derived capabilities. It is not yet
 published. See [the DeepSeek host contract](docs/DEEPSEEK.md).

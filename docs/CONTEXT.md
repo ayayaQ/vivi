@@ -1,6 +1,6 @@
 # Provider-facing context management
 
-Prepared for `0.14.0`, not yet published. Production host adoption requires verified public registry bytes.
+Available in published `0.14.0`. Production host adoption requires verified public registry bytes.
 
 The root `@ayayaq/vivi` export offers optional request measurement and portable compaction.
 It does not replace canonical history, authorize tools, or change host storage limits.

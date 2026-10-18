@@ -1,5 +1,7 @@
 # Optional web retrieval
 
+Prepared for `0.15.0`, not yet published. Production host adoption follows verified registry bytes.
+
 `@ayayaq/vivi/web` defines `WebProvider`, typed search/fetch requests and bounded normalized
 responses, provenance and `WebProviderError`. `@ayayaq/vivi/web/deepseek` provides
 `createDeepSeekWebProvider`. These optional entry points are independent of `ModelProvider`,
