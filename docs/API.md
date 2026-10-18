@@ -1,5 +1,13 @@
 # API and host integration
 
+## Optional web retrieval (unreleased)
+
+`@ayayaq/vivi/web` defines a small `WebProvider` search/fetch contract independent of
+`ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
+bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
+Hosts retain paid-provider consent, secure keys, privacy/URL screening and outcome authority.
+See [WEB.md](WEB.md) for the complete contract, limits, costs and offline verification.
+
 ## Optional decisions entry point (published 0.7.0)
 
 `@ayayaq/vivi/decisions` exports `createDecisionRequest`, `evaluateDecision`,

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add optional `/web` retrieval contracts and `/web/deepseek` standalone Search/Fetch adapter,
+  separate from model providers, with bounded untrusted results, honest local truncation,
+  cancellation, sanitized errors and uncertain-request outcomes
+- Keep paid-provider selection, credentials, privacy/URL approvals, retry policy and host
+  adoption explicit; no new dependencies, live provider calls, fallback or npm publication
+
 ## 0.14.0 (prepared 2026-10-15, not yet published)
 
 - Add complete provider-projected context estimates, honest known/unknown capacity metadata,

@@ -1,5 +1,12 @@
 # Source attribution
 
+## Optional web retrieval
+
+The optional generic web retrieval types, bounded DeepSeek Search/Fetch adapter and synthetic
+offline fixtures are original Apache-2.0 work. Wire fields follow DeepSeek's public
+[Search and Fetch API documentation](https://api-docs.deepseek.com/guides/search/), checked
+2026-10-18. No third-party implementation, provider credentials or website content is bundled.
+
 ## Optional clarification questions
 
 The renderer-neutral question types, bounded tool schema, response binding, cancellation queue,

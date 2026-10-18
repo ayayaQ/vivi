@@ -157,6 +157,26 @@
         "types": "./dist/cjs/presentation.d.ts",
         "default": "./dist/cjs/presentation.js"
       }
+    },
+    "./web": {
+      "import": {
+        "types": "./dist/web.d.ts",
+        "default": "./dist/web.js"
+      },
+      "require": {
+        "types": "./dist/cjs/web.d.ts",
+        "default": "./dist/cjs/web.js"
+      }
+    },
+    "./web/deepseek": {
+      "import": {
+        "types": "./dist/web/deepseek.d.ts",
+        "default": "./dist/web/deepseek.js"
+      },
+      "require": {
+        "types": "./dist/cjs/web/deepseek.d.ts",
+        "default": "./dist/cjs/web/deepseek.js"
+      }
     }
   },
   "types": "./dist/index.d.ts",
