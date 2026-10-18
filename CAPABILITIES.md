@@ -108,7 +108,7 @@ These are gateway capabilities for **Chat Completions**. They are not claims abo
 provider, guaranteed routed behavior, or OpenRouter's separate Responses endpoint. Hosts retain
 their existing routing decisions and fallback behavior. No new request option is imposed.
 
-## DeepSeek interpretation
+## DeepSeek interpretation (prepared 0.15.0)
 
 Reviewed **2026-10-18** against the official [model catalog](https://api-docs.deepseek.com/api/list-models/),
 [Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/), and

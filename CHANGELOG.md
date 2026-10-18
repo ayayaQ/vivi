@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0 (prepared 2026-10-18, not yet published)
 
 - Add optional `/web` retrieval contracts and `/web/deepseek` standalone Search/Fetch adapter,
   separate from model providers, with bounded untrusted results, honest local truncation,
@@ -12,7 +12,7 @@
   bounded tool-free summaries, and conservative host-catalog capability metadata
 - Keep chat generation independent of web retrieval and approval-decision providers
 
-## 0.14.0 (prepared 2026-10-15, not yet published)
+## 0.14.0 (2026-10-18)
 
 - Add complete provider-projected context estimates, honest known/unknown capacity metadata,
   output reservation and pure next-request measurement independent of cumulative usage
