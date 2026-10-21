@@ -2,7 +2,7 @@
 
 The optional `@ayayaq/vivi/providers/deepseek` subpath implements the ordinary
 `ModelProvider` interface using DeepSeek Chat Completions. It is independent of web
-retrieval and approval-decision providers. Prepared for `0.15.0`, not yet published.
+retrieval and approval-decision providers. Available since `0.15.0`; output-budget and diagnostic fixes are prepared for `0.15.1`.
 
 ```js
 import { createDeepSeekProvider } from '@ayayaq/vivi/providers/deepseek'
@@ -42,6 +42,26 @@ and sends `thinking: { type: 'disabled' }`. An explicit effort likewise requires
 host to supply its supported choices, and sends `reasoning_effort`. The adapter
 accepts native `low`, `high`, `max` and documented compatibility aliases `minimal`,
 `medium`, `xhigh`; it does not invent an `ultra` member in the shared effort contract.
+
+## Output budget and incomplete responses
+
+The provider advertises `defaultOutputTokens` using the documented endpoint defaults:
+65,536 in default/enabled thinking mode, 131,072 with `max` effort, and 8,192 with
+thinking disabled. Context management reserves and sends that allowance, clamped
+by the host's model limits; an explicit host reserve overrides it. Without context
+management or an explicit generation bound, the server still owns `max_tokens`.
+These are output recommendations, not inferred model context limits. Larger
+allowances include reasoning and can increase cost and latency.
+
+JSON and streamed incomplete responses report the allowlisted finish reason:
+`length`, `content_filter`, `insufficient_system_resource`, or `aborted`.
+A `length` result can mean the output allowance or total context limit was reached;
+it does not prove which one. Missing/unknown reasons remain generic and raw
+upstream values are not echoed. Partial tool calls never execute or enter accepted
+history, and incomplete output does not trigger automatic retries.
+
+References reviewed 2026-10-21: [Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)
+and [model details](https://api-docs.deepseek.com/quick_start/pricing/).
 
 ## Native history and tools
 

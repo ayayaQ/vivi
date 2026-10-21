@@ -5,10 +5,10 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Published `0.14.0` includes portable provider-facing context management, clarification
-questions and exact scalar MCP resource-template reads. Prepared `0.15.0` adds the
-independent DeepSeek chat adapter and optional web search/fetch provider. It is not yet
-published; production host adoption follows verified publication.
+Published `0.15.0` includes portable context management, clarification questions, MCP
+resource-template reads, independent DeepSeek chat and optional web search/fetch.
+Prepared `0.15.1` fixes DeepSeek output reservations and incomplete-response diagnostics;
+production host adoption follows verified publication.
 
 ## Optional context management (since 0.14.0)
 
@@ -62,10 +62,9 @@ ordered accepted-message replay. Its registry bytes are verified and unchanged. 
 
 ## Optional model capabilities
 
-The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` adapter supports ordinary DeepSeek
+The `@ayayaq/vivi/providers/deepseek` adapter (since `0.15.0`) supports ordinary DeepSeek
 Chat Completions independently of web retrieval and decision review, with native
-all-turn reasoning retention and catalog-derived capabilities. It is not yet
-published. See [the DeepSeek host contract](docs/DEEPSEEK.md).
+all-turn reasoning retention and catalog-derived capabilities. See [the DeepSeek host contract](docs/DEEPSEEK.md).
 
 The optional `@ayayaq/vivi/providers/models` subpath is published in verified registry `0.4.0`
 and absent from immutable `0.3.0`. Hosts can adopt it through separate reviewed changes that

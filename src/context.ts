@@ -143,6 +143,7 @@ function validate(input: ContextInput): void {
   assert(Array.isArray(input.tools), 'Context tools must be an array')
   assertJson(input.tools)
   assert(input.provider && typeof input.provider.generate === 'function', 'Context requires a provider')
+  assert(input.provider.defaultOutputTokens === undefined || positive(input.provider.defaultOutputTokens), 'Invalid provider output reserve')
   assert(input.provider.estimateContext === undefined || typeof input.provider.estimateContext === 'function', 'Invalid context estimator')
   if (options.checkpoint !== undefined) validateContextCheckpoint(options.checkpoint)
   if (options.limits !== undefined) {
@@ -176,10 +177,10 @@ export function estimateContext(input: { messages: readonly HistoryMessage[]; to
   return { inputTokens: Math.ceil(bytes / 3) + input.messages.length * 4, estimated: true }
 }
 
-function reserve(options: ContextOptions): number {
+function reserve(options: ContextOptions, provider: ModelProvider): number {
   const limits = options.limits
   const scaled = limits?.contextWindow === undefined ? 4096 : Math.max(1, Math.floor(limits.contextWindow * 0.1))
-  return Math.min(options.reserveOutputTokens ?? Math.min(4096, scaled), limits?.maxOutputTokens ?? Number.MAX_SAFE_INTEGER)
+  return Math.min(options.reserveOutputTokens ?? provider.defaultOutputTokens ?? Math.min(4096, scaled), limits?.maxOutputTokens ?? Number.MAX_SAFE_INTEGER)
 }
 
 function measure(input: ContextInput, messages: readonly HistoryMessage[], outputReserveTokens: number): ContextUsage {
@@ -214,6 +215,7 @@ function capture(original: ContextInput): CapturedContextInput {
   const input: ContextInput = {
     ...original, messages: snapshot(original.messages), tools: snapshot(original.tools),
     provider: { generate: original.provider.generate.bind(original.provider),
+      ...(original.provider.defaultOutputTokens !== undefined ? { defaultOutputTokens: original.provider.defaultOutputTokens } : {}),
       ...(original.provider.estimateContext ? { estimateContext: original.provider.estimateContext.bind(original.provider) } : {}) },
     context: { ...original.context,
       ...(original.context.checkpoint ? { checkpoint: snapshot(original.context.checkpoint) } : {}),
@@ -305,7 +307,7 @@ async function prepare(original: ContextInput, reason?: CompactionReason): Promi
   }
   const raw = source(input.messages)
   const current = boundCheckpoint(input, raw)
-  const outputReserve = reserve(input.context)
+  const outputReserve = reserve(input.context, input.provider)
   const messages = project(input, raw, current)
   const usage = measure(input, messages, outputReserve)
   const compactReason = reason ?? (input.context.autoCompact !== false && usage.utilization !== undefined &&
@@ -352,7 +354,8 @@ async function prepare(original: ContextInput, reason?: CompactionReason): Promi
         ...(current ? { previousSummary: current.summary } : {}), conversation: delta
       }) }
     ]
-    const summaryReserve = Math.min(outputReserve, 2048)
+    // Reasoning shares the output allowance even for a concise summary.
+    const summaryReserve = Math.min(outputReserve, input.provider.defaultOutputTokens ?? 2048)
     const summaryInput = { ...input, tools: [] }
     const summaryOccupancy = measure(summaryInput, summaryMessages, summaryReserve)
     if (summaryOccupancy.availableInputTokens !== undefined && summaryOccupancy.inputTokens > summaryOccupancy.availableInputTokens) {
@@ -424,7 +427,7 @@ export function measureContext(original: ContextInput): PreparedContext {
     const raw = source(input.messages)
     const checkpoint = boundCheckpoint(input, raw)
     const messages = project(input, raw, checkpoint)
-    const maxOutputTokens = reserve(input.context)
+    const maxOutputTokens = reserve(input.context, input.provider)
     return { messages, usage: measure(input, messages, maxOutputTokens), maxOutputTokens,
       canCompact: cutPoint(raw, input.context.keepRecentMessages ?? 6) > (checkpoint?.source.messageCount ?? 0),
       ...(checkpoint ? { checkpoint } : {}) }

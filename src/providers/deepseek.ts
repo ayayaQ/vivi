@@ -127,16 +127,26 @@ function tokenUsage(value: unknown): ProviderResult['usage'] {
   return normalized
 }
 
+/** Only allowlisted finish reasons enter diagnostics; never echo upstream response data. */
+function incomplete(reason: unknown): never {
+  switch (reason) {
+    case 'length': fail('DeepSeek', 'response reached its output or context token limit (finish_reason: length); reasoning tokens count toward the output budget')
+    case 'content_filter': fail('DeepSeek', 'response was stopped by content filtering (finish_reason: content_filter)')
+    case 'insufficient_system_resource': fail('DeepSeek', 'response stopped because the provider had insufficient system resources (finish_reason: insufficient_system_resource)')
+    case 'aborted': fail('DeepSeek', 'response was aborted by the provider (finish_reason: aborted)')
+    case undefined: case null: fail('DeepSeek', 'agent response was not completed; no finish reason was received')
+    default: fail('DeepSeek', 'agent response was not completed; unrecognized finish reason')
+  }
+}
+
 function result(value: unknown, model: string, messages: readonly HistoryMessage[], reservedIds: readonly string[], allowTools: boolean, requireReasoning: boolean): ProviderResult {
   throwIfContextOverflow(value, 'DeepSeek')
   if (!isRecord(value) || value.error || !Array.isArray(value.choices) ||
       value.choices.length !== 1 || !isRecord(value.choices[0])) fail('DeepSeek', 'response contained no single agent message')
   const choice = value.choices[0]
   throwIfContextOverflow(choice, 'DeepSeek')
-  if (choice.error || (choice.index !== undefined && choice.index !== 0) ||
-      (choice.finish_reason !== 'stop' && choice.finish_reason !== 'tool_calls')) {
-    fail('DeepSeek', 'agent response was not completed')
-  }
+  if (choice.error || (choice.index !== undefined && choice.index !== 0)) fail('DeepSeek', 'invalid completion choice')
+  if (choice.finish_reason !== 'stop' && choice.finish_reason !== 'tool_calls') incomplete(choice.finish_reason)
   const parsed = assistant(choice.message)
   if (requireReasoning && parsed.toolCalls.length && typeof parsed.item.reasoning_content !== 'string') {
     fail('DeepSeek', 'thinking with tools returned no native reasoning for continuation')
@@ -211,14 +221,14 @@ class ChatStream {
     }
     if (value.usage !== undefined && value.usage !== null) this.counts = value.usage
     if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
-      if (choice.finish_reason !== 'stop' && choice.finish_reason !== 'tool_calls') fail('DeepSeek', 'agent response was not completed')
+      if (choice.finish_reason !== 'stop' && choice.finish_reason !== 'tool_calls') incomplete(choice.finish_reason)
       if (this.finish && this.finish !== choice.finish_reason) fail('DeepSeek', 'conflicting stream finish reason')
       this.finish = choice.finish_reason
     }
   }
 
   completed(): Record<string, unknown> {
-    if (!this.finish) fail('DeepSeek', 'agent response was not completed')
+    if (!this.finish) incomplete(undefined)
     const calls = [...this.calls.entries()].sort(([a], [b]) => a - b)
     if (calls.some(([index], position) => index !== position)) fail('DeepSeek', 'incomplete tool call indices')
     if (calls.length) this.message.tool_calls = calls.map(([, call]) => call)
@@ -247,6 +257,11 @@ export function createDeepSeekProvider(options: DeepSeekProviderOptions): ModelP
   const config = configure(options, 'DeepSeek', 'https://api.deepseek.com', 'chat/completions',
     ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
   return {
+    // Official endpoint defaults, reviewed 2026-10-21. Context management clamps
+    // this recommendation to host/catalog limits and honors explicit reserves.
+    // https://api-docs.deepseek.com/api/create-chat-completion/
+    defaultOutputTokens: config.reasoning && config.reasoning.effort === undefined ? 8192
+      : config.reasoning?.effort === 'max' ? 131072 : 65536,
     estimateContext(input, options) { return estimateRequestContext(requestBody(config, input, options)) },
     generate(input, signal, options) {
       const reservedIds = reservedToolCallIds('DeepSeek', options)

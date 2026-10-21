@@ -81,11 +81,21 @@ omitted; catalog metadata does not prove account access or every routed endpoint
 The available input budget is the minimum known endpoint cap and model window minus reserved
 output. Limit source metadata, including host-supplied freshness, flows to `usage.limitSource`.
 
-The default output reserve is the smaller of 4,096 tokens and 10% of a known model window,
-capped by a known output ceiling. With an unknown window it reserves 4,096; hosts may explicitly
-choose another positive reserve. The reserve is dispatched as the provider output bound so
-accounting and execution agree. It includes any reasoning counted inside the provider's output
-limit. A known small model therefore does not inherit a large fixed reserve.
+An explicit host `reserveOutputTokens` wins; otherwise a provider's optional
+`defaultOutputTokens` recommendation is used. Providers without a recommendation
+retain the smaller of 4,096 tokens and 10% of a known model window (4,096 for an
+unknown window). Every choice is capped by a known `maxOutputTokens` ceiling.
+The same reserve is counted against input capacity and sent as the request output
+bound; an input that cannot fit is compacted or rejected, never silently dispatched
+with an unreserved larger limit. Hosts wrapping a provider must forward its
+`defaultOutputTokens` and both `estimateContext` arguments. Changing provider or
+reasoning mode requires measuring again with the new provider instance.
+
+Summaries use at most the selected output reserve and the provider recommendation,
+or 2,048 tokens for providers without one. This leaves room for reasoning even
+when the requested summary text is concise. Explicit smaller host bounds still
+apply. Larger allowances can increase latency and cost; there is no automatic
+retry for incomplete output.
 
 Unknown capacity still yields an estimated numerator, with no fabricated denominator or
 utilization percentage. It disables threshold-based compaction; manual compaction and classified

@@ -1,6 +1,11 @@
 # Changelog
 
-## 0.15.0 (prepared 2026-10-18, not yet published)
+## 0.15.1 (prepared 2026-10-21, not yet published)
+
+- Honor provider-aware output reservations, including DeepSeek thinking and summary budgets, while preserving explicit host bounds and catalog ceilings
+- Report sanitized DeepSeek incomplete finish reasons without accepting partial tool calls or retrying failed output
+
+## 0.15.0 (2026-10-18)
 
 - Add optional `/web` retrieval contracts and `/web/deepseek` standalone Search/Fetch adapter,
   separate from model providers, with bounded untrusted results, honest local truncation,

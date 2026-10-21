@@ -351,3 +351,50 @@ test('stream body cancellation and failed progress never commit partial assistan
   await assert.rejects(h.provider.generate(input, signal(), { onProgress() { throw failure } }), error => error === failure)
   assert.equal(cancelled, 1)
 })
+
+for (const stream of [false, true]) {
+  for (const reason of ['length', 'content_filter', 'insufficient_system_resource', 'aborted']) {
+    test(`DeepSeek ${stream ? 'stream' : 'JSON'} retains sanitized ${reason} diagnostics without accepting partial calls or retrying`, async () => {
+      const response = answer('partial', [call()])
+      response.choices[0].finish_reason = reason
+      const h = harness([stream ? sse(frame(chunk({}, reason)) + 'data: [DONE]\n\n') : response], { stream })
+      const result = await runAgent({ provider: h.provider, ...input, async executeTool() { assert.fail('Partial calls must not execute') } })
+      assert.equal(result.status, 'error')
+      assert.match(result.error.message, new RegExp(`finish_reason: ${reason}`))
+      assert.equal(h.requests.length, 1)
+      assert.deepEqual(result.history, input.messages)
+      assert(!result.error.message.includes(privateValue))
+    })
+  }
+  test(`DeepSeek ${stream ? 'stream' : 'JSON'} does not echo unknown finish reason data`, async () => {
+    const response = answer()
+    response.choices[0].finish_reason = privateValue
+    const h = harness([stream ? sse(frame(chunk({}, privateValue)) + 'data: [DONE]\n\n') : response], { stream })
+    await assert.rejects(h.provider.generate(input, signal()), error => {
+      assert.match(error.message, /unrecognized finish reason/)
+      assert(!error.message.includes(privateValue)); return true
+    })
+  })
+}
+
+test('DeepSeek context reserves mode-aware output tokens and sends the identical clamped budget', async () => {
+  for (const [reasoning, supportedReasoningEfforts, expected] of [
+    [undefined, undefined, 65536], [{ mode: 'default' }, undefined, 65536],
+    [{ mode: 'disabled' }, ['none'], 8192], [{ mode: 'effort', effort: 'high' }, ['high'], 65536],
+    [{ mode: 'effort', effort: 'max' }, ['max'], 131072]
+  ]) {
+    for (const [context, budget] of [
+      [{ sourceId: 's', limits: { contextWindow: 1048576, maxOutputTokens: 393216 } }, expected],
+      [{ sourceId: 's', reserveOutputTokens: 1234 }, 1234],
+      [{ sourceId: 's', limits: { maxOutputTokens: 7000 } }, 7000]
+    ]) {
+      const h = harness([answer()], { reasoning, supportedReasoningEfforts })
+      const result = await runAgent({ provider: h.provider, messages: input.messages, tools: [], context,
+        async executeTool() { assert.fail('No calls expected') } })
+      assert.equal(result.status, 'completed')
+      assert.equal(h.provider.defaultOutputTokens, expected)
+      assert.equal(h.requests[0].body.max_tokens, budget)
+      assert.equal(h.requests.length, 1)
+    }
+  }
+})
