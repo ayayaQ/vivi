@@ -71,6 +71,8 @@ export interface ContextEstimate {
 }
 
 export interface ModelProvider {
+  /** Recommended output reserve, including reasoning. Hosts may override it. */
+  readonly defaultOutputTokens?: number
   /** Pure effective-request measurement; must apply the same projection as generate. */
   estimateContext?(
     input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },

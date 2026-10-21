@@ -1,29 +1,30 @@
 # Release workflow
 
-## Prepared stable 0.15.0, not yet published
+## Prepared patch 0.15.1, not yet published
 
-This combined additive release prepares two independent optional features: the ordinary
-`/providers/deepseek` Chat Completions model adapter and `/web` plus `/web/deepseek`
-standalone Search/Fetch retrieval contracts. Chat choice, web choice and approval-decision
-review remain separate. Hosts retain credentials, paid-provider opt-in, privacy/URL policy,
-exact-action review, execution, durable intent/outcome storage and UI. No runtime dependency
-is added. See [DEEPSEEK.md](docs/DEEPSEEK.md), [WEB.md](docs/WEB.md) and
-[CAPABILITIES.md](CAPABILITIES.md).
+This patch adds a provider-aware output-reserve recommendation (including reasoning),
+uses the documented DeepSeek mode defaults within explicit host/catalog limits, and
+reports sanitized incomplete-response reasons. It neither retries failed output nor
+accepts partial tool calls. Explicit host reserves still win. See [CONTEXT.md](docs/CONTEXT.md)
+and [DEEPSEEK.md](docs/DEEPSEEK.md). Larger output allowances may increase cost and latency.
 
-The features merged through [PR #41](https://github.com/ayayaQ/vivi/pull/41) and
-[PR #42](https://github.com/ayayaQ/vivi/pull/42), with combined source
-`e30fb031af4be1246077f7c1c7cd1d2b610a5875`, tree
-`a449ee8e982c582e3dd4bc2073d02add93d7de64`. Independent exact-source and remote-tree
-review passed, including switching/continuation boundaries. The combined 809 tests,
-all offline examples, packaged ESM/CommonJS runtime and strict TypeScript consumers across
-17 public subpaths, and pre/post-merge Linux/Windows Node 22/24 CI passed. Release metadata
-and the separately frozen archive require their own independent review and checks.
+The source fix at `7a71cd936d35a18106e03b12cac838505c5ad3f4` passed 822 offline tests,
+all examples, build, and packaged ESM/CommonJS runtime and TypeScript consumers across
+17 public subpaths. Release metadata, exact final archive and remote CI require their
+own final review. Live paid-provider behavior has not been exercised; the original
+reported failure's finish reason was not captured, so its specific cause remains unknown.
 
-Official registry metadata observed 2026-10-18 lists `latest` as `0.14.0`; `0.15.0` is
-not published. The account holder handles npm login, security challenges and publication
-of the exact separately reviewed archive, without repacking. Never publish this release's
-new bytes as `0.14.0`. Verify public registry bytes and clean supported consumers before
-separate production CLI/Desktop pins. Local QA packs do not establish a published release.
+The account holder publishes the separately reviewed archive after approval and checks.
+Do not overwrite immutable 0.15.0 bytes. Verify registry identity and clean consumer
+installation before the CLI dependency update. Desktop adoption is separate and is not
+included in this CLI bug-fix rollout.
+
+## Published stable 0.15.0
+
+DeepSeek chat and standalone Search/Fetch were released on 2026-10-18, after core
+PRs #41–43. Published archive verification and the CLI/Desktop integration rollout
+completed separately. The underlying chat, web and approval responsibilities remain
+independent; the 0.15.1 patch does not alter web-provider setup or permissions.
 
 ## Published stable 0.14.0
 
@@ -353,7 +354,7 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The commands below target the prepared `0.15.0` release. For a later release, select its
+The commands below target the prepared `0.15.1` release. For a later release, select its
 new version in every command and repeat source, archive, registry and host verification.
 All published records and archives remain immutable.
 
@@ -367,7 +368,7 @@ npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
 npm pack --json --pack-destination "$RELEASE_DIR"
-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.15.0.tgz"
+sha256sum "$RELEASE_DIR/ayayaq-vivi-0.15.1.tgz"
 git rev-parse HEAD HEAD^{tree}
 git status --short
 ```
@@ -386,7 +387,7 @@ Any source, metadata, documentation or archive change requires a new pack, hash 
 
 ## Account-holder publication
 
-Use the exact approved `ayayaq-vivi-0.15.0.tgz` and its supplied release record on your trusted
+Use the exact approved `ayayaq-vivi-0.15.1.tgz` and its supplied release record on your trusted
 computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
 Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
 or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
@@ -397,18 +398,18 @@ If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm
 npm login --auth-type=web --registry=https://registry.npmjs.org/
 npm whoami --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
-sha256sum ./ayayaq-vivi-0.15.0.tgz
+sha256sum ./ayayaq-vivi-0.15.1.tgz
 ```
 
-Match SHA-256 to the approved release record. If `0.15.0` already exists, stop and compare registry
+Match SHA-256 to the approved release record. If `0.15.1` already exists, stop and compare registry
 integrity and bytes before taking another action. Name/version pairs are immutable even after
 unpublication. Do not change the version or archive without another review.
 
 ```sh
-npm publish ./ayayaq-vivi-0.15.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+npm publish ./ayayaq-vivi-0.15.1.tgz --access public --tag latest --registry=https://registry.npmjs.org/
 ```
 
-This publishes all archive contents and updates `latest` to `0.15.0`. See
+This publishes all archive contents and updates `latest` to `0.15.1`. See
 [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
 A client-side failure can follow a successful upload; inspect the registry before retrying,
 and never substitute a newly packed working directory for the reviewed archive.
@@ -416,19 +417,19 @@ and never substitute a newly packed working directory for the reviewed archive.
 ## Verify registry bytes and integrate hosts
 
 ```sh
-npm view @ayayaq/vivi@0.15.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.15.1 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
-npm pack @ayayaq/vivi@0.15.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
-cmp ./ayayaq-vivi-0.15.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.15.0.tgz"
+npm pack @ayayaq/vivi@0.15.1 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+cmp ./ayayaq-vivi-0.15.1.tgz "$REGISTRY_DIR/ayayaq-vivi-0.15.1.tgz"
 ```
 
 Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
-`@ayayaq/vivi@0.15.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+`@ayayaq/vivi@0.15.1` into clean registry consumers and repeat ESM/CommonJS runtime, strict
 NodeNext declaration, extension/cache and headless-example checks. Record the verified release
 without repacking or replacing published bytes.
 
-Only then set exact `"@ayayaq/vivi": "0.15.0"` in authorized CLI/desktop changes and regenerate
+Only then set exact `"@ayayaq/vivi": "0.15.1"` in authorized CLI/desktop changes and regenerate
 lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
 preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
 Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local

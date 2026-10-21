@@ -402,3 +402,32 @@ test('content-only projection permits structurally equivalent object key orderin
     projectMessages: (messages) => messages.map((message) => ({ kind: message.kind, role: message.role, content: 'new' })) } })
   assert.equal(measureContext(source).messages[0].content, 'new')
 })
+
+test('provider output recommendation is reserved consistently and fails before dispatch when input cannot fit', async () => {
+  let requests = 0
+  const p = { defaultOutputTokens: 65536, estimateContext: (_input, options) => {
+    assert.equal(options.maxOutputTokens, 65536)
+    return { inputTokens: 40000, estimated: true }
+  }, async generate() { requests++; return textResult() } }
+  const request = { provider: p, messages: [user('latest')], tools: [], context: { sourceId: 's', limits: { contextWindow: 100000 } } }
+  const measured = measureContext(request)
+  assert.equal(measured.maxOutputTokens, 65536)
+  assert.equal(measured.usage.availableInputTokens, 34464)
+  await assert.rejects(prepareContext(request), { code: 'cannot_fit' })
+  assert.equal(requests, 0)
+  for (const invalid of [0, -1, NaN, Infinity, '65536']) {
+    assert.throws(() => measureContext({ ...request, provider: { ...p, defaultOutputTokens: invalid } }), { code: 'invalid_context' })
+  }
+})
+
+test('provider-aware compaction reserves reasoning tokens while ordinary providers retain concise summary budget', async () => {
+  for (const recommended of [undefined, 65536]) {
+    const calls = []
+    const p = { ...provider(async (_input, _signal, options) => { calls.push(options); return textResult() }),
+      ...(recommended ? { defaultOutputTokens: recommended } : {}) }
+    await compactContext(input({ provider: p }))
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].purpose, 'context-summary')
+    assert.equal(calls[0].maxOutputTokens, recommended ?? 2048)
+  }
+})
