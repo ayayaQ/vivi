@@ -1,6 +1,36 @@
 # Changelog
 
-## 0.13.0 (prepared 2026-10-13, not yet published)
+## 0.15.1 (prepared 2026-10-21, not yet published)
+
+- Honor provider-aware output reservations, including DeepSeek thinking and summary budgets, while preserving explicit host bounds and catalog ceilings
+- Report sanitized DeepSeek incomplete finish reasons without accepting partial tool calls or retrying failed output
+
+## 0.15.0 (2026-10-18)
+
+- Add optional `/web` retrieval contracts and `/web/deepseek` standalone Search/Fetch adapter,
+  separate from model providers, with bounded untrusted results, honest local truncation,
+  cancellation, sanitized errors and uncertain-request outcomes
+- Keep paid-provider selection, credentials, privacy/URL approvals, retry policy and host
+  adoption explicit; no new dependencies, live provider calls, fallback or npm publication
+- Add an optional DeepSeek Chat Completions model provider with exact native
+  reasoning/tool continuation, streaming, cache-hit usage, context estimation,
+  bounded tool-free summaries, and conservative host-catalog capability metadata
+- Keep chat generation independent of web retrieval and approval-decision providers
+
+## 0.14.0 (2026-10-18)
+
+- Add complete provider-projected context estimates, honest known/unknown capacity metadata,
+  output reservation and pure next-request measurement independent of cumulative usage
+- Add opt-in automatic/manual portable compaction with separate source/projection-bound
+  checkpoints, preserved current instructions and complete recent tool groups, and immutable
+  summary inputs using the same model with tools disabled
+- Preserve canonical raw history and host approval/outcome authority; report summary usage
+  separately and allow one strictly smaller retry after classified context overflow
+- Preserve compacted-away canonical tool IDs for provider normalization, avoid redundant or
+  futile compaction, and cover cancellation, crash/resume, privacy, model switches and failure
+- No new runtime dependencies, live providers, npm publication or host adoption are included
+
+## 0.13.0 (2026-10-13)
 
 - Add opt-in exact scalar MCP resource-template reads with a trusted synchronous
   no-I/O expander, immutable template/value/expanded-URI binding, fresh expansion

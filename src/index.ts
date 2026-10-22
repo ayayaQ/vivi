@@ -12,6 +12,7 @@ export type {
   JsonValue,
   Message,
   ModelProvider,
+  ContextEstimate,
   ProviderResult,
   ProviderGenerateOptions,
   ProviderProgress,
@@ -23,3 +24,6 @@ export type {
   ToolResultMessage,
   Usage
 } from './types.js'
+
+export { prepareContext, compactContext, measureContext, estimateContext, validateContextCheckpoint, ContextError } from './context.js'
+export type { ContextCheckpoint, ContextOptions, ContextLimits, ContextLimitSource, ContextUsage, ContextInput, PreparedContext, ContextEvent, CompactionReason } from './context.js'

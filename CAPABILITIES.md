@@ -12,8 +12,8 @@ access, a selectable model, or that a routed request will succeed.
 
 ## Version 1 schema
 
-`normalizeModelCapabilities({ apiVersion: 1, provider, protocol, model })` accepts `openai` or
-`openrouter`, `responses` or `chat-completions`, and one catalog entry with an exact `id`.
+`normalizeModelCapabilities({ apiVersion: 1, provider, protocol, model })` accepts `openai`,
+`openrouter`, or `deepseek`, `responses` or `chat-completions`, and one catalog entry with an exact `id`.
 An existing selection can use just `{ id }`. This does not fetch, sort, filter, deduplicate, or
 replace either host's catalog. Invalid versions, identities, providers, and protocols fail with
 sanitized `TypeError` messages. Unsupported or malformed optional metadata remains unknown.
@@ -107,6 +107,29 @@ false non-reasoning assertion from that omission.
 These are gateway capabilities for **Chat Completions**. They are not claims about every backing
 provider, guaranteed routed behavior, or OpenRouter's separate Responses endpoint. Hosts retain
 their existing routing decisions and fallback behavior. No new request option is imposed.
+
+## DeepSeek interpretation (prepared 0.15.0)
+
+Reviewed **2026-10-18** against the official [model catalog](https://api-docs.deepseek.com/api/list-models/),
+[Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/), and
+[thinking guide](https://api-docs.deepseek.com/guides/thinking_mode/). Only exact `deepseek-flash`
+and `deepseek-v4-pro` IDs receive documented chat, function-tool, streaming, and optional-reasoning
+facts. Unreviewed IDs gain only evidence supplied in their catalog entry; names and aliases prove nothing.
+
+Catalog `context_window` is the shared input/output window; `max_output_tokens` is the generation
+cap. Positive safe integers are accepted, conflicting output caps are omitted, and a separate input
+cap is never derived. Limits are catalog-derived even for reviewed IDs. Both text input and output
+modalities prove text conversation. Catalog `effort.supported_levels` lists enabled-thinking choices,
+excluding `none`; it does not establish disable support or mandatory reasoning. Valid lists narrow
+known choices. Only reviewed IDs gain the documented compatibility aliases `minimal` → `low` and
+`medium`/`xhigh` → `high`; `ultra` is outside this version's effort type. `default_level` does not
+select an override. Default omission retains server behavior: thinking enabled with effort `high`.
+
+DeepSeek supports disabling thinking separately. The adapter's explicit disable uses that toggle;
+the capability `none` sentinel retains its existing host-mapping meaning. With tools present,
+DeepSeek requires previous assistant `reasoning_content` to be replayed, including turns without
+tool calls. These facts are **Chat Completions-specific**. DeepSeek's separate, partially compatible
+Responses endpoint remains unknown throughout this normalizer; catalog metadata is not transplanted.
 
 ## Paired consumer evidence
 

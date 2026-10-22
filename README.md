@@ -5,12 +5,20 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Published `0.11.0` includes optional `/presentation` bounded, UI-neutral tool display snapshots
-and safe text fallback. See [the presentation contract](docs/TOOL_PRESENTATION.md).
-Prepared `0.12.0` adds the optional clarification question extension below. It is not yet
-published; host adoption follows verified publication.
+Published `0.15.0` includes portable context management, clarification questions, MCP
+resource-template reads, independent DeepSeek chat and optional web search/fetch.
+Prepared `0.15.1` fixes DeepSeek output reservations and incomplete-response diagnostics;
+production host adoption follows verified publication.
 
-## Optional clarification questions (prepared 0.12.0)
+## Optional context management (since 0.14.0)
+
+The root API adds full projected-request occupancy, explicit known/unknown capacities,
+`measureContext`, manual/automatic portable compaction, separate source-bound checkpoints,
+and one classified-overflow retry. Canonical raw history and tool/approval evidence stay
+unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
+See [CONTEXT.md](docs/CONTEXT.md). This feature is available in published `0.14.0`.
+
+## Optional clarification questions (since 0.12.0)
 
 The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral
 `request_user_input` tool for 1–3 questions, choices, free text and explicit skip/cancel.
@@ -18,7 +26,7 @@ A host callback collects actual human input; without one, no tool is advertised.
 ordinary tool results and never authorize actions or change approval modes. Both normal and
 Plan-mode hosts can use the extension under their own tool policy. See the
 [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
-This addition is absent from published `0.11.0`; host adoption follows a reviewed release.
+This addition is available from published `0.12.0`; hosts adopt it under their own policy.
 
 Unreleased optional queued-message steering is prepared separately for review. Hosts own
 queue acknowledgement and force-send cancellation; see [STEERING.md](docs/STEERING.md).
@@ -40,14 +48,15 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.11.0`:
+The latest verified npm release is `0.14.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.11.0
+npm install --save-exact @ayayaq/vivi@0.14.0
 ```
 
-`0.11.0` includes the optional MCP bridge with prepared-action review, trusted extensions,
-cache usage, model capabilities, memory and skills. Hosts retain connections, processes,
+`0.14.0` includes context management, clarification questions, the optional MCP bridge
+with prepared-action review, trusted extensions, cache usage, model capabilities, memory
+and skills. Hosts retain connections, processes,
 credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
 `0.10.0` also adds owned scopes, `/events` session snapshots and `/events/stream`
@@ -55,6 +64,10 @@ ordered accepted-message replay. Its registry bytes are verified and unchanged. 
 [the host commit and bounded replay contract](docs/AGENT_STREAM.md).
 
 ## Optional model capabilities
+
+The `@ayayaq/vivi/providers/deepseek` adapter (since `0.15.0`) supports ordinary DeepSeek
+Chat Completions independently of web retrieval and decision review, with native
+all-turn reasoning retention and catalog-derived capabilities. See [the DeepSeek host contract](docs/DEEPSEEK.md).
 
 The optional `@ayayaq/vivi/providers/models` subpath is published in verified registry `0.4.0`
 and absent from immutable `0.3.0`. Hosts can adopt it through separate reviewed changes that
@@ -143,6 +156,7 @@ The package includes builds, declarations, source, examples, and documentation; 
 runs no build script.
 
 - [API and host integration](docs/API.md): contracts, usage, providers, history, and extensions
+- [Optional web search and fetch](docs/WEB.md): separate host-controlled retrieval and DeepSeek adapter
 - [Runnable headless example](examples/headless.mjs) and [inventory policy example](examples/inventory.mjs)
 - [Changelog](CHANGELOG.md), [release status and workflow](RELEASING.md), [shared-use audit](REUSE_AUDIT.md)
 - Apache-2.0: [LICENSE](LICENSE), [NOTICE](NOTICE), [origin and attribution](ATTRIBUTION.md)

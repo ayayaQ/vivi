@@ -1,6 +1,6 @@
 {
   "name": "@ayayaq/vivi",
-  "version": "0.13.0",
+  "version": "0.15.1",
   "description": "A small headless, provider-neutral tool-calling agent loop",
   "type": "module",
   "license": "Apache-2.0",
@@ -46,6 +46,16 @@
       "require": {
         "types": "./dist/cjs/providers/openrouter.d.ts",
         "default": "./dist/cjs/providers/openrouter.js"
+      }
+    },
+    "./providers/deepseek": {
+      "import": {
+        "types": "./dist/providers/deepseek.d.ts",
+        "default": "./dist/providers/deepseek.js"
+      },
+      "require": {
+        "types": "./dist/cjs/providers/deepseek.d.ts",
+        "default": "./dist/cjs/providers/deepseek.js"
       }
     },
     "./extensions": {
@@ -156,6 +166,26 @@
       "require": {
         "types": "./dist/cjs/presentation.d.ts",
         "default": "./dist/cjs/presentation.js"
+      }
+    },
+    "./web": {
+      "import": {
+        "types": "./dist/web.d.ts",
+        "default": "./dist/web.js"
+      },
+      "require": {
+        "types": "./dist/cjs/web.d.ts",
+        "default": "./dist/cjs/web.js"
+      }
+    },
+    "./web/deepseek": {
+      "import": {
+        "types": "./dist/web/deepseek.d.ts",
+        "default": "./dist/web/deepseek.js"
+      },
+      "require": {
+        "types": "./dist/cjs/web/deepseek.d.ts",
+        "default": "./dist/cjs/web/deepseek.js"
       }
     }
   },

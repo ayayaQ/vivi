@@ -1,5 +1,14 @@
 # API and host integration
 
+## Optional web retrieval (unreleased)
+
+Prepared `0.15.0` (not yet published): `@ayayaq/vivi/web` defines a small
+`WebProvider` search/fetch contract independent of
+`ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
+bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
+Hosts retain paid-provider consent, secure keys, privacy/URL screening and outcome authority.
+See [WEB.md](WEB.md) for the complete contract, limits, costs and offline verification.
+
 ## Optional decisions entry point (published 0.7.0)
 
 `@ayayaq/vivi/decisions` exports `createDecisionRequest`, `evaluateDecision`,
@@ -219,6 +228,12 @@ inside the host's own consistency boundary.
 
 ## Shared provider factories
 
+The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
+and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
+of web retrieval and decision review. It retains every native assistant turn's
+reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
+history, usage, context, and host-adoption details. This addition is not yet published.
+
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
 import { createOpenRouterProvider } from '@ayayaq/vivi/providers/openrouter'
@@ -318,3 +333,13 @@ for settled session anchors, identity/evidence rules, host privacy/commit author
 The additive `/events/stream` subpath provides ordered accepted deltas and terminal reconciliation;
 see [AGENT_STREAM.md](AGENT_STREAM.md). Both source APIs are absent from published 0.9.0;
 production adoption follows reviewed 0.10.0 publication and exact registry-byte verification.
+
+## Context management (since 0.14.0)
+
+The root API exports `measureContext`, `prepareContext`, `compactContext`,
+`estimateContext`, `validateContextCheckpoint`, `ContextError` and their context types.
+`RunAgentOptions.context` enables provider-facing measurement/compaction without replacing
+canonical history. Model providers can implement `estimateContext`; generate options accept
+`maxOutputTokens` and the host-only `purpose` discriminator. Derived result checkpoint/occupancy
+metadata is excluded from canonical settlements. See [CONTEXT.md](CONTEXT.md) for the contract,
+unknown-limit behavior, persistence, failures, billing and host integration.

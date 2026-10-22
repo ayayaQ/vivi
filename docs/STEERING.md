@@ -3,7 +3,7 @@
 `runAgent` accepts an optional `getSteeringMessages({ signal })` callback returning
 `readonly Message[]` or a promise of that array. Each returned message must have
 `kind: 'message'`, `role: 'user'`, and string `content`. This additive API is prepared
-for review separately from the current `0.13.0` foundation. No package version or
+for review separately from the current published foundation. No package version or
 publication is changed by this work.
 
 ## Admission boundary

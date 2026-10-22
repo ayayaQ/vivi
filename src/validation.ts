@@ -123,3 +123,12 @@ export function assertHistory(messages: unknown, allowInterrupted = false): asse
   }
   assert(allowInterrupted || pending.length === 0, 'History contains unanswered tool calls')
 }
+
+/** Stable sanitized overflow signal for adapters and hosts, without reading message/accessor text. */
+export function isContextOverflow(error: unknown): boolean {
+  try {
+    if (!(error instanceof Error)) return false
+    const descriptor = Object.getOwnPropertyDescriptor(error, 'code')
+    return descriptor !== undefined && 'value' in descriptor && descriptor.value === 'context_overflow'
+  } catch { return false }
+}

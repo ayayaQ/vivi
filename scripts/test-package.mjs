@@ -25,6 +25,13 @@ function run(command, arguments_, cwd = root) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
+  for (const required of ['docs/WEB.md', 'src/web.ts', 'src/web/deepseek.ts',
+    'dist/web.js', 'dist/web.d.ts', 'dist/web/deepseek.js', 'dist/web/deepseek.d.ts',
+    'dist/cjs/web.js', 'dist/cjs/web.d.ts', 'dist/cjs/web/deepseek.js', 'dist/cjs/web/deepseek.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
+  for (const required of ['docs/CONTEXT.md', 'src/context.ts', 'dist/context.js', 'dist/context.d.ts',
+    'dist/cjs/context.js', 'dist/cjs/context.d.ts']) assert(paths.has(required), `Package is missing ${required}`)
   for (const required of ['docs/QUESTIONS.md', 'examples/questions.mjs',
     'src/extensions/questions.ts', 'dist/extensions/questions.js', 'dist/extensions/questions.d.ts',
     'dist/cjs/extensions/questions.js', 'dist/cjs/extensions/questions.d.ts']) {
@@ -135,6 +142,116 @@ try {
 `)
     run(process.execPath, [`steering.${extension}`], temporary)
   }
+  for (const [extension, importLine] of [
+    ['mjs', "import assert from 'node:assert/strict'; import {WebProviderError} from '@ayayaq/vivi/web'; import {createDeepSeekWebProvider} from '@ayayaq/vivi/web/deepseek'"],
+    ['cjs', "const assert=require('node:assert/strict'); const {WebProviderError}=require('@ayayaq/vivi/web'); const {createDeepSeekWebProvider}=require('@ayayaq/vivi/web/deepseek')"]
+  ]) {
+    await writeFile(join(temporary, `web.${extension}`), `${importLine}
+async function main() {
+  let calls=0
+  const web=createDeepSeekWebProvider({apiKey:'offline-key',fetch:async(url,init)=>{
+    calls++
+    assert.equal(url,'https://api.deepseek.com/v1/tools/fetch')
+    assert.equal(init.redirect,'error')
+    assert.deepEqual(JSON.parse(init.body),{url:'https://example.test/'})
+    return new Response(JSON.stringify({title:'Page',content:'# Offline'}))
+  }})
+  const result=await web.fetch({url:'https://example.test/'})
+  assert.equal(result.contentMarkdown,'# Offline')
+  assert.equal(result.provenance.untrusted,true)
+  assert.equal(result.provenance.upstreamTruncation,'unknown')
+  await assert.rejects(web.search({query:' '}),error=>error instanceof WebProviderError && error.requestState==='not_started')
+  assert.equal(calls,1)
+}
+main().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`web.${extension}`], temporary)
+  }
+  for (const extension of ['mts', 'cts']) {
+    await writeFile(join(temporary, `web-types.${extension}`), `
+import {createDeepSeekWebProvider} from '@ayayaq/vivi/web/deepseek'
+import type {DeepSeekWebProviderOptions} from '@ayayaq/vivi/web/deepseek'
+import {WebProviderError} from '@ayayaq/vivi/web'
+import type {WebProvider,WebSearchRequest,WebFetchRequest,WebSearchResponse,WebFetchResponse,WebRequestState,WebProviderErrorCode} from '@ayayaq/vivi/web'
+import type {ModelProvider} from '@ayayaq/vivi'
+const options:DeepSeekWebProviderOptions={apiKey:async()=>'offline-key',maxContentChars:1000,beforeRequest:async(intent,signal)=>{
+  const operation:'search'|'fetch'=intent.operation
+  if(intent.operation==='search') { const count:number=intent.request.count; void count }
+  else { const url:string=intent.request.url; void url }
+  void [operation,signal]
+}}
+const web:WebProvider=createDeepSeekWebProvider(options)
+const search:WebSearchRequest={query:'Vivi',count:5,includeContent:true}
+const fetchRequest:WebFetchRequest={url:'https://example.test/'}
+async function consume():Promise<void>{
+  const results:WebSearchResponse=await web.search(search,new AbortController().signal)
+  const page:WebFetchResponse=await web.fetch(fetchRequest)
+  const evidence:true=results.provenance.untrusted
+  const completeness:'unknown'=page.provenance.upstreamTruncation
+  const content:string=page.contentMarkdown
+  const code:WebProviderErrorCode='timeout'
+  const state:WebRequestState='unknown'
+  const error=new WebProviderError('offline',code,'Sanitized',state)
+  void [evidence,completeness,content,error]
+}
+// @ts-expect-error WebProvider is independent of the model-generation protocol.
+const model:ModelProvider=web
+// @ts-expect-error API endpoints are fixed, not part of the host factory contract.
+createDeepSeekWebProvider({apiKey:'offline-key',baseURL:'https://example.test/'})
+// @ts-expect-error The original user question is not part of the search request.
+web.search({query:'Vivi',ori_question:'Private question'})
+void [consume,model]
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `web-types.${extension}`], temporary)
+  }
+  for (const required of ['docs/DEEPSEEK.md', 'src/providers/deepseek.ts', 'dist/providers/deepseek.js',
+    'dist/providers/deepseek.d.ts', 'dist/cjs/providers/deepseek.js', 'dist/cjs/providers/deepseek.d.ts']) {
+    assert(paths.has(required), `Package is missing ${required}`)
+  }
+  for (const [extension, imports] of [
+    ['mjs', "import assert from 'node:assert/strict'\nimport {createDeepSeekProvider} from '@ayayaq/vivi/providers/deepseek'\nimport {normalizeModelCapabilities} from '@ayayaq/vivi/providers/models'"],
+    ['cjs', "const assert=require('node:assert/strict')\nconst {createDeepSeekProvider}=require('@ayayaq/vivi/providers/deepseek')\nconst {normalizeModelCapabilities}=require('@ayayaq/vivi/providers/models')"]
+  ]) {
+    await writeFile(join(temporary, `deepseek-consumer.${extension}`), `${imports}
+;(async () => {
+  const body=[]
+  const provider=createDeepSeekProvider({apiKey:'offline',model:'deepseek-flash',fetch:async (url,init)=>{
+    assert.equal(url,'https://api.deepseek.com/chat/completions');body.push(JSON.parse(init.body))
+    return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{role:'assistant',content:'Done',reasoning_content:'Retained'}}],usage:{prompt_tokens:3,completion_tokens:2,prompt_cache_hit_tokens:1,prompt_cache_miss_tokens:2}}))
+  }})
+  const input={messages:[{kind:'message',role:'user',content:'Continue'}],tools:[]}
+  const result=await provider.generate(input,new AbortController().signal,{maxOutputTokens:100})
+  assert.equal(result.providerState.provider,'deepseek:deepseek-flash');assert.equal(result.usage.cachedInputTokens,1)
+  assert.equal(result.usage.cacheWriteInputTokens,undefined);assert.equal(body[0].max_tokens,100)
+  const capabilities=normalizeModelCapabilities({apiVersion:1,provider:'deepseek',protocol:'chat-completions',model:{id:'deepseek-flash',context_window:1048576,max_output_tokens:393216}})
+  assert.equal(capabilities.contextWindow,1048576);assert.equal(capabilities.tools,'supported')
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`deepseek-consumer.${extension}`], temporary)
+  }
+  for (const [extension, imports] of [
+    ['mts', "import * as core from '@ayayaq/vivi'\nimport * as deepseek from '@ayayaq/vivi/providers/deepseek'\nimport * as models from '@ayayaq/vivi/providers/models'\nimport * as decisions from '@ayayaq/vivi/decisions'"],
+    ['cts', "import core = require('@ayayaq/vivi')\nimport deepseek = require('@ayayaq/vivi/providers/deepseek')\nimport models = require('@ayayaq/vivi/providers/models')\nimport decisions = require('@ayayaq/vivi/decisions')"]
+  ]) {
+    await writeFile(join(temporary, `deepseek-types.${extension}`), `${imports}
+const options: deepseek.DeepSeekProviderOptions = {apiKey:'offline',model:'deepseek-flash',stream:true,reasoning:{mode:'effort',effort:'high'},supportedReasoningEfforts:['none','low','high','max']}
+const provider: core.ModelProvider = deepseek.createDeepSeekProvider(options)
+const capabilities: models.ModelCapabilities = models.normalizeModelCapabilities({apiVersion:1,provider:'deepseek',protocol:'chat-completions',model:{id:'deepseek-flash'}})
+const native: core.JsonObject[] = deepseek.projectDeepSeekHistory([],options.model)
+const historyOptions: deepseek.DeepSeekHistoryOptions = {tools:true,thinking:true}
+deepseek.projectDeepSeekHistory([],options.model,historyOptions)
+// @ts-expect-error effective history settings are boolean
+deepseek.projectDeepSeekHistory([],options.model,{tools:'enabled'})
+// @ts-expect-error default is a separate reasoning mode
+deepseek.createDeepSeekProvider({...options,reasoning:{mode:'effort',effort:'default'}})
+// @ts-expect-error OpenRouter routing is not a DeepSeek option
+deepseek.createDeepSeekProvider({...options,requireSupportedParameters:true})
+// @ts-expect-error chat support does not add a decision reviewer
+decisions.createDeepSeekDecisionProvider({apiKey:'offline'})
+void provider;void capabilities;void native
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `deepseek-types.${extension}`], temporary)
+  }
   const presentationFixture = JSON.stringify({ version: 1, callId: 'installed-call',
     name: 'offline', status: 'approval_required', effect: 'unknown',
     source: { reference: 'owned://installed-source', revision: 'original' },
@@ -158,6 +275,23 @@ assert.equal(presentation.toolPresentationView(snapshot).details[1].text,'Safe f
 assert(Object.isFrozen(snapshot.arguments.data))
 `)
     run(process.execPath, [`presentation.${extension}`], temporary)
+  }
+  for (const [extension, importLine] of [
+    ['mjs', "import assert from 'node:assert/strict'; import * as core from '@ayayaq/vivi'"],
+    ['cjs', "const assert=require('node:assert/strict'); const core=require('@ayayaq/vivi')"]
+  ]) {
+    await writeFile(join(temporary, `context.${extension}`), `${importLine}
+;(async()=>{
+  const messages=Array.from({length:12},(_,i)=>({kind:'message',role:'user',content:'old '+i+' '+('x'.repeat(200))}))
+  const provider={async generate(input,signal,options){assert.deepEqual(input.tools,[]);assert.equal(options.purpose,'context-summary');return {content:'compact facts',toolCalls:[]}}}
+  const input={provider,messages,tools:[],context:{sourceId:'packed',keepRecentMessages:2}}
+  const result=await core.compactContext(input)
+  core.validateContextCheckpoint(result.checkpoint)
+  assert.equal(result.checkpoint.version,1)
+  assert(core.measureContext({...input,context:{...input.context,checkpoint:result.checkpoint}}).usage.inputTokens<core.measureContext(input).usage.inputTokens)
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`context.${extension}`], temporary)
   }
   run(process.execPath, [join(installed, 'examples/tool-presentation.mjs')], temporary)
   for (const extension of ['mts', 'cts']) {
