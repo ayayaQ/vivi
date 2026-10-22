@@ -49,6 +49,13 @@ projection. Gaps, conflicting IDs, unknown versions, malformed order and hostile
 throw atomically. Receipts keep hashes/byte counts, never old message bodies. Independent
 reported token totals and permanently omitted cache counters retain runner semantics.
 
+Full acceptance and terminal-transition validation requires these ordered folds:
+`applyAgentRunRecord` or `projectAgentRunRecords`. The session `decodeAgentRecord`
+intentionally preserves legacy no-steering settlement compatibility, checking suffix
+rounds/content without enforcing that a text-only assistant ends acceptance. The ordered
+fold enforces that transition for accepted deltas and unseen terminal output; continuation
+after a text-only assistant requires intervening admitted user input.
+
 A terminal may include unseen canonical output and ordered cleanup results after a hook
 failure. It cannot change accepted assistants, input or IDs. An accepted generic result
 can be replaced only with the same exact call/name, original source reference plus new
@@ -117,3 +124,14 @@ snapshot per turn. Cross-turn snapshots still cost approximately N × H for N tu
 history size H in the worst case. Limits fail closed; efficient cross-turn persistence and
 optional sanitized bootstrap are outside this version. Production CLI-20/Desktop-14
 migration remains separately reviewed after verified publication.
+
+## Unreleased steering extension
+
+Optional queued-message steering adds `user_message_accepted` canonical updates and
+matching run records. These append user input only at completed assistant/tool boundaries,
+with exact current-round matching and no usage increment. Intervening user input permits
+continuation after a text-only response; it cannot split pending calls. Terminal snapshots
+can retain unseen admitted users after cancellation or hook failure. All identities and
+provenance remain immutable. Published `0.11.0` readers fail closed on these new records;
+no-steering record behavior is unchanged. See [STEERING.md](STEERING.md) for the queue,
+acknowledgement, budget, and recovery contract.

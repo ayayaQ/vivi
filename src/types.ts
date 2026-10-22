@@ -119,6 +119,8 @@ export type AgentEvent =
 export type AgentAcceptedUpdate =
   | { type: 'assistant_accepted'; message: AssistantMessage; round: number; usage?: Usage; aggregateUsage: Usage }
   | { type: 'tool_result_accepted'; message: ToolResultMessage; round: number }
+  /** Host-queued user input admitted after this completed provider round; adds no usage. */
+  | { type: 'user_message_accepted'; message: Message; round: number }
 
 export interface RunAgentOptions {
   /** Opt-in provider-facing context management. Canonical messages are never replaced. */
@@ -136,6 +138,12 @@ export interface RunAgentOptions {
    * Awaited in order; failure is event_error. Hosts own durable commit and admitted-write drain.
    * Cleanup closures are in final AgentResult, not additional callbacks. */
   onAccepted?(update: AgentAcceptedUpdate): void | Promise<void>
+  /** Optional host queue pull after a complete assistant/tool batch, only while another
+   * provider round is available. Initial history and returned user Messages require exact
+   * canonical fields, without application metadata. Returns occurrences in FIFO order. Captured
+   * once; awaited with abort. A throw/rejection is event_error; invalid data is invalid_input.
+   * Hosts retain messages until onAccepted/final history confirms exact acceptance. */
+  getSteeringMessages?(context: { signal: AbortSignal }): readonly Message[] | Promise<readonly Message[]>
 }
 
 export interface AgentError {

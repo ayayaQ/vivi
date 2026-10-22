@@ -99,7 +99,7 @@ reviewed release and verified published bytes.
 - `ModelProvider.generate({ messages, tools }, signal)`: returns `{ content, toolCalls }` with optional
   `usage: { inputTokens, outputTokens, totalTokens, cachedInputTokens?, cacheWriteInputTokens? }`
   and `providerState`
-- `runAgent({ provider, messages, tools, executeTool, signal?, maxRounds?, onEvent?, onAccepted? })`: returns
+- `runAgent({ provider, messages, tools, executeTool, signal?, maxRounds?, onEvent?, onAccepted?, getSteeringMessages? })`: returns
   `{ status, history, content, rounds, usage, error? }`
 
 See the [exported types](../src/types.ts) for the complete API. The result status is `completed`,
@@ -147,6 +147,28 @@ a thrown/rejected callback returns `event_error`, and cancellation remains promp
 closures are available only in the final `AgentResult`. When omitted, existing callback
 ordering and scheduling are unchanged. The update does not certify host persistence or
 external effects. See [ordered records and host commit obligations](AGENT_STREAM.md).
+
+## Opt-in queued-message steering (unreleased)
+
+`getSteeringMessages({ signal })` returns a FIFO array of plain-JSON user `Message`s,
+synchronously or asynchronously. Core captures it once and polls only after a complete
+assistant/tool batch and `round_completed`, with another provider round available. It
+never polls before the initial request or splits a multi-tool batch. Admitted input after
+a text-only response continues generation. `maxRounds` still bounds provider responses;
+an exhausted budget leaves the host queue untouched.
+
+When this callback is enabled, initial history and returned messages require exact
+canonical fields compatible with durable history records. Host metadata stays in a
+sidecar; user messages contain only `kind`, `role`, and `content`. Omitting the callback
+preserves published initial-history validation and metadata retention, as does
+`validateHistory`. The full batch is validated before each FIFO occurrence is cloned
+independently for sequential admission, including repeated references to one host object. Each admitted user
+receives a frozen `user_message_accepted` update with the completed round, adding no usage.
+Callback throws/rejections are `event_error`; invalid returned batches are `invalid_input`.
+Abort races uncooperative waits and late settlements are ignored. Admission can precede
+a failing acceptance hook, so hosts retain queued entries until exact FIFO-occurrence
+reconciliation against acceptance updates and final history. See [STEERING.md](STEERING.md)
+for queue acknowledgement, terminal replay, and host-owned force-send cancellation.
 
 ## Transcript and provider adapters
 

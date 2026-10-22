@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createHash } from 'node:crypto'
 import type { Usage } from '../types.js'
-import { assertHistory } from '../validation.js'
+import { assertCanonicalHistoryFields, assertHistory } from '../validation.js'
 import { assertEventJson, captureEventArray, eventObject, eventText } from './data.js'
 import type {
   AgentHistoryEntry, AgentProjection, AgentRecordSource, AgentRunSettlement, CreateRunSettlementOptions,
@@ -94,13 +94,12 @@ export function assertAgentHistoryEntry(entry: unknown): asserts entry is AgentH
   identity(entry.id); source(entry.source)
   const message = entry.message
   assertRecord(eventObject(message), 'Invalid history message')
-  if (message.kind === 'message') keys(message, ['kind', 'role', 'content'])
-  else if (message.kind === 'assistant') {
-    keys(message, ['kind', 'content', 'toolCalls'], ['providerState'])
+  assertCanonicalHistoryFields(message)
+  if (message.kind === 'assistant') {
     assertRecord(Array.isArray(message.toolCalls), 'Invalid tool calls')
-    for (const call of message.toolCalls) { keys(call, ['id', 'name', 'arguments']); identity(call.id); identity(call.name) }
-    if ('providerState' in message) { keys(message.providerState, ['provider', 'items']); identity(message.providerState.provider) }
-  } else keys(message, ['kind', 'callId', 'name', 'content'], ['isError'])
+    for (const call of message.toolCalls) { assertRecord(eventObject(call), 'Invalid tool call'); identity(call.id); identity(call.name) }
+    if ('providerState' in message) { assertRecord(eventObject(message.providerState), 'Invalid provider state'); identity(message.providerState.provider) }
+  }
 }
 
 function snapshot(value: unknown): asserts value is AgentRecordSnapshot {
@@ -130,7 +129,53 @@ function snapshot(value: unknown): asserts value is AgentRecordSnapshot {
   usage(value.usage)
 }
 
-/** Decode bounded v1 records. Reject unknown fields; never fall back to an empty history. */
+/** Steering is canonical output only after a completed provider round and tool batch. */
+function outputSuffix(history: readonly AgentHistoryEntry[], final: AgentRunSettlement): void {
+  // Preserve the v1 no-steering snapshot contract; the ordered-run fold retains
+  // its stronger acceptance transitions for those existing records.
+  if (!history.some(entry => entry.message.kind === 'message')) {
+    const accepted = history.filter(entry => entry.message.kind === 'assistant')
+    assertRecord(accepted.length === final.rounds, 'Settlement rounds do not match accepted suffix')
+    assertRecord(final.content === (accepted.at(-1)?.message.content ?? ''), 'Settlement content does not match accepted suffix')
+    return
+  }
+  let pending: readonly { readonly id: string; readonly name: string }[] = []
+  let lastTurn: AgentHistoryEntry['message'] | undefined
+  let lastAssistant: AgentHistoryEntry['message'] | undefined
+  let rounds = 0
+  for (const entry of history) {
+    const message = entry.message
+    if (message.kind === 'message') {
+      assertRecord(message.role === 'user' && rounds > 0,
+        'Settled output suffix cannot contain new user/system input before an accepted round')
+      assertRecord(pending.length === 0, 'Settled user message cannot split pending calls')
+      lastTurn = message
+    } else if (message.kind === 'assistant') {
+      assertRecord(pending.length === 0 && (!lastTurn || lastTurn.kind === 'message' ||
+        (lastTurn.kind === 'assistant' && lastTurn.toolCalls.length > 0)),
+        'Settled assistant cannot discard pending calls or follow a text-only assistant')
+      pending = message.toolCalls.map(call => ({ id: call.id, name: call.name }))
+      lastTurn = message; lastAssistant = message; rounds++
+    } else {
+      assertRecord(pending[0]?.id === message.callId && pending[0]?.name === message.name,
+        'Settled result must match the next pending call')
+      pending = pending.slice(1)
+    }
+  }
+  assertRecord(pending.length === 0, 'Settled output suffix contains unanswered tool calls')
+  assertRecord(rounds === final.rounds, 'Settlement rounds do not match accepted suffix')
+  assertRecord(final.content === (lastAssistant?.content ?? ''), 'Settlement content does not match accepted suffix')
+  if (final.status === 'completed') assertRecord(rounds > 0 && history.at(-1)?.message.kind === 'assistant' &&
+    lastAssistant?.kind === 'assistant' && lastAssistant.toolCalls.length === 0,
+    'Completed run requires an accepted text-only final assistant')
+}
+
+/**
+ * Decode bounded v1 records. Reject unknown fields; never fall back to an empty history.
+ * Legacy no-steering settlements retain snapshot compatibility without enforcing all
+ * run acceptance transitions. Use applyAgentRunRecord/projectAgentRunRecords for the
+ * full ordered acceptance and terminal-transition validation.
+ */
 export function decodeAgentRecord(input: unknown): DurableAgentRecord {
   assertEventJson(input, AGENT_RECORD_LIMITS.bytes, { nodes: AGENT_RECORD_LIMITS.nodes, depth: AGENT_RECORD_LIMITS.depth })
   assertRecord(eventObject(input) && input.version === 1, 'Unsupported agent record version')
@@ -152,10 +197,7 @@ export function decodeAgentRecord(input: unknown): DurableAgentRecord {
       (input.inputHistoryLength as number) <= input.snapshot.history.length, 'Invalid canonical input boundary')
     assertHistory(input.snapshot.history.slice(0, input.inputHistoryLength as number).map(entry => entry.message))
     const suffix = input.snapshot.history.slice(input.inputHistoryLength as number)
-    assertRecord(suffix.every(entry => entry.message.kind !== 'message'), 'Settled output suffix cannot contain new user/system input')
-    const accepted = suffix.filter(entry => entry.message.kind === 'assistant')
-    assertRecord(accepted.length === (input.settlement as unknown as AgentRunSettlement).rounds, 'Settlement rounds do not match accepted suffix')
-    assertRecord((input.settlement as unknown as AgentRunSettlement).content === (accepted.at(-1)?.message.content ?? ''), 'Settlement content does not match accepted suffix')
+    outputSuffix(suffix, input.settlement as unknown as AgentRunSettlement)
   }
   return freeze(structuredClone(input)) as unknown as DurableAgentRecord
 }

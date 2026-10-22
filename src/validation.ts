@@ -62,6 +62,32 @@ export function assertProviderState(value: unknown): void {
   assert(Array.isArray(value.items), 'Provider state items must be an array')
 }
 
+/** Exact message fields shared by opt-in steering admission and durable history records.
+ * Full JSON, value and transcript-order checks remain in assertHistory. */
+export function assertCanonicalHistoryFields(message: unknown): void {
+  const keys = (value: unknown, required: readonly string[], optional: readonly string[] = []): void => {
+    assert(record(value), 'History fields must be JSON objects')
+    assert(required.every(key => Object.hasOwn(value, key)) &&
+      Object.keys(value).every(key => required.includes(key) || optional.includes(key)),
+    'Invalid or unsupported history message fields')
+  }
+  assert(record(message), 'History message must be an object')
+  if (message.kind === 'message') keys(message, ['kind', 'role', 'content'])
+  else if (message.kind === 'assistant') {
+    keys(message, ['kind', 'content', 'toolCalls'], ['providerState'])
+    assert(Array.isArray(message.toolCalls), 'Assistant toolCalls must be an array')
+    for (const call of message.toolCalls) keys(call, ['id', 'name', 'arguments'])
+    if ('providerState' in message) keys(message.providerState, ['provider', 'items'])
+  } else if (message.kind === 'tool_result') keys(message, ['kind', 'callId', 'name', 'content'], ['isError'])
+  else throw new Error('Invalid history message kind')
+}
+
+/** Steering uses the record-compatible exact fields; published legacy validation stays permissive. */
+export function assertCanonicalHistory(messages: unknown): asserts messages is HistoryMessage[] {
+  assertHistory(messages)
+  for (const message of messages) assertCanonicalHistoryFields(message)
+}
+
 export function assertHistory(messages: unknown, allowInterrupted = false): asserts messages is HistoryMessage[] {
   assertJson(messages)
   assert(Array.isArray(messages), 'Messages must be an array')

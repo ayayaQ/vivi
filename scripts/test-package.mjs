@@ -50,6 +50,7 @@ try {
     'dist/events/stream.js', 'dist/events/stream.d.ts', 'dist/cjs/events/stream.js', 'dist/cjs/events/stream.d.ts']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
+  assert(paths.has('docs/STEERING.md'), 'Package is missing docs/STEERING.md')
   for (const required of ['docs/EXTENSION_SCOPES.md', 'examples/extension-scope.mjs']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
@@ -101,6 +102,46 @@ try {
   await writeFile(join(temporary, 'all-subpaths.cjs'), `const assert=require('node:assert/strict')\n${specifiers.map(specifier => `assert(Object.keys(require(${JSON.stringify(specifier)})).length > 0)`).join('\n')}\n`)
   run(process.execPath, ['all-subpaths.mjs'], temporary)
   run(process.execPath, ['all-subpaths.cjs'], temporary)
+  for (const [extension, imports] of [
+    ['mjs', "import assert from 'node:assert/strict'; import { runAgent } from '@ayayaq/vivi'; import { createAgentAcceptedRecord } from '@ayayaq/vivi/events/stream'"],
+    ['cjs', "const assert=require('node:assert/strict'); const { runAgent }=require('@ayayaq/vivi'); const { createAgentAcceptedRecord }=require('@ayayaq/vivi/events/stream')"]
+  ]) {
+    await writeFile(join(temporary, `steering.${extension}`), `${imports}
+;(async () => {
+  let rounds=0, pulls=0
+  const updates=[]
+  const queued={kind:'message',role:'user',content:'Steer'}
+  const result=await runAgent({ messages:[{kind:'message',role:'user',content:'Start'}], tools:[],
+    provider:{async generate(){return {content:'Round '+(++rounds),toolCalls:[]}}},
+    async executeTool(){throw Error('No tools')},
+    getSteeringMessages(){return ++pulls===1 ? [queued,queued] : []},
+    onAccepted(update){updates.push(update)} })
+  assert.equal(result.status,'completed'); assert.equal(result.rounds,2)
+  assert.deepEqual(result.history.map(message=>message.kind),['message','assistant','message','message','assistant'])
+  assert.notEqual(result.history[2],result.history[3]); assert.notEqual(result.history[2],queued)
+  const update=updates.find(item=>item.type==='user_message_accepted')
+  assert.equal(update.round,1); assert(Object.isFrozen(update.message)); assert(!('aggregateUsage' in update))
+  const source={reference:'owned://packaged-steering'}
+  const record=createAgentAcceptedRecord({envelope:{version:1,scope:'run',sessionId:'session',runId:'run',
+    eventId:'event',sequence:1,previousEventId:null,source},update,historyId:'queued-user',source})
+  assert.equal(record.type,'user_message_accepted'); assert.equal(record.entry.id,'queued-user')
+  assert(Object.isFrozen(record.entry.source)); assert(!('usage' in record))
+  result.history[2].content='Caller edit'; assert.equal(result.history[3].content,'Steer')
+  const metadata={kind:'message',role:'user',content:'Input',metadata:{localId:'input-1'}}
+  const common={messages:[metadata],tools:[],provider:{async generate(){return {content:'Done',toolCalls:[]}}},
+    async executeTool(){throw Error('No tools')}}
+  const legacy=await runAgent(common); assert.equal(legacy.status,'completed')
+  assert.deepEqual(legacy.history[0],metadata)
+  const strict=await runAgent({...common,getSteeringMessages(){return []}})
+  assert.equal(strict.status,'error'); assert.equal(strict.error.code,'invalid_input')
+  const invalid=await runAgent({...common,messages:[{kind:'message',role:'user',content:'Start'}],
+    getSteeringMessages(){return [queued,metadata]}})
+  assert.equal(invalid.status,'error'); assert.equal(invalid.error.code,'invalid_input')
+  assert.equal(invalid.history.length,2)
+})().catch(error=>{console.error(error);process.exitCode=1})
+`)
+    run(process.execPath, [`steering.${extension}`], temporary)
+  }
   for (const [extension, importLine] of [
     ['mjs', "import assert from 'node:assert/strict'; import {WebProviderError} from '@ayayaq/vivi/web'; import {createDeepSeekWebProvider} from '@ayayaq/vivi/web/deepseek'"],
     ['cjs', "const assert=require('node:assert/strict'); const {WebProviderError}=require('@ayayaq/vivi/web'); const {createDeepSeekWebProvider}=require('@ayayaq/vivi/web/deepseek')"]
@@ -272,6 +313,25 @@ const status: presentation.ToolPresentationStatus = 'approved'
 void status
 `)
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `presentation.${extension}`], temporary)
+  }
+  for (const extension of ['mts', 'cts']) {
+    await writeFile(join(temporary, `steering.${extension}`), `${extension === 'mts'
+      ? "import * as core from '@ayayaq/vivi'"
+      : "import core=require('@ayayaq/vivi')"}
+const queue: readonly core.Message[]=[{kind:'message',role:'user',content:'Steer'}]
+const pull: core.RunAgentOptions['getSteeringMessages']=async ({signal})=>{void signal.aborted;return queue}
+const hook: core.RunAgentOptions['onAccepted']=(update)=>{
+  if(update.type==='user_message_accepted'){
+    const round: number=update.round
+    const message: core.Message=update.message
+    // @ts-expect-error user input carries no usage
+    void update.aggregateUsage
+    void round;void message
+  }
+}
+void pull;void hook
+`)
+    run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `steering.${extension}`], temporary)
   }
   assert.deepEqual(manifest.exports['./decisions'], {
     import: { types: './dist/decisions.d.ts', default: './dist/decisions.js' },
