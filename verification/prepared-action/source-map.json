@@ -1,0 +1,8 @@
+{
+  "baselineCommit": "1a8459093e68f1965b7819173a5c36280351f2ca",
+  "sha256": {
+    "src/decisions/actions.ts": "520afc16672591dcbd60fd15fd4eec15265ae8d53d3d29e054fa9449ad7ebdd7",
+    "src/decisions/validation.ts": "a905af0c55fa354bec635f91042dca95736c7416e47ea5f02d3eb0bbf6f9a6df",
+    "src/decisions/types.ts": "5959a5143f56527ab73100ac69dd39ea0dfa62a27e0333fecaaeb0925720837a"
+  }
+}

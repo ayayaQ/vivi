@@ -1,0 +1,8 @@
+# This routes review; enforcement additionally requires repository branch protection.
+/verification/prepared-action/ @ayayaQ
+/.github/workflows/verify-prepared-action.yml @ayayaQ
+/.github/CODEOWNERS @ayayaQ
+/src/decisions/actions.ts @ayayaQ
+/src/decisions/validation.ts @ayayaQ
+/src/decisions/types.ts @ayayaQ
+/package.json @ayayaQ
