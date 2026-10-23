@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,7 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        # PRs use the supported baseline; main/manual retain the full matrix.
+        node: ${{ fromJSON(github.event_name == 'pull_request' && '[22]' || '[22, 24]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,12 +31,29 @@ jobs:
       - run: npm ci
       - run: npm run check
 
+  compatibility:
+    name: Linux package smoke (Node 24)
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/test-package-smoke.mjs
+      - run: node examples/inventory.mjs
+      - run: node examples/model-capabilities.mjs
+
   mcp-windows:
     name: Windows compatibility (Node ${{ matrix.node }})
     runs-on: windows-latest
     strategy:
       matrix:
-        node: [22, 24]
+        # PRs use the supported baseline; main/manual retain the full matrix.
+        node: ${{ fromJSON(github.event_name == 'pull_request' && '[22]' || '[22, 24]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -79,11 +98,15 @@ jobs:
   summary:
     name: CI summary
     if: ${{ always() }}
-    needs: [check, mcp-windows, prepared-action]
+    needs: [check, compatibility, mcp-windows, prepared-action]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Test CI gate policy
+        run: python3 scripts/test-ci-policy.py
       - name: Require every check to succeed
         env:
+          EVENT_NAME: ${{ github.event_name }}
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           python3 - <<'PYTHON'
@@ -92,11 +115,16 @@ jobs:
           import sys
 
           needs = json.loads(os.environ['NEEDS_JSON'])
-          expected = {'check', 'mcp-windows', 'prepared-action'}
+          event = os.environ['EVENT_NAME']
+          if event not in {'pull_request', 'push', 'workflow_dispatch'}:
+              sys.exit(f'Unexpected CI event: {event}')
+          expected = {'check': 'success', 'mcp-windows': 'success',
+                      'prepared-action': 'success',
+                      'compatibility': 'success' if event == 'pull_request' else 'skipped'}
           for job, status in sorted(needs.items()):
               print(f"{job}: {status.get('result', 'missing')}")
-          if set(needs) != expected or any(
-              status.get('result') != 'success' for status in needs.values()
+          if set(needs) != set(expected) or any(
+              needs[job].get('result') != result for job, result in expected.items()
           ):
-              sys.exit('Every required job must succeed; failure, cancellation, and skips are not accepted.')
+              sys.exit('CI topology or result mismatch; only the main/manual PR-only smoke skip is accepted.')
           PYTHON
