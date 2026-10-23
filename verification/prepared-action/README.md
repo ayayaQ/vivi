@@ -102,13 +102,15 @@ reassess the abstraction boundary. Preserve all enum and precedence coverage.
 CODEOWNERS requests the repository owner's review for this folder, mapped source,
 the workflow, package command and CODEOWNERS itself. Enforced protection requires
 a repository administrator to require code-owner review and the
-`Prepared-action Lean verification / prepared-action` check on the protected
-branch; this change does not configure repository settings. Without those
+`CI summary` check from `Core checks` on the protected branch. The summary
+requires Linux, Windows, and Lean success. Existing required-check names need
+separate administrator review; this change does not configure repository settings. Without those
 settings, ownership and source hashes are review aids, not an enforcement claim.
 
-The isolated Linux CI workflow pins action commits and Lean archive bytes. It
-runs on pushes and PRs without secrets or write permissions. Local passing checks
-do not establish that hosted CI has run. Existing runtime CI is unchanged.
+The Linux Lean job in `Core checks` pins action commits and Lean archive bytes.
+It runs on main pushes and PRs without secrets or write permissions. Local
+passing checks do not establish that hosted CI has run. Runtime check coverage
+is unchanged; see [CI](../../docs/CI.md) for job names and build reuse.
 The npm publish allowlist excludes `verification/` and `.github/`, so no Lean
 binary/proof tool or model is shipped to users. `verify:prepared-action` is a
 repository maintenance command, not a command supported in an installed package.
