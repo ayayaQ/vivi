@@ -210,11 +210,14 @@
   ],
   "scripts": {
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/finish-build.mjs",
-    "test": "npm run build && node --test test/*.test.mjs",
-    "check": "npm test && npm run example && npm run test:package",
-    "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs && node examples/extension-scope.mjs && node examples/agent-records.mjs && node examples/agent-stream.mjs && node examples/tool-presentation.mjs && node examples/questions.mjs",
-    "test:package": "npm run build && node scripts/test-package.mjs",
-    "verify:prepared-action": "npm run build && node --test verification/prepared-action/audit.test.mjs && node verification/prepared-action/check.mjs"
+    "test": "npm run build && npm run test:built",
+    "check": "npm run build && npm run test:built && npm run example:built && npm run test:package:built",
+    "example": "npm run build && npm run example:built",
+    "test:package": "npm run build && npm run test:package:built",
+    "verify:prepared-action": "npm run build && node --test verification/prepared-action/audit.test.mjs && node verification/prepared-action/check.mjs",
+    "test:built": "node --test test/*.test.mjs",
+    "example:built": "node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs && node examples/extension-scope.mjs && node examples/agent-records.mjs && node examples/agent-stream.mjs && node examples/tool-presentation.mjs && node examples/questions.mjs",
+    "test:package:built": "node scripts/test-package.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",

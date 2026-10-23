@@ -2,13 +2,20 @@ name: Core checks
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
+# Only superseded PR runs cancel. Main pushes retain independent runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
+    name: Linux correctness and package (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,6 +30,7 @@ jobs:
       - run: npm run check
 
   mcp-windows:
+    name: Windows compatibility (Node ${{ matrix.node }})
     runs-on: windows-latest
     strategy:
       matrix:
@@ -49,3 +57,46 @@ jobs:
       - run: node -e "const {createExtensionScope} = require('./dist/cjs/extensions.js'); const scope = createExtensionScope(); const completion = scope.dispose(); if (!scope.signal.aborted || completion !== scope.dispose()) process.exit(1); completion.catch(error => {console.error(error); process.exitCode=1})"
       - run: node -e "const events=require('./dist/cjs/events.js'); const state=events.createAgentProjection('windows-offline'); if(state.sequence!==0 || !Object.isFrozen(state.usage)) process.exit(1)"
       - run: node -e "const events=require('./dist/cjs/events.js'); const stream=require('./dist/cjs/events/stream.js'); const state=stream.createAgentRunProjection(events.createAgentProjection('windows-offline'),'run'); if(state.state!=='waiting' || !Object.isFrozen(state.runUsage)) process.exit(1)"
+
+  prepared-action:
+    name: Prepared-action Lean verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install checksum-pinned Lean 4.34.0
+        run: bash verification/prepared-action/install-lean.sh "$RUNNER_TEMP/vivi-lean"
+      - name: Kernel proofs, trust audit, and actual TypeScript conformance
+        run: npm run verify:prepared-action
+        env:
+          LEAN: ${{ runner.temp }}/vivi-lean/lean-4.34.0-linux/bin/lean
+
+  summary:
+    name: CI summary
+    if: ${{ always() }}
+    needs: [check, mcp-windows, prepared-action]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every check to succeed
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ['NEEDS_JSON'])
+          expected = {'check', 'mcp-windows', 'prepared-action'}
+          for job, status in sorted(needs.items()):
+              print(f"{job}: {status.get('result', 'missing')}")
+          if set(needs) != expected or any(
+              status.get('result') != 'success' for status in needs.values()
+          ):
+              sys.exit('Every required job must succeed; failure, cancellation, and skips are not accepted.')
+          PYTHON
