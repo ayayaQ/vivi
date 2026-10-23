@@ -213,7 +213,8 @@
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm test && npm run example && npm run test:package",
     "example": "npm run build && node examples/inventory.mjs && node examples/model-capabilities.mjs && node examples/memory.mjs && node examples/skills.mjs && node examples/decisions.mjs && node examples/mcp.mjs && node examples/extension-scope.mjs && node examples/agent-records.mjs && node examples/agent-stream.mjs && node examples/tool-presentation.mjs && node examples/questions.mjs",
-    "test:package": "npm run build && node scripts/test-package.mjs"
+    "test:package": "npm run build && node scripts/test-package.mjs",
+    "verify:prepared-action": "npm run build && node --test verification/prepared-action/audit.test.mjs && node verification/prepared-action/check.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",
