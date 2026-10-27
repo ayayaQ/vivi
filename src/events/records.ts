@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createHash } from 'node:crypto'
 import type { Usage } from '../types.js'
-import { assertCanonicalHistoryFields, assertHistory } from '../validation.js'
+import { assertCanonicalHistoryFields, assertHistory, assertToolImages } from '../validation.js'
 import { assertEventJson, captureEventArray, eventObject, eventText } from './data.js'
 import type {
   AgentHistoryEntry, AgentProjection, AgentRecordSource, AgentRunSettlement, CreateRunSettlementOptions,
@@ -89,12 +89,16 @@ function settlement(value: unknown): asserts value is AgentRunSettlement {
   assertRecord((value.status === 'error') === ('error' in value), 'Settlement error must match run status')
 }
 
-export function assertAgentHistoryEntry(entry: unknown): asserts entry is AgentHistoryEntry {
+export function assertAgentHistoryEntry(entry: unknown, version: 1 | 2 = 2): asserts entry is AgentHistoryEntry {
   keys(entry, ['id', 'source', 'message'])
   identity(entry.id); source(entry.source)
   const message = entry.message
   assertRecord(eventObject(message), 'Invalid history message')
   assertCanonicalHistoryFields(message)
+  if (message.kind === 'tool_result' && 'images' in message) {
+    assertRecord(version === 2, 'Tool images require agent record version 2')
+    assertToolImages(message.images)
+  }
   if (message.kind === 'assistant') {
     assertRecord(Array.isArray(message.toolCalls), 'Invalid tool calls')
     for (const call of message.toolCalls) { assertRecord(eventObject(call), 'Invalid tool call'); identity(call.id); identity(call.name) }
@@ -102,12 +106,12 @@ export function assertAgentHistoryEntry(entry: unknown): asserts entry is AgentH
   }
 }
 
-function snapshot(value: unknown): asserts value is AgentRecordSnapshot {
+function snapshot(value: unknown, version: 1 | 2): asserts value is AgentRecordSnapshot {
   keys(value, ['history', 'outcomes', 'usage'])
   assertRecord(Array.isArray(value.history) && value.history.length <= AGENT_RECORD_LIMITS.history, 'History limit exceeded')
   const messageIds = new Set<string>()
   for (const entry of value.history) {
-    assertAgentHistoryEntry(entry)
+    assertAgentHistoryEntry(entry, version)
     assertRecord(!messageIds.has(entry.id), 'Duplicate history identity'); messageIds.add(entry.id)
   }
   assertHistory(value.history.map(entry => entry.message))
@@ -171,14 +175,14 @@ function outputSuffix(history: readonly AgentHistoryEntry[], final: AgentRunSett
 }
 
 /**
- * Decode bounded v1 records. Reject unknown fields; never fall back to an empty history.
+ * Decode bounded v1 text-only and v2 image-capable records. Reject unknown fields; never fall back to an empty history.
  * Legacy no-steering settlements retain snapshot compatibility without enforcing all
  * run acceptance transitions. Use applyAgentRunRecord/projectAgentRunRecords for the
  * full ordered acceptance and terminal-transition validation.
  */
 export function decodeAgentRecord(input: unknown): DurableAgentRecord {
   assertEventJson(input, AGENT_RECORD_LIMITS.bytes, { nodes: AGENT_RECORD_LIMITS.nodes, depth: AGENT_RECORD_LIMITS.depth })
-  assertRecord(eventObject(input) && input.version === 1, 'Unsupported agent record version')
+  assertRecord(eventObject(input) && (input.version === 1 || input.version === 2), 'Unsupported agent record version')
   const envelope = ['version', 'sessionId', 'eventId', 'sequence', 'previousEventId', 'source', 'type', 'snapshot']
   if (input.type === 'session_snapshot') {
     keys(input, [...envelope, 'reason'])
@@ -191,7 +195,7 @@ export function decodeAgentRecord(input: unknown): DurableAgentRecord {
   assertRecord(Number.isSafeInteger(input.sequence) && (input.sequence as number) >= 1 && (input.sequence as number) <= AGENT_RECORD_LIMITS.records, 'Invalid record sequence')
   if (input.previousEventId !== null) identity(input.previousEventId)
   assertRecord((input.sequence === 1) === (input.previousEventId === null), 'Invalid initial record anchor')
-  snapshot(input.snapshot)
+  snapshot(input.snapshot, input.version)
   if (input.type === 'run_settled') {
     assertRecord(Number.isSafeInteger(input.inputHistoryLength) && (input.inputHistoryLength as number) >= 0 &&
       (input.inputHistoryLength as number) <= input.snapshot.history.length, 'Invalid canonical input boundary')
@@ -246,6 +250,7 @@ function checkHistory(previous: AgentProjection, next: DurableAgentRecord): void
     if (a.kind === 'tool_result' && b.kind === 'tool_result') {
       assertRecord(a.callId === b.callId && a.name === b.name, 'Rewrite cannot change result identity')
       if (!privacy) {
+        assertRecord(same(a.images ?? [], b.images ?? []), 'Result reconciliation cannot replace image observations')
         const beforeEvidence = previous.outcomes.find(item => item.callId === a.callId)
         const afterEvidence = next.snapshot.outcomes.find(item => item.callId === a.callId)
         assertRecord(afterEvidence && (!beforeEvidence || !same(beforeEvidence, afterEvidence)), 'Result reconciliation needs refined exact host evidence')

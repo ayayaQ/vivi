@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { HistoryMessage, ToolCall } from './types.js'
+import type { HistoryMessage, ToolCall, ToolImageReference } from './types.js'
 
 export function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -49,6 +49,35 @@ export function identifier(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value === value.trim()
 }
 
+/** Shared bounds for persisted references and provider snapshot resolution. */
+export const TOOL_IMAGE_LIMITS = Object.freeze({ perResult: 4, bytes: 5 * 1024 * 1024, pixels: 16_000_000 })
+
+/** Conservative portable visual budget; not a tokenizer/provider measurement. */
+export function imageInputTokenAllowance(image: ToolImageReference): number {
+  return 4096 + 4096 * Math.ceil(image.width / 512) * Math.ceil(image.height / 512)
+}
+
+export function assertToolImages(value: unknown): asserts value is readonly ToolImageReference[] {
+  assertJson(value)
+  assert(Array.isArray(value) && value.length > 0 && value.length <= TOOL_IMAGE_LIMITS.perResult,
+    'Tool images must contain 1..4 references')
+  const ids = new Set<string>()
+  for (const image of value) {
+    assert(record(image) && Object.keys(image).length === 6 &&
+      ['id', 'sha256', 'mimeType', 'width', 'height', 'byteLength'].every(key => Object.hasOwn(image, key)),
+    'Tool image reference requires exact metadata fields')
+    assert(identifier(image.id) && image.id.length <= 256 && !/[\u0000-\u001f\u007f]/.test(image.id), 'Invalid tool image id')
+    assert(!ids.has(image.id), 'Duplicate tool image id'); ids.add(image.id)
+    assert(typeof image.sha256 === 'string' && /^[a-f0-9]{64}$/.test(image.sha256), 'Invalid tool image sha256')
+    assert(image.mimeType === 'image/png' || image.mimeType === 'image/jpeg', 'Unsupported tool image MIME type')
+    assert(Number.isSafeInteger(image.width) && (image.width as number) > 0 &&
+      Number.isSafeInteger(image.height) && (image.height as number) > 0 &&
+      (image.width as number) * (image.height as number) <= TOOL_IMAGE_LIMITS.pixels, 'Invalid tool image dimensions')
+    assert(Number.isSafeInteger(image.byteLength) && (image.byteLength as number) > 0 &&
+      (image.byteLength as number) <= TOOL_IMAGE_LIMITS.bytes, 'Invalid tool image byte length')
+  }
+}
+
 export function assertCall(value: unknown): asserts value is ToolCall {
   assert(record(value), 'Tool call must be an object')
   assert(identifier(value.id), 'Tool call id must be a nonempty, trimmed string')
@@ -78,7 +107,7 @@ export function assertCanonicalHistoryFields(message: unknown): void {
     assert(Array.isArray(message.toolCalls), 'Assistant toolCalls must be an array')
     for (const call of message.toolCalls) keys(call, ['id', 'name', 'arguments'])
     if ('providerState' in message) keys(message.providerState, ['provider', 'items'])
-  } else if (message.kind === 'tool_result') keys(message, ['kind', 'callId', 'name', 'content'], ['isError'])
+  } else if (message.kind === 'tool_result') keys(message, ['kind', 'callId', 'name', 'content'], ['isError', 'images'])
   else throw new Error('Invalid history message kind')
 }
 
@@ -102,6 +131,7 @@ export function assertHistory(messages: unknown, allowInterrupted = false): asse
       assert(message.callId === expected.id && message.name === expected.name,
         'Tool result must match the next pending call id and name')
       if ('isError' in message) assert(typeof message.isError === 'boolean', 'Tool isError must be boolean')
+      if ('images' in message) assertToolImages(message.images)
       continue
     }
     assert(allowInterrupted || pending.length === 0, 'History contains unanswered tool calls')

@@ -20,6 +20,7 @@ export type {
   RunAgentOptions,
   ToolCall,
   ToolDefinition,
+  ToolImageReference,
   ToolResult,
   ToolResultMessage,
   Usage
@@ -27,3 +28,5 @@ export type {
 
 export { prepareContext, compactContext, measureContext, estimateContext, validateContextCheckpoint, ContextError } from './context.js'
 export type { ContextCheckpoint, ContextOptions, ContextLimits, ContextLimitSource, ContextUsage, ContextInput, PreparedContext, ContextEvent, CompactionReason } from './context.js'
+
+export { TOOL_IMAGE_LIMITS } from './validation.js'

@@ -144,7 +144,7 @@ test('user records capture frozen detached provenance and reject forged usage, r
     const changed = structuredClone(record); changed.entry.message = message
     assert.throws(() => decodeAgentRunRecord(changed))
   }
-  for (const changes of [{ version: 0 }, { version: 2 }, { scope: 'session' }, { type: 'user_accepted' },
+  for (const changes of [{ version: 0 }, { version: 3 }, { scope: 'session' }, { type: 'user_accepted' },
     { usage: zero }, { aggregateUsage: zero }, { approval: true }, { executor: 'restore' }])
     assert.throws(() => decodeAgentRunRecord({ ...record, ...changes }))
   for (const extra of [{ usage: zero }, { aggregateUsage: zero }, { permission: true }])

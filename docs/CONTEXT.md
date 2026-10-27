@@ -162,3 +162,22 @@ Reviewed 2026-10-15; independently implemented, with no copied source code:
   explicit capacity/output reserve, manual/automatic/overflow paths and indivisible-unit limits
 
 The existing CORE-14 hierarchical experiment remains offline and is not this implementation.
+
+## Fresh dispatch prefixes (unreleased)
+
+`runAgent({ getContextPrefix({signal}) { return messages } })` optionally pulls fresh
+ordinary canonical `Message` shapes (`kind: 'message'`, `role: 'system' | 'user'`, string
+`content`) once before each response dispatch, including the single overflow retry.
+The callback may be async and is cancellation-aware even if its promise does not settle.
+It runs before measurement/compaction; that exact detached prefix is then measured and
+used for the ensuing dispatch/tool batch. The host owns instruction scope/revisions;
+core does not scan files or hot-reload a currently executing batch.
+
+Static `context.prefixMessages` precede this dynamic prefix. Without context management,
+the dynamic prefix directly precedes canonical history. Both are provider-only: they never
+enter accepted updates, canonical history, steering, summary source or checkpoint identity.
+A derived user-role prefix is lower-trust context, not a new user request or approval.
+Hosts should frame raw project documents as quoted untrusted data under trusted system
+instructions. Assistant/tool-result shapes and extra fields are rejected. Invalid data is
+`invalid_input`; callback failure is `context_error` without dispatch; abort is `cancelled`.
+Omitting the option preserves existing behavior.

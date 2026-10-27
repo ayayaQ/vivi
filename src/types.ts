@@ -37,12 +37,23 @@ export interface AssistantMessage {
   providerState?: ProviderState
 }
 
+/** Immutable host-owned image snapshot metadata; bytes never belong in history JSON. */
+export interface ToolImageReference {
+  id: string
+  sha256: string
+  mimeType: 'image/png' | 'image/jpeg'
+  width: number
+  height: number
+  byteLength: number
+}
+
 export interface ToolResultMessage {
   kind: 'tool_result'
   callId: string
   name: string
   content: string
   isError?: boolean
+  images?: readonly ToolImageReference[]
 }
 
 export type HistoryMessage = Message | AssistantMessage | ToolResultMessage
@@ -105,6 +116,7 @@ export interface ProviderGenerateOptions {
 export interface ToolResult {
   content: string
   isError?: boolean
+  images?: readonly ToolImageReference[]
 }
 
 export type AgentEvent =
@@ -125,6 +137,11 @@ export type AgentAcceptedUpdate =
 export interface RunAgentOptions {
   /** Opt-in provider-facing context management. Canonical messages are never replaced. */
   context?: ContextOptions
+  /** Fresh ordinary-message provider prefix (system/user only). Pulled once before each response dispatch,
+   * before measurement/compaction, including overflow retry. Never canonical or summarized.
+   * User-role prefix data is derived context, never steering or new user authority.
+   * Hosts own scope/revisions. Throw/rejection is context_error; invalid data is invalid_input. */
+  getContextPrefix?(context: { signal: AbortSignal }): readonly Message[] | Promise<readonly Message[]>
   provider: ModelProvider
   messages: readonly HistoryMessage[]
   tools: readonly ToolDefinition[]

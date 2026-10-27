@@ -19,7 +19,7 @@ import type {
 import { isContextOverflow as providerContextOverflow } from './validation.js'
 import { prepareContext, compactContext, ContextError } from './context.js'
 import type { ContextCheckpoint, ContextUsage, ContextOptions, PreparedContext } from './context.js'
-import { assert, assertCall, assertCanonicalHistory, assertHistory, assertJson, assertProviderState, identifier, record } from './validation.js'
+import { assert, assertCall, assertCanonicalHistory, assertHistory, assertJson, assertProviderState, assertToolImages, identifier, record } from './validation.js'
 
 class RunFailure extends Error {
   constructor(readonly code: AgentError['code'], message: string) {
@@ -79,6 +79,7 @@ function assertToolResult(value: unknown): asserts value is ToolResult {
   assert(record(value), 'Tool result must be an object')
   assert(typeof value.content === 'string', 'Tool result content must be a string')
   if ('isError' in value) assert(typeof value.isError === 'boolean', 'Tool isError must be boolean')
+  if ('images' in value) assertToolImages(value.images)
 }
 
 function assertTools(tools: unknown): asserts tools is ToolDefinition[] {
@@ -155,6 +156,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   let signal: AbortSignal = new AbortController().signal
   let onAccepted: RunAgentOptions['onAccepted']
   let getSteeringMessages: RunAgentOptions['getSteeringMessages']
+  let getContextPrefix: RunAgentOptions['getContextPrefix']
   let checkpoint: ContextCheckpoint | undefined
   let contextUsage: ContextUsage | undefined
 
@@ -174,6 +176,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       assert(options.onEvent === undefined || typeof options.onEvent === 'function', 'onEvent must be a function')
       onAccepted = options.onAccepted
       assert(onAccepted === undefined || typeof onAccepted === 'function', 'onAccepted must be a function')
+      getContextPrefix = options.getContextPrefix
+      assert(getContextPrefix === undefined || typeof getContextPrefix === 'function', 'getContextPrefix must be a function')
       getSteeringMessages = options.getSteeringMessages
       assert(getSteeringMessages === undefined || typeof getSteeringMessages === 'function', 'getSteeringMessages must be a function')
       // The new steering option requires record-compatible input without tightening
@@ -260,10 +264,31 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       ...(options.context.limits ? { limits: snapshot(options.context.limits) } : {}),
       ...(options.context.prefixMessages ? { prefixMessages: snapshot(options.context.prefixMessages) } : {})
     } : undefined
+    let prefix: Message[] = []
+    const pullPrefix = async (): Promise<void> => {
+      if (!getContextPrefix) return
+      let output: unknown
+      try {
+        output = await wait(() => getContextPrefix!({ signal }), signal)
+        checkAbort()
+      } catch (error) {
+        if (signal.aborted || error instanceof Cancelled) throw new Cancelled()
+        throw new RunFailure('context_error', 'Context prefix callback failed; no provider request was dispatched')
+      }
+      try {
+        assertJson(output)
+        const captured: unknown = structuredClone(output)
+        assertCanonicalHistory(captured)
+        for (const message of captured) assert(message.kind === 'message',
+          'Context prefix must contain only canonical user/system messages')
+        prefix = structuredClone(captured) as Message[]
+      } catch (error) { throw new RunFailure('invalid_input', detail(error)) }
+    }
     const prepare = async (overflow = false): Promise<PreparedContext> => {
       try {
         const input = { provider: options.provider, messages: history, tools, context: {
-          ...context!, ...(checkpoint ? { checkpoint } : {})
+          ...context!, ...(checkpoint ? { checkpoint } : {}),
+          prefixMessages: [...(context?.prefixMessages ?? []), ...prefix]
         }, signal, onEvent: emit }
         const prepared = await (overflow ? compactContext(input, 'overflow') : prepareContext(input))
         checkpoint = prepared.checkpoint
@@ -368,10 +393,11 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 
     for (let round = 0; round < maxRounds; round++) {
       checkAbort()
+      if (getContextPrefix) await pullPrefix()
       let prepared = context ? await prepare() : undefined
       let turn: ProviderResult
       try {
-        turn = await generateTurn(prepared?.messages ?? history, prepared?.maxOutputTokens)
+        turn = await generateTurn(prepared?.messages ?? [...prefix, ...history], prepared?.maxOutputTokens)
       } catch (error) {
         if (!isContextOverflow(error)) throw error
         if (!context || context.autoCompact === false) {
@@ -379,6 +405,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         }
         // No assistant or tool has been accepted for this request. Retry only this generation,
         // once, after making its effective input smaller; never replay completed tool effects.
+        if (getContextPrefix) await pullPrefix()
         prepared = await prepare(true)
         try { turn = await generateTurn(prepared.messages, prepared.maxOutputTokens) } catch (retryError) {
           if (isContextOverflow(retryError)) {
@@ -434,7 +461,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
             message = {
               kind: 'tool_result', callId: call.id, name: call.name,
               content: output.content,
-              ...('isError' in output ? { isError: output.isError } : {})
+              ...('isError' in output ? { isError: output.isError } : {}),
+              ...(output.images ? { images: structuredClone(output.images) } : {})
             }
           } catch (error) {
             if (signal.aborted || error instanceof Cancelled) throw new Cancelled()

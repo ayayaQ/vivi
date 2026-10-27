@@ -3,13 +3,15 @@
 import type { HistoryMessage, JsonObject, ModelProvider, ProviderGenerateOptions, ProviderResult, ToolCall, ToolDefinition } from '../types.js'
 import { assertHistory } from '../validation.js'
 import { fail, identifier, isRecord, MAX_ARGUMENT_CHARS, MAX_ITEMS, normalizeCallIds, parseCall, sameCalls, tokenCount, usage } from './shared.js'
-import { configure, estimateRequestContext, eventJson, outputTokenLimit, post, ProviderRequestError, readJson, readSse, request, reservedToolCallIds, throwIfContextOverflow } from './transport.js'
+import { configure, eventJson, outputTokenLimit, post, ProviderRequestError, readJson, readSse, request, reservedToolCallIds, throwIfContextOverflow } from './transport.js'
+import { captureImageOptions, estimateImageRequestContext, assertImageProjectionBounds, imageDataUrls, imageObservation } from './images.js'
+import type { ImageProjectionOptions } from './images.js'
 import type { Config, ProviderOptions } from './transport.js'
 
 export { ProviderRequestError, isContextOverflow } from './transport.js'
 export type { ReasoningEffort, EnabledReasoningEffort, ReasoningSelection } from './transport.js'
-export interface DeepSeekProviderOptions extends ProviderOptions {}
-export interface DeepSeekHistoryOptions {
+export interface DeepSeekProviderOptions extends ProviderOptions, ImageProjectionOptions {}
+export interface DeepSeekHistoryOptions extends ImageProjectionOptions {
   /** Whether the effective request advertises tools. Default false. */
   tools?: boolean
   /** Whether thinking is enabled (including the server default). Default true. */
@@ -65,7 +67,7 @@ function native(message: Extract<HistoryMessage, { kind: 'assistant' }>, model: 
 /** Foreign native state is never replayed. No reasoning is fabricated for portable history.
  * With no tools the API ignores prior reasoning, so callers can omit it from the wire/estimate.
  */
-export function projectDeepSeekHistory(messages: readonly HistoryMessage[], model: string, options: DeepSeekHistoryOptions = {}): JsonObject[] {
+export function projectDeepSeekHistory(messages: readonly HistoryMessage[], model: string, options: DeepSeekHistoryOptions = {}, estimateImages = false): JsonObject[] {
   if (!isRecord(options) || (options.tools !== undefined && typeof options.tools !== 'boolean') ||
       (options.thinking !== undefined && typeof options.thinking !== 'boolean')) {
     throw new ProviderRequestError('DeepSeek', 'configuration', 'DeepSeek history options must use boolean tools and thinking settings')
@@ -73,9 +75,21 @@ export function projectDeepSeekHistory(messages: readonly HistoryMessage[], mode
   try { assertHistory(messages) } catch {
     throw new ProviderRequestError('DeepSeek', 'configuration', 'DeepSeek requires complete, exactly paired agent history')
   }
-  return messages.map((message) => {
-    if (message.kind === 'message') return { role: message.role, content: message.content }
-    if (message.kind === 'tool_result') return { role: 'tool', tool_call_id: message.callId, content: message.content }
+  if (!estimateImages) assertImageProjectionBounds('DeepSeek', messages)
+  const input: JsonObject[] = []
+  let pending = 0
+  let observations: { callId: string; urls: string[] }[] = []
+  for (const message of messages) {
+    if (message.kind === 'message') { input.push({ role: message.role, content: message.content }); continue }
+    if (message.kind === 'tool_result') {
+      input.push({ role: 'tool', tool_call_id: message.callId, content: message.content })
+      const urls = imageDataUrls('DeepSeek', model, message.images, options, estimateImages)
+      if (urls.length) observations.push({ callId: message.callId, urls })
+      pending--
+      if (!pending && observations.length) { input.push(imageObservation(observations)); observations = [] }
+      continue
+    }
+    pending = message.toolCalls.length
     const retained = native(message, model)
     if (!retained && message.toolCalls.length) {
       throw new ProviderRequestError('DeepSeek', 'configuration', 'DeepSeek cannot replay imported tool calls; start a new session or use a portable summary')
@@ -85,8 +99,9 @@ export function projectDeepSeekHistory(messages: readonly HistoryMessage[], mode
     }
     const item = retained ?? { role: 'assistant', content: message.content || null }
     if (!options.tools) delete item.reasoning_content
-    return item
-  })
+    input.push(item)
+  }
+  return input
 }
 
 /** Cache misses are ordinary input, never cache writes. Reasoning is already output usage. */
@@ -236,12 +251,12 @@ class ChatStream {
   }
 }
 
-function requestBody(config: Config, input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
-  options?: Pick<ProviderGenerateOptions, 'maxOutputTokens' | 'purpose'>): JsonObject {
+function requestBody(config: Config, images: ImageProjectionOptions, input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
+  options?: Pick<ProviderGenerateOptions, 'maxOutputTokens' | 'purpose'>, estimateImages = false): JsonObject {
   const limit = outputTokenLimit('DeepSeek', options)
   const tools = options?.purpose === 'context-summary' ? [] : input.tools
   const thinking = !config.reasoning || config.reasoning.effort !== undefined
-  return { model: config.model, messages: projectDeepSeekHistory(input.messages, config.model, { tools: tools.length > 0, thinking }),
+  return { model: config.model, messages: projectDeepSeekHistory(input.messages, config.model, { tools: tools.length > 0, thinking, ...images }, estimateImages),
     ...(tools.length ? { tools: tools.map((tool) => ({ type: 'function', function: {
       name: tool.name, description: tool.description, parameters: tool.parameters
     } })) } : {}),
@@ -256,17 +271,18 @@ function requestBody(config: Config, input: { messages: readonly HistoryMessage[
 export function createDeepSeekProvider(options: DeepSeekProviderOptions): ModelProvider {
   const config = configure(options, 'DeepSeek', 'https://api.deepseek.com', 'chat/completions',
     ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
+  const images = captureImageOptions('DeepSeek', config.model, options)
   return {
     // Official endpoint defaults, reviewed 2026-10-21. Context management clamps
     // this recommendation to host/catalog limits and honors explicit reserves.
     // https://api-docs.deepseek.com/api/create-chat-completion/
     defaultOutputTokens: config.reasoning && config.reasoning.effort === undefined ? 8192
       : config.reasoning?.effort === 'max' ? 131072 : 65536,
-    estimateContext(input, options) { return estimateRequestContext(requestBody(config, input, options)) },
+    estimateContext(input, options) { return estimateImageRequestContext(requestBody(config, images, input, options, true), input.messages) },
     generate(input, signal, options) {
       const reservedIds = reservedToolCallIds('DeepSeek', options)
       return request(config, signal, options, async (context, key) => {
-        const body = requestBody(config, input, options)
+        const body = requestBody(config, images, input, options)
         const response = await post(config, context, key, body)
         const allowTools = Array.isArray(body.tools) && body.tools.length > 0
         const requireReasoning = allowTools && (!config.reasoning || config.reasoning.effort !== undefined)

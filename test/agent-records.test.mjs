@@ -58,7 +58,7 @@ test('ordered full replay and incremental folds are identical; old duplicates re
 })
 
 for (const [name, mutate] of [
-  ['unsupported major version', item => { item.version = 2 }],
+  ['unsupported major version', item => { item.version = 3 }],
   ['unknown record kind', item => { item.type = 'text_delta' }],
   ['unrecognized fields', item => { item.approval = true }],
   ['negative counter', item => { item.snapshot.usage.totalTokens = -1 }],

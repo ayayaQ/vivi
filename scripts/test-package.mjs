@@ -51,6 +51,8 @@ try {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   assert(paths.has('docs/STEERING.md'), 'Package is missing docs/STEERING.md')
+  for (const required of ['docs/IMAGES.md', 'src/providers/images.ts', 'dist/providers/images.js', 'dist/providers/images.d.ts',
+    'dist/cjs/providers/images.js', 'dist/cjs/providers/images.d.ts']) assert(paths.has(required), `Package is missing ${required}`)
   for (const required of ['docs/EXTENSION_SCOPES.md', 'examples/extension-scope.mjs']) {
     assert(paths.has(required), `Package is missing ${required}`)
   }
@@ -462,7 +464,7 @@ assert.deepEqual(projected,events.applyAgentRecord(events.createAgentProjection(
 assert.equal(events.applyAgentRecord(projected,record),projected)
 assert.equal(projected.usage.totalTokens,5)
 assert(Object.isFrozen(projected.history[0].message))
-assert.throws(()=>events.decodeAgentRecord({...record,version:2}))
+assert.throws(()=>events.decodeAgentRecord({...record,version:3}))
 `)
     run(process.execPath, [`events-consumer.${extension}`], temporary)
   }
@@ -1081,6 +1083,42 @@ const result: Promise<decisions.DecisionResult> = decisions.evaluateDecision(req
 void result.then(result => { const outcome: decisions.DecisionOutcome = result.outcome; const current: boolean = decisions.isDecisionCurrent(result,snapshot); void outcome;void current })
 `)
     run(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022', '--lib', 'ES2022,DOM', `decision-types.${extension}`], temporary)
+  }
+  for (const extension of ['mjs', 'cjs']) {
+    const imports = extension === 'mjs' ? "import assert from 'node:assert/strict'; import {runAgent,TOOL_IMAGE_LIMITS} from '@ayayaq/vivi'; import {createAgentAcceptedRecord} from '@ayayaq/vivi/events/stream'" : "const assert=require('node:assert/strict'); const {runAgent,TOOL_IMAGE_LIMITS}=require('@ayayaq/vivi'); const {createAgentAcceptedRecord}=require('@ayayaq/vivi/events/stream')"
+    await writeFile(join(temporary, `image-prefix.${extension}`), `${imports}
+;(async()=>{
+let requests=0,prefixes=0
+const image={id:'snapshot',sha256:'a'.repeat(64),mimeType:'image/png',width:1,height:1,byteLength:10}
+const updates=[]
+const result=await runAgent({messages:[{kind:'message',role:'user',content:'goal'}],tools:[{name:'read_image',description:'offline',parameters:{}}],
+ getContextPrefix(){return [{kind:'message',role:'user',content:'project '+(++prefixes)}]},
+ provider:{async generate({messages}){requests++;assert.equal(messages[0].content,'project '+requests);if(requests===2)assert.deepEqual(messages.at(-1).images,[image]);return requests===1?{content:'',toolCalls:[{id:'one',name:'read_image',arguments:{}}]}:{content:'done',toolCalls:[]}}},
+ async executeTool(){return {content:'observation',images:[image]}},onAccepted(update){updates.push(update)}})
+assert.equal(result.status,'completed');assert.equal(result.history.length,4);assert.equal(prefixes,2);assert.equal(TOOL_IMAGE_LIMITS.perResult,4)
+const source={reference:'owned://fixture'}
+const record=createAgentAcceptedRecord({envelope:{version:2,scope:'run',sessionId:'session',runId:'run',eventId:'event',sequence:1,previousEventId:null,source},historyId:'image',source,update:updates.find(update=>update.type==='tool_result_accepted')})
+assert.deepEqual(record.entry.message.images,[image]);assert(Object.isFrozen(record.entry.message.images[0]))
+})().catch(error=>{console.error(error);process.exitCode=1})`)
+    run(process.execPath,[`image-prefix.${extension}`],temporary)
+  }
+  for (const extension of ['mts', 'cts']) {
+    await writeFile(join(temporary, `image-prefix-types.${extension}`), `
+import {type RunAgentOptions,type ToolImageReference,type ToolResult,TOOL_IMAGE_LIMITS} from '@ayayaq/vivi'
+import {createOpenAIProvider,type OpenAIProviderOptions} from '@ayayaq/vivi/providers/openai'
+import {type AgentRecordEnvelope} from '@ayayaq/vivi/events'
+const prefix:RunAgentOptions['getContextPrefix']=async({signal})=>{void signal;return [{kind:'message',role:'system',content:'frame'},{kind:'message',role:'user',content:'data'}]}
+const image:ToolImageReference={id:'snapshot',sha256:'a'.repeat(64),mimeType:'image/png',width:1,height:1,byteLength:10}
+const result:ToolResult={content:'image',images:[image]}
+const options:OpenAIProviderOptions={apiKey:'offline',model:'gpt-4.1',resolveImage(reference){const known:ToolImageReference=reference;void known;return new Uint8Array(10)}}
+const version:AgentRecordEnvelope['version']=2
+// @ts-expect-error only ordinary messages may be prefixed
+const invalid:RunAgentOptions['getContextPrefix']=()=>[{kind:'assistant',content:'',toolCalls:[]}]
+// @ts-expect-error array is readonly
+result.images?.push(image)
+void prefix;void result;void createOpenAIProvider(options);void version;void invalid;void TOOL_IMAGE_LIMITS
+`)
+    run(process.execPath,[join(root,'node_modules/typescript/bin/tsc'),'--strict','--noEmit','--module','NodeNext','--target','ES2022','--lib','ES2022,DOM',`image-prefix-types.${extension}`],temporary)
   }
   console.log(`Packaged ESM/CommonJS runtime and TypeScript consumers passed (${packed.filename})`)
   console.log(`All ${specifiers.length} public subpaths resolved in both runtimes and declaration modes`)
