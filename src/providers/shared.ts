@@ -3,6 +3,8 @@
 // Generalized from Bot Commander Desktop's agentProviderAdapter.ts; see ATTRIBUTION.md.
 import type { HistoryMessage, JsonObject, JsonValue, ProviderResult, ToolCall } from '../types.js'
 import { ProviderRequestError } from './transport.js'
+import { assertImageProjectionBounds, imageDataUrls, imageObservation } from './images.js'
+import type { ImageProjectionOptions } from './images.js'
 
 export type Provider = 'OpenAI' | 'OpenRouter' | 'DeepSeek'
 export const MAX_ARGUMENT_CHARS = 1_048_576
@@ -414,8 +416,10 @@ export function nativeOpenRouterItem(
 /** Native reasoning is only compatible with the exact provider and model that produced it. */
 export function projectOpenAiHistory(
   messages: readonly HistoryMessage[],
-  model: string
+  model: string,
+  options: ImageProjectionOptions = {}, estimateImages = false
 ): JsonObject[] {
+  if (!estimateImages) assertImageProjectionBounds('OpenAI', messages)
   const input: JsonObject[] = []
   const pendingCalls = new Map<string, string>()
   for (const message of messages) {
@@ -444,7 +448,10 @@ export function projectOpenAiHistory(
       if (pendingCalls.get(message.callId) !== message.name) {
         throw new ProviderRequestError('OpenAI', 'configuration', 'Agent history contains an unmatched tool result')
       }
-      input.push({ type: 'function_call_output', call_id: message.callId, output: message.content })
+      const urls = imageDataUrls('OpenAI', model, message.images, options, estimateImages)
+      input.push({ type: 'function_call_output', call_id: message.callId, output: urls.length
+        ? [{ type: 'input_text', text: message.content }, ...urls.map(image_url => ({ type: 'input_image', image_url, detail: 'auto' }))]
+        : message.content })
       pendingCalls.delete(message.callId)
     }
   }
@@ -453,10 +460,13 @@ export function projectOpenAiHistory(
 
 export function projectOpenRouterHistory(
   messages: readonly HistoryMessage[],
-  model: string
+  model: string,
+  options: ImageProjectionOptions = {}, estimateImages = false
 ): JsonObject[] {
+  if (!estimateImages) assertImageProjectionBounds('OpenRouter', messages)
   const input: JsonObject[] = []
   const pendingCalls = new Map<string, string>()
+  let observations: { callId: string; urls: string[] }[] = []
   for (const message of messages) {
     if (message.kind === 'message') {
       input.push({ role: message.role, content: message.content })
@@ -474,9 +484,16 @@ export function projectOpenRouterHistory(
         throw new ProviderRequestError('OpenRouter', 'configuration', 'Agent history contains an unmatched tool result')
       }
       input.push({ role: 'tool', tool_call_id: message.callId, content: message.content })
+      const urls = imageDataUrls('OpenRouter', model, message.images, options, estimateImages)
+      if (urls.length) observations.push({ callId: message.callId, urls })
       pendingCalls.delete(message.callId)
+      if (!pendingCalls.size && observations.length) {
+        input.push(imageObservation(observations))
+        observations = []
+      }
     }
   }
+  if (observations.length) throw new ProviderRequestError('OpenRouter', 'configuration', 'Image observations require a complete tool-result batch')
   return input
 }
 

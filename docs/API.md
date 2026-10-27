@@ -343,3 +343,9 @@ canonical history. Model providers can implement `estimateContext`; generate opt
 `maxOutputTokens` and the host-only `purpose` discriminator. Derived result checkpoint/occupancy
 metadata is excluded from canonical settlements. See [CONTEXT.md](CONTEXT.md) for the contract,
 unknown-limit behavior, persistence, failures, billing and host integration.
+
+## Unreleased dispatch prefixes and image observations
+
+See [CONTEXT.md](CONTEXT.md#fresh-dispatch-prefixes-unreleased) for `getContextPrefix`,
+and [IMAGES.md](IMAGES.md) for `ToolImageReference`, adapter resolution/capabilities and
+explicit v2 durable-record adoption. Both are opt-in; host permissions remain authoritative.

@@ -42,6 +42,8 @@ export interface ModelCapabilities {
   /** Text conversation through this particular provider and protocol. */
   chat: Capability
   tools: Capability
+  /** Image input for this exact model/provider/protocol; never an account-access claim. */
+  vision: Capability
   stream: Capability
   reasoning: {
     support: Capability
@@ -69,7 +71,7 @@ const DEEPSEEK_THINKING = 'https://api-docs.deepseek.com/guides/thinking_mode/'
 const DEEPSEEK_REVIEWED_ON = '2026-10-18'
 const DEEPSEEK_DOCUMENTED_IDS = ['deepseek-flash', 'deepseek-v4-pro']
 
-type Facts = Pick<ModelCapabilities, 'chat' | 'tools' | 'stream' | 'reasoning'>
+type Facts = Pick<ModelCapabilities, 'chat' | 'tools' | 'vision' | 'stream' | 'reasoning'>
 interface DocumentedFacts {
   ids: readonly string[]
   protocols: readonly ApiProtocol[]
@@ -86,7 +88,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
     protocols: ['responses', 'chat-completions'],
     limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
     facts: {
-      chat: 'supported', tools: 'supported', stream: 'supported',
+      chat: 'supported', tools: 'supported', vision: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'unsupported', effortSelection: 'supported',
         efforts: ['minimal', 'low', 'medium', 'high'], requirement: 'required' }
     },
@@ -97,7 +99,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
     protocols: ['responses', 'chat-completions'],
     limits: { contextWindow: 400_000, maxOutputTokens: 128_000 },
     facts: {
-      chat: 'supported', tools: 'supported', stream: 'supported',
+      chat: 'supported', tools: 'supported', vision: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'supported', effortSelection: 'supported',
         efforts: ['none', 'low', 'medium', 'high'], requirement: 'optional' }
     },
@@ -108,7 +110,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
     protocols: ['responses', 'chat-completions'],
     limits: { contextWindow: 1_047_576, maxOutputTokens: 32_768 },
     facts: {
-      chat: 'supported', tools: 'supported', stream: 'supported',
+      chat: 'supported', tools: 'supported', vision: 'supported', stream: 'supported',
       reasoning: { support: 'unsupported', disable: 'unsupported', effortSelection: 'unsupported',
         efforts: [], requirement: 'optional' }
     },
@@ -119,7 +121,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
     protocols: ['responses'],
     limits: { contextWindow: 400_000, maxOutputTokens: 272_000 },
     facts: {
-      chat: 'supported', tools: 'supported', stream: 'supported',
+      chat: 'supported', tools: 'supported', vision: 'supported', stream: 'supported',
       reasoning: { support: 'supported', disable: 'unsupported', effortSelection: 'supported',
         efforts: ['high'], requirement: 'required' }
     },
@@ -130,7 +132,7 @@ const DOCUMENTED_OPENAI: readonly DocumentedFacts[] = [
     protocols: ['responses'],
     limits: { contextWindow: 200_000, maxOutputTokens: 100_000 },
     facts: {
-      chat: 'supported', tools: 'supported', stream: 'unsupported',
+      chat: 'supported', tools: 'supported', vision: 'supported', stream: 'unsupported',
       reasoning: { support: 'supported', disable: 'unknown', effortSelection: 'unknown',
         efforts: [], requirement: 'unknown' }
     },
@@ -183,7 +185,7 @@ function source(kind: CapabilitySource['kind'], url: string): CapabilitySource {
 function unknown(provider: CapabilityProvider, protocol: ApiProtocol, id: string): ModelCapabilities {
   return {
     apiVersion: 1, provider, protocol, id,
-    chat: 'unknown', tools: 'unknown', stream: 'unknown',
+    chat: 'unknown', tools: 'unknown', vision: 'unknown', stream: 'unknown',
     reasoning: { support: 'unknown', disable: 'unknown', effortSelection: 'unknown', efforts: [], requirement: 'unknown' },
     sources: []
   }
@@ -192,6 +194,7 @@ function unknown(provider: CapabilityProvider, protocol: ApiProtocol, id: string
 function unsupported(result: ModelCapabilities): void {
   result.chat = 'unsupported'
   result.tools = 'unsupported'
+  result.vision = 'unsupported'
   result.stream = 'unsupported'
   result.reasoning = {
     support: 'unsupported', disable: 'unsupported', effortSelection: 'unsupported', efforts: [], requirement: 'optional'
@@ -250,6 +253,10 @@ function openrouter(result: ModelCapabilities, model: unknown): void {
   const input = stringList(field(architecture, 'input_modalities'))
   const output = stringList(field(architecture, 'output_modalities'))
   let catalogEvidence = false
+  if (input) {
+    result.vision = input.includes('image') ? 'supported' : 'unsupported'
+    catalogEvidence = true
+  }
   if (parameters) {
     result.tools = parameters.includes('tools') ? 'supported' : 'unsupported'
     catalogEvidence = true
@@ -339,6 +346,10 @@ function deepseek(result: ModelCapabilities, model: unknown): void {
   const input = stringList(field(model, 'input_modalities'))
   const output = stringList(field(model, 'output_modalities'))
   let catalogEvidence = false
+  if (input) {
+    result.vision = input.includes('image') ? 'supported' : 'unsupported'
+    catalogEvidence = true
+  }
   if (input && !input.includes('text') || output && !output.includes('text')) {
     result.chat = 'unsupported'
     catalogEvidence = true

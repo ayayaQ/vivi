@@ -45,7 +45,8 @@ export interface AgentRunSettlement {
 }
 
 export interface AgentRecordEnvelope {
-  readonly version: 1
+  /** v1 is text-only; v2 permits immutable tool-image references. */
+  readonly version: 1 | 2
   readonly sessionId: string
   readonly eventId: string
   readonly sequence: number

@@ -5,13 +5,15 @@ import {
   fail, identifier, isJsonValue, isRecord, MAX_ARGUMENT_CHARS, MAX_ITEMS,
   normalizeCallIds, parseOpenRouterMessage, parseReasoningDetail, projectOpenRouterHistory, usage
 } from './shared.js'
-import { configure, estimateRequestContext, eventJson, outputTokenLimit, post, readJson, readSse, request, reservedToolCallIds, ProviderRequestError, throwIfContextOverflow } from './transport.js'
+import { configure, eventJson, outputTokenLimit, post, readJson, readSse, request, reservedToolCallIds, ProviderRequestError, throwIfContextOverflow } from './transport.js'
+import { captureImageOptions, estimateImageRequestContext } from './images.js'
+import type { ImageProjectionOptions } from './images.js'
 import type { Config, ProgressOptions, ProviderOptions } from './transport.js'
 
 export { projectOpenRouterHistory } from './shared.js'
 export { ProviderRequestError, isContextOverflow } from './transport.js'
 export type { ReasoningEffort, EnabledReasoningEffort, ReasoningSelection } from './transport.js'
-export interface OpenRouterProviderOptions extends ProviderOptions {
+export interface OpenRouterProviderOptions extends ProviderOptions, ImageProjectionOptions {
   attribution?: { referer?: string; title?: string }
   /** Opt in to routing only to endpoints that support every supplied parameter. Default false. */
   requireSupportedParameters?: boolean
@@ -163,14 +165,14 @@ class ChatStream {
 }
 
 function requestBody(
-  config: Config, requireSupportedParameters: boolean,
+  config: Config, images: ImageProjectionOptions, requireSupportedParameters: boolean,
   input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
-  options?: { maxOutputTokens?: number }
+  options?: { maxOutputTokens?: number }, estimateImages = false
 ): JsonObject {
   const maxOutputTokens = outputTokenLimit('OpenRouter', options)
   // Automatic tool choice is the gateway default. Strict routing need not require tool_choice.
   return {
-    model: config.model, messages: projectOpenRouterHistory(input.messages, config.model),
+    model: config.model, messages: projectOpenRouterHistory(input.messages, config.model, images, estimateImages),
     ...(input.tools.length ? { tools: input.tools.map((tool) => ({ type: 'function', function: {
       name: tool.name, description: tool.description, parameters: tool.parameters
     } })) } : {}),
@@ -186,6 +188,7 @@ function requestBody(
 export function createOpenRouterProvider(options: OpenRouterProviderOptions): ModelProvider {
   const config = configure(options, 'OpenRouter', 'https://openrouter.ai/api/v1', 'chat/completions',
     ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
+  const images = captureImageOptions('OpenRouter', config.model, options)
   if (options.requireSupportedParameters !== undefined && typeof options.requireSupportedParameters !== 'boolean') {
     throw new ProviderRequestError('OpenRouter', 'configuration', 'OpenRouter requireSupportedParameters must be a boolean')
   }
@@ -206,12 +209,12 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions): Mo
   }
   return {
     estimateContext(input, options) {
-      return estimateRequestContext(requestBody(config, requireSupportedParameters, input, options))
+      return estimateImageRequestContext(requestBody(config, images, requireSupportedParameters, input, options, true), input.messages)
     },
     generate(input, signal, progress?: ProgressOptions) {
       const reservedIds = reservedToolCallIds('OpenRouter', progress)
       return request(config, signal, progress, async (context, key) => {
-        const body = requestBody(config, requireSupportedParameters, input, progress)
+        const body = requestBody(config, images, requireSupportedParameters, input, progress)
         const response = await post(config, context, key, body, headers)
         if (!config.stream) return result(await readJson(response, context, 'OpenRouter'), config.model, input.messages, reservedIds)
         const stream = new ChatStream()

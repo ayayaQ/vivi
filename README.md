@@ -18,6 +18,14 @@ and one classified-overflow retry. Canonical raw history and tool/approval evide
 unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
 See [CONTEXT.md](docs/CONTEXT.md). This feature is available in published `0.14.0`.
 
+## Workspace instructions and tool images (unreleased)
+
+Fresh host-owned `getContextPrefix` messages are measured before each dispatch without
+entering canonical history. Optional image-bearing tool results carry immutable snapshot
+references to vision-capable provider adapters; hosts retain file permissions and storage.
+See [fresh prefixes](docs/CONTEXT.md#fresh-dispatch-prefixes-unreleased) and
+[tool image observations](docs/IMAGES.md). No attachment command or publication is included.
+
 ## Optional clarification questions (since 0.12.0)
 
 The opt-in `@ayayaq/vivi/extensions/questions` subpath offers a renderer-neutral

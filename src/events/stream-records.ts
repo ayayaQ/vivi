@@ -22,7 +22,7 @@ const hashPattern = /^[a-f0-9]{64}$/
 
 function envelope(value: unknown): asserts value is AgentRunRecordEnvelope {
   keys(value, envelopeKeys)
-  check(value.version === 1 && value.scope === 'run', 'Unsupported run record version or scope')
+  check((value.version === 1 || value.version === 2) && value.scope === 'run', 'Unsupported run record version or scope')
   identity(value.sessionId); identity(value.runId); identity(value.eventId); source(value.source)
   check(Number.isSafeInteger(value.sequence) && (value.sequence as number) >= 1 &&
     (value.sequence as number) <= AGENT_RUN_RECORD_LIMITS.records, 'Invalid run record sequence')
@@ -47,11 +47,11 @@ export function decodeAgentRunRecord(input: unknown): AgentRunRecord {
     check(input.baseSequence === 0 ? input.baseReceiptDigest === null :
       typeof input.baseReceiptDigest === 'string' && hashPattern.test(input.baseReceiptDigest), 'Invalid session baseline receipt')
     check(Array.isArray(input.input) && input.input.length <= AGENT_RECORD_LIMITS.history, 'Invalid canonical run input')
-    for (const item of input.input) { entry(item); check(item.message.kind === 'message', 'Run input must contain only new user/system messages') }
+    for (const item of input.input) { entry(item, header.version); check(item.message.kind === 'message', 'Run input must contain only new user/system messages') }
     assertHistory(input.input.map(item => item.message))
   } else if (input.type === 'assistant_accepted' || input.type === 'tool_result_accepted' || input.type === 'user_message_accepted') {
     keys(input, [...envelopeKeys, 'type', 'entry', 'round'], input.type === 'assistant_accepted' ? ['usage', 'aggregateUsage'] : [])
-    entry(input.entry)
+    entry(input.entry, header.version)
     check(input.entry.message.kind === (input.type === 'assistant_accepted' ? 'assistant' :
       input.type === 'user_message_accepted' ? 'message' : 'tool_result'), 'Accepted record message kind mismatch')
     check(Number.isSafeInteger(input.round) && (input.round as number) >= 1 && (input.round as number) <= 1000, 'Invalid accepted round')
@@ -72,6 +72,7 @@ export function decodeAgentRunRecord(input: unknown): AgentRunRecord {
     check(input.type === 'run_settled', 'Unsupported run record type')
     keys(input, [...envelopeKeys, 'type', 'terminal'])
     const terminal = decodeAgentRecord(input.terminal)
+    check(header.version >= terminal.version, 'Run wrapper cannot downgrade terminal record version')
     check(terminal.type === 'run_settled' && terminal.sessionId === input.sessionId && terminal.runId === input.runId,
       'Terminal session/run identity mismatch')
   }
@@ -159,6 +160,8 @@ function validateTerminal(previous: AgentRunProjection, terminal: DurableAgentRe
       before.message.callId === after.message.callId && before.message.name === after.message.name &&
       before.source.reference === after.source.reference && after.source.revision !== undefined &&
       after.source.revision !== before.source.revision, 'Terminal cannot rewrite accepted payload/provenance')
+    check(digest(before.message.images ?? []) === digest(after.message.images ?? []),
+      'Terminal refinement cannot replace image observations')
     const callId = before.message.callId
     const call = previous.history.flatMap(item => item.message.kind === 'assistant' ? item.message.toolCalls : [])
       .find(item => item.id === callId)

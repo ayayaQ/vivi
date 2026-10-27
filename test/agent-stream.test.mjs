@@ -216,7 +216,7 @@ test('hostile record/replay containers and unknown formats are rejected before g
   assert.throws(() => projectAgentRunRecords(fixture.original, 'run', chain)); assert.equal(entered, 0)
   const getter = structuredClone(fixture.records[0]); Object.defineProperty(getter, 'source', { enumerable: true, get() { entered++; return source } })
   assert.throws(() => decodeAgentRunRecord(getter)); assert.equal(entered, 0)
-  for (const changes of [{ version: 2 }, { scope: 'session' }, { type: 'text_delta' }, { approval: true }])
+  for (const changes of [{ version: 3 }, { scope: 'session' }, { type: 'text_delta' }, { approval: true }])
     assert.throws(() => decodeAgentRunRecord({ ...fixture.records[0], ...changes }))
 })
 

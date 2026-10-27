@@ -2,7 +2,9 @@
 // Copyright 2026 ayayaQ
 import type { HistoryMessage, JsonObject, ModelProvider, ProviderResult, ToolDefinition } from '../types.js'
 import { fail, isRecord, normalizeCallIds, parseOpenAiOutput, usage } from './shared.js'
-import { configure, estimateRequestContext, eventJson, outputTokenLimit, post, readJson, readSse, request, reservedToolCallIds, throwIfContextOverflow } from './transport.js'
+import { configure, eventJson, outputTokenLimit, post, readJson, readSse, request, reservedToolCallIds, throwIfContextOverflow } from './transport.js'
+import { captureImageOptions, estimateImageRequestContext } from './images.js'
+import type { ImageProjectionOptions } from './images.js'
 import type { Config, ProgressOptions, ProviderOptions } from './transport.js'
 
 export { projectOpenAiHistory } from './shared.js'
@@ -10,7 +12,7 @@ export { ProviderRequestError, isContextOverflow } from './transport.js'
 export type { ReasoningSelection } from './transport.js'
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 export type EnabledReasoningEffort = Exclude<ReasoningEffort, 'none'>
-export type OpenAIProviderOptions = ProviderOptions<EnabledReasoningEffort>
+export type OpenAIProviderOptions = ProviderOptions<EnabledReasoningEffort> & ImageProjectionOptions
 import { projectOpenAiHistory } from './shared.js'
 
 function result(value: unknown, model: string, messages: readonly HistoryMessage[], reservedIds: readonly string[] = []): ProviderResult {
@@ -35,13 +37,13 @@ function result(value: unknown, model: string, messages: readonly HistoryMessage
 
 /** Build once for both the wire request and its context estimate. */
 function requestBody(
-  config: Config,
+  config: Config, images: ImageProjectionOptions,
   input: { messages: readonly HistoryMessage[]; tools: readonly ToolDefinition[] },
-  options?: { maxOutputTokens?: number }
+  options?: { maxOutputTokens?: number }, estimateImages = false
 ): JsonObject {
   const maxOutputTokens = outputTokenLimit('OpenAI', options)
   return {
-    model: config.model, input: projectOpenAiHistory(input.messages, config.model),
+    model: config.model, input: projectOpenAiHistory(input.messages, config.model, images, estimateImages),
     ...(input.tools.length ? {
       tools: input.tools.map((tool) => ({ type: 'function', ...tool, strict: false })), tool_choice: 'auto'
     } : {}),
@@ -55,14 +57,15 @@ function requestBody(
 export function createOpenAIProvider(options: OpenAIProviderOptions): ModelProvider {
   const config = configure(options, 'OpenAI', 'https://api.openai.com/v1', 'responses',
     ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
+  const images = captureImageOptions('OpenAI', config.model, options)
   return {
     estimateContext(input, options) {
-      return estimateRequestContext(requestBody(config, input, options))
+      return estimateImageRequestContext(requestBody(config, images, input, options, true), input.messages)
     },
     generate(input, signal, progress?: ProgressOptions) {
       const reservedIds = reservedToolCallIds('OpenAI', progress)
       return request(config, signal, progress, async (context, key) => {
-        const body = requestBody(config, input, progress)
+        const body = requestBody(config, images, input, progress)
         const response = await post(config, context, key, body)
         if (!config.stream) return result(await readJson(response, context, 'OpenAI'), config.model, input.messages, reservedIds)
         return readSse(response, context, 'OpenAI', async (frame) => {

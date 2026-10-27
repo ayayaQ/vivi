@@ -4,7 +4,8 @@ import type { AgentHistoryEntry, AgentProjection, AgentRecordSource, DurableAgen
 
 /** Order is local to one run. Session terminal records retain their separate session order. */
 export interface AgentRunRecordEnvelope {
-  readonly version: 1
+  /** v1 is text-only; v2 permits immutable tool-image references. */
+  readonly version: 1 | 2
   readonly scope: 'run'
   readonly sessionId: string
   readonly runId: string
