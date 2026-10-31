@@ -252,6 +252,17 @@ uses Chat Completions. Configuration contains a model, a key (or async key suppl
 reasoning, request timeout, streaming flag and injectable fetch. OpenRouter can receive optional
 host attribution; no Discord branding, desktop settings or moderation key is built in.
 
+OpenAI also accepts an optional trusted, pure `transformRequest(body)` compatibility projection.
+It runs after ordinary Responses encoding for both estimation and generation, including context
+summaries. Return JSON data retaining the configured `model` and `stream`; the adapter captures
+the callback at creation and copies its output. Credentials never enter it. The host owns any
+route-specific role, tool namespace or unsupported-field rules; the default wire format is unchanged.
+
+`errorDetails: true` opts into bounded `ProviderRequestError.details` containing an upstream
+`code`, `param`, `requestId` when safe identifiers are supplied, and a `bodyShape` discriminator
+(`error`, `detail`, `other`, `unreadable`). Raw error text and credential values remain excluded.
+OpenAI terminal SSE failures retain the same diagnostics as HTTP admission failures.
+
 Reasoning has three explicit modes: `default` omits the provider setting, `disabled` requests
 reasoning off, and `effort` supplies a named effort. Nondefault choices require the host to declare
 `supportedReasoningEfforts` for its selected model; include `none` only when disabling is supported.
