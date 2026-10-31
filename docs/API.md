@@ -259,6 +259,23 @@ This is a host capability assertion, not automatic model discovery. Changing pro
 can discard native reasoning continuity; the CLI requires a new session for such a change.
 OpenRouter retains returned reasoning state for tool continuation while displaying only answer text.
 
+For Claude models (`anthropic/` IDs), the OpenRouter factory also checks that replayed reasoning
+still belongs to the same request prefix. Its opaque `providerState.items` include private,
+versioned SHA-256 bindings for the preceding messages, tool definitions, reasoning settings and
+native assistant payload. Preserve the complete state through JSON persistence; a fresh provider
+instance can then retain valid reasoning. These hashes contain no API key or raw request and are
+never sent to OpenRouter. They check local consistency, not cryptographic authenticity or authority.
+
+If earlier context changes (for example a refreshed skill catalog, expired tool receipt, edited
+instruction, changed toolset or compaction), the factory omits the affected reasoning and any
+later reasoning whose prefix no longer matches. Imported or legacy Claude reasoning without a
+binding is also omitted. Text, exact native tool calls, tool results and canonical saved history
+are preserved. Newly returned reasoning is bound to the effective projected request and remains
+available for subsequent tool continuation. Estimation makes the same decision without resolving
+image bytes. Other OpenRouter models are unchanged. The low-level `projectOpenRouterHistory`
+helper remains a structural wire encoder; the factory owns these full-request checks.
+See [Claude's thinking signature rules](https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting).
+
 For OpenRouter, `requireSupportedParameters: true` (available since `0.2.1`) sends
 `provider.require_parameters: true`, restricting routing to endpoints that support every supplied
 parameter. Use it when the host relies on declared tool or reasoning capabilities. The option

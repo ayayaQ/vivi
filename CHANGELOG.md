@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Validate Claude reasoning replay against persisted hashes of the preceding request context,
+  tools and reasoning settings. Preserve valid native continuation across provider recreation
+  and JSON persistence; omit stale or legacy unbound reasoning from request views after context
+  changes, without editing canonical history or native tool identities.
+- Use the same reasoning projection for OpenRouter estimation, streaming and non-streaming
+  dispatch. Other providers retain their existing replay behavior; no automatic retries or
+  additional network requests are introduced.
+
 ## 0.15.1 (prepared 2026-10-21, not yet published)
 
 - Honor provider-aware output reservations, including DeepSeek thinking and summary budgets, while preserving explicit host bounds and catalog ceilings

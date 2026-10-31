@@ -9,6 +9,7 @@ import { configure, eventJson, outputTokenLimit, post, readJson, readSse, reques
 import { captureImageOptions, estimateImageRequestContext } from './images.js'
 import type { ImageProjectionOptions } from './images.js'
 import type { Config, ProgressOptions, ProviderOptions } from './transport.js'
+import { bindOpenRouterReasoning, projectOpenRouterReasoning } from './openrouter-reasoning.js'
 
 export { projectOpenRouterHistory } from './shared.js'
 export { ProviderRequestError, isContextOverflow } from './transport.js'
@@ -209,17 +210,21 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions): Mo
   }
   return {
     estimateContext(input, options) {
-      return estimateImageRequestContext(requestBody(config, images, requireSupportedParameters, input, options, true), input.messages)
+      const projected = projectOpenRouterReasoning(input, config.model, config.reasoning)
+      return estimateImageRequestContext(requestBody(config, images, requireSupportedParameters, projected, options, true), projected.messages)
     },
     generate(input, signal, progress?: ProgressOptions) {
       const reservedIds = reservedToolCallIds('OpenRouter', progress)
       return request(config, signal, progress, async (context, key) => {
-        const body = requestBody(config, images, requireSupportedParameters, input, progress)
+        const projected = projectOpenRouterReasoning(input, config.model, config.reasoning)
+        const body = requestBody(config, images, requireSupportedParameters, projected, progress)
+        const complete = (value: unknown): ProviderResult => bindOpenRouterReasoning(
+          result(value, config.model, projected.messages, reservedIds), projected, config.model, config.reasoning)
         const response = await post(config, context, key, body, headers)
-        if (!config.stream) return result(await readJson(response, context, 'OpenRouter'), config.model, input.messages, reservedIds)
+        if (!config.stream) return complete(await readJson(response, context, 'OpenRouter'))
         const stream = new ChatStream()
         return readSse(response, context, 'OpenRouter', async (frame) => {
-          if (frame.data === '[DONE]') return result(stream.completed(), config.model, input.messages, reservedIds)
+          if (frame.data === '[DONE]') return complete(stream.completed())
           const event = eventJson(frame, 'OpenRouter')
           if (frame.event === 'error') {
             throwIfContextOverflow(event, 'OpenRouter')
