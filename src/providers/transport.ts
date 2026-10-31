@@ -25,6 +25,16 @@ export interface ProviderOptions<E extends EnabledReasoningEffort = EnabledReaso
   baseURL?: string
   /** Optional transport injection, useful for offline testing. No automatic retries are made. */
   fetch?: typeof fetch
+  /** Opt-in bounded machine-readable upstream diagnostics. Never retains raw body text. */
+  errorDetails?: boolean
+}
+
+export interface ProviderErrorDetails {
+  code?: string
+  param?: string
+  requestId?: string
+  /** Shape of the received JSON body, not its potentially sensitive values. */
+  bodyShape: 'error' | 'detail' | 'other' | 'unreadable'
 }
 
 export type ProgressOptions = ProviderGenerateOptions
@@ -35,7 +45,8 @@ export class ProviderRequestError extends Error {
     readonly provider: Provider,
     readonly code: 'configuration' | 'http' | 'transport' | 'invalid_response' | 'timeout' | 'aborted' | 'context_overflow',
     message: string,
-    readonly status?: number
+    readonly status?: number,
+    readonly details?: Readonly<ProviderErrorDetails>
   ) {
     super(message)
     this.name = code === 'aborted' ? 'AbortError' : 'ProviderRequestError'
@@ -122,6 +133,7 @@ export interface Config {
   stream: boolean
   endpoint: string
   fetch: typeof fetch
+  errorDetails: boolean
 }
 
 export function configure(
@@ -151,6 +163,7 @@ export function configure(
   if (options.stream !== undefined && typeof options.stream !== 'boolean') {
     invalid('stream must be a boolean')
   }
+  if (options.errorDetails !== undefined && typeof options.errorDetails !== 'boolean') invalid('errorDetails must be a boolean')
   const capabilities = options.supportedReasoningEfforts
   if (capabilities !== undefined && (!Array.isArray(capabilities) ||
       capabilities.some((effort) => effort !== 'none' && !allowedEfforts.includes(effort)))) {
@@ -186,7 +199,7 @@ export function configure(
   if (typeof fetchImpl !== 'function') invalid('fetch transport is unavailable')
   return {
     provider, model: options.model, apiKey: options.apiKey, timeoutMs,
-    stream: options.stream ?? false, endpoint: endpoint!, fetch: fetchImpl,
+    stream: options.stream ?? false, endpoint: endpoint!, fetch: fetchImpl, errorDetails: options.errorDetails ?? false,
     ...(reasoning ? { reasoning } : {})
   }
 }
@@ -304,10 +317,34 @@ export async function post(
   if (!response.ok) {
     const error = await readHttpError(response, context)
     throwIfContextOverflow(error, config.provider, response.status)
-    throw new ProviderRequestError(config.provider, 'http',
-      `${config.provider} request failed (HTTP ${response.status})`, response.status)
+    throw responseFailure(config, error, key, response.status, response.headers.get('x-request-id') ?? undefined, 'http')
   }
   return response
+}
+
+
+/** Optional diagnostics contain only bounded protocol identifiers; no raw message, body or cause. */
+export function responseFailure(config: Config, value: unknown, key: string, status?: number,
+  requestId?: string, code: 'http' | 'invalid_response' = 'invalid_response'): ProviderRequestError {
+  let details: ProviderErrorDetails | undefined
+  if (config.errorDetails) {
+    const nested = dataField(dataField(value, 'response'), 'error')
+    const error = dataField(value, 'error') ?? nested
+    const candidate = error !== undefined ? error : value
+    const safe = (input: unknown): string | undefined => typeof input === 'string' &&
+      /^[a-zA-Z0-9_.:\[\]-]{1,200}$/.test(input) && !input.includes(key) ? input : undefined
+    const upstreamCode = safe(dataField(candidate, 'code'))
+    const param = safe(dataField(candidate, 'param'))
+    const id = safe(requestId)
+    details = Object.freeze({
+      bodyShape: error !== undefined ? 'error' : dataField(value, 'detail') !== undefined ? 'detail'
+        : value === undefined ? 'unreadable' : 'other',
+      ...(upstreamCode ? { code: upstreamCode } : {}), ...(param ? { param } : {}),
+      ...(id ? { requestId: id } : {})
+    })
+  }
+  return new ProviderRequestError(config.provider, code,
+    code === 'http' ? `${config.provider} request failed (HTTP ${status})` : `Invalid ${config.provider} agent output: agent response was not completed`, status, details)
 }
 
 export const MAX_BODY_BYTES = 16_777_216
