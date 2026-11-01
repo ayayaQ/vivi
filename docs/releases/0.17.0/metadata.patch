@@ -1,0 +1,287 @@
+From d4c4f83f61abf58340061084bcbd82315337e52a Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 31 Oct 2026 17:15:30 -0700
+Subject: [PATCH] Prepare local 0.17.0 release metadata and publication notes
+
+---
+ CHANGELOG.md      | 10 +++++++++-
+ README.md         | 35 +++++++++++++++++++++--------------
+ RELEASING.md      | 44 ++++++++++++++++++++++++++++++++------------
+ docs/API.md       | 10 +++++-----
+ package-lock.json |  4 ++--
+ package.json      |  2 +-
+ 6 files changed, 70 insertions(+), 35 deletions(-)
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index a31c589..edffb9c 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,6 +1,14 @@
+ # Changelog
+ 
+-## Unreleased
++## 0.17.0 (proposed, not yet published)
++
++- Add an opt-in trusted synchronous OpenAI Responses request projection, shared by estimation
++  and dispatch, with detached JSON input/output and fail-closed validation. Default API-key
++  behavior is unchanged.
++- Add optional bounded, sanitized provider error details for host-side recovery; raw provider
++  messages and bodies are not exposed. Authentication, account storage and approval policy
++  remain host-owned; this core release does not add ChatGPT sign-in or Skip permissions UI.
++
+ 
+ - Validate Claude reasoning replay against persisted hashes of the preceding request context,
+   tools and reasoning settings. Preserve valid native continuation across provider recreation
+diff --git a/README.md b/README.md
+index ad3677d..e0eec4c 100644
+--- a/README.md
++++ b/README.md
+@@ -5,10 +5,10 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
+ storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
+ module loads the maintained YAML parser dependency.
+ 
+-Published `0.15.0` includes portable context management, clarification questions, MCP
+-resource-template reads, independent DeepSeek chat and optional web search/fetch.
+-Prepared `0.15.1` fixes DeepSeek output reservations and incomplete-response diagnostics;
+-production host adoption follows verified publication.
++Public npm `latest` was verified as `0.16.0` on 2026-11-01. The proposed, unpublished
++`0.17.0` adds generic OpenAI request projection and safe error details, plus the OpenRouter
++reasoning-replay fix. Hosts still own authentication, storage and approval policy; core does
++not add ChatGPT sign-in or Skip permissions UI. See [RELEASING.md](RELEASING.md).
+ 
+ ## Optional context management (since 0.14.0)
+ 
+@@ -18,13 +18,13 @@ and one classified-overflow retry. Canonical raw history and tool/approval evide
+ unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
+ See [CONTEXT.md](docs/CONTEXT.md). This feature is available in published `0.14.0`.
+ 
+-## Workspace instructions and tool images (unreleased)
++## Workspace instructions and tool images (available in 0.16.0)
+ 
+ Fresh host-owned `getContextPrefix` messages are measured before each dispatch without
+ entering canonical history. Optional image-bearing tool results carry immutable snapshot
+ references to vision-capable provider adapters; hosts retain file permissions and storage.
+ See [fresh prefixes](docs/CONTEXT.md#fresh-dispatch-prefixes-unreleased) and
+-[tool image observations](docs/IMAGES.md). No attachment command or publication is included.
++[tool image observations](docs/IMAGES.md). No attachment command or host adoption is included.
+ 
+ ## Optional clarification questions (since 0.12.0)
+ 
+@@ -36,8 +36,8 @@ Plan-mode hosts can use the extension under their own tool policy. See the
+ [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
+ This addition is available from published `0.12.0`; hosts adopt it under their own policy.
+ 
+-Unreleased optional queued-message steering is prepared separately for review. Hosts own
+-queue acknowledgement and force-send cancellation; see [STEERING.md](docs/STEERING.md).
++Optional queued-message steering is available in `0.16.0`. Hosts own queue acknowledgement
++and force-send cancellation; see [STEERING.md](docs/STEERING.md).
+ 
+ ## Optional decision review
+ 
+@@ -56,16 +56,23 @@ same subpath. Host adoption remains separately reviewed; see
+ 
+ ## Install
+ 
+-The latest verified npm release is `0.14.0`:
++The latest verified public npm release is `0.16.0` (not the new projection API):
+ 
+ ```sh
+-npm install --save-exact @ayayaq/vivi@0.14.0
++npm install --save-exact @ayayaq/vivi@0.16.0
+ ```
+ 
+-`0.14.0` includes context management, clarification questions, the optional MCP bridge
+-with prepared-action review, trusted extensions, cache usage, model capabilities, memory
+-and skills. Hosts retain connections, processes,
+-credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
++To test proposed `0.17.0` locally, install only the exact independently reviewed candidate
++archive from the release packet into a temporary consumer (not a host dependency pin):
++
++```sh
++npm install --ignore-scripts --no-save --package-lock=false /absolute/path/ayayaq-vivi-0.17.0.tgz
++```
++
++After account-holder publication and registry-byte verification, hosts may separately adopt
++exact `@ayayaq/vivi@0.17.0`. Do not use a local archive as evidence of registry publication.
++Hosts retain connections, processes, credentials, actual sends and UI. See
++[MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
+ 
+ `0.10.0` also adds owned scopes, `/events` session snapshots and `/events/stream`
+ ordered accepted-message replay. Its registry bytes are verified and unchanged. See
+diff --git a/RELEASING.md b/RELEASING.md
+index 3a43536..91543e8 100644
+--- a/RELEASING.md
++++ b/RELEASING.md
+@@ -1,5 +1,25 @@
+ # Release workflow
+ 
++## Proposed 0.17.0, not yet published
++
++Public npm `latest` was verified as `0.16.0` on 2026-11-01. Repository metadata still
++reported `0.15.1`; the older preparation notes below are historical and do not establish
++registry state. This additive `0.17.0` candidate does not replace any immutable version.
++
++The candidate includes the OpenRouter reasoning-replay binding fix from PR #49, the
++opt-in generic request projection and sanitized error details from PR #50, and detached
++projection input from PR #51. Its merged source is `3c8ab12a1cd52f384f4953eb69f8e80553a49bc2`,
++tree `46d025d8224acdc3bd3d15dcefd7a975b1f585bf`. The version/docs preparation is local-only;
++its separate release record must identify the exact metadata commit, final archive,
++independent checks and merged-source CI before account-holder publication.
++Authentication, account storage, consent UI and approval modes remain host-owned; core
++neither signs users in nor adopts the separate CLI changes. Runtime dependencies remain
++unchanged. Live providers and OAuth login have not been exercised.
++
++The account holder publishes only the exact final independently reviewed archive after
++source, package and clean installed-consumer checks. Do not publish this draft source or
++update host pins before the real release and registry-byte verification.
++
+ ## Prepared patch 0.15.1, not yet published
+ 
+ This patch adds a provider-aware output-reserve recommendation (including reasoning),
+@@ -354,7 +374,7 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
+ checks. This verification does not establish host integration or native platform readiness.
+ The later capability normalization module is outside `0.3.0`.
+ 
+-The commands below target the prepared `0.15.1` release. For a later release, select its
++The commands below target the proposed `0.17.0` release. For a later release, select its
+ new version in every command and repeat source, archive, registry and host verification.
+ All published records and archives remain immutable.
+ 
+@@ -368,7 +388,7 @@ npm run check
+ npm pack --dry-run --json
+ RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
+ npm pack --json --pack-destination "$RELEASE_DIR"
+-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.15.1.tgz"
++sha256sum "$RELEASE_DIR/ayayaq-vivi-0.17.0.tgz"
+ git rev-parse HEAD HEAD^{tree}
+ git status --short
+ ```
+@@ -387,7 +407,7 @@ Any source, metadata, documentation or archive change requires a new pack, hash
+ 
+ ## Account-holder publication
+ 
+-Use the exact approved `ayayaq-vivi-0.15.1.tgz` and its supplied release record on your trusted
++Use the exact approved `ayayaq-vivi-0.17.0.tgz` and its supplied release record on your trusted
+ computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
+ Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
+ or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
+@@ -398,18 +418,18 @@ If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm
+ npm login --auth-type=web --registry=https://registry.npmjs.org/
+ npm whoami --registry=https://registry.npmjs.org/
+ npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
+-sha256sum ./ayayaq-vivi-0.15.1.tgz
++sha256sum ./ayayaq-vivi-0.17.0.tgz
+ ```
+ 
+-Match SHA-256 to the approved release record. If `0.15.1` already exists, stop and compare registry
++Match SHA-256 to the approved release record. If `0.17.0` already exists, stop and compare registry
+ integrity and bytes before taking another action. Name/version pairs are immutable even after
+ unpublication. Do not change the version or archive without another review.
+ 
+ ```sh
+-npm publish ./ayayaq-vivi-0.15.1.tgz --access public --tag latest --registry=https://registry.npmjs.org/
++npm publish ./ayayaq-vivi-0.17.0.tgz --access public --tag latest --registry=https://registry.npmjs.org/
+ ```
+ 
+-This publishes all archive contents and updates `latest` to `0.15.1`. See
++This publishes all archive contents and updates `latest` to `0.17.0`. See
+ [npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
+ A client-side failure can follow a successful upload; inspect the registry before retrying,
+ and never substitute a newly packed working directory for the reviewed archive.
+@@ -417,19 +437,19 @@ and never substitute a newly packed working directory for the reviewed archive.
+ ## Verify registry bytes and integrate hosts
+ 
+ ```sh
+-npm view @ayayaq/vivi@0.15.1 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
++npm view @ayayaq/vivi@0.17.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+ npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
+ REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
+-npm pack @ayayaq/vivi@0.15.1 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+-cmp ./ayayaq-vivi-0.15.1.tgz "$REGISTRY_DIR/ayayaq-vivi-0.15.1.tgz"
++npm pack @ayayaq/vivi@0.17.0 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
++cmp ./ayayaq-vivi-0.17.0.tgz "$REGISTRY_DIR/ayayaq-vivi-0.17.0.tgz"
+ ```
+ 
+ Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
+-`@ayayaq/vivi@0.15.1` into clean registry consumers and repeat ESM/CommonJS runtime, strict
++`@ayayaq/vivi@0.17.0` into clean registry consumers and repeat ESM/CommonJS runtime, strict
+ NodeNext declaration, extension/cache and headless-example checks. Record the verified release
+ without repacking or replacing published bytes.
+ 
+-Only then set exact `"@ayayaq/vivi": "0.15.1"` in authorized CLI/desktop changes and regenerate
++Only then set exact `"@ayayaq/vivi": "0.17.0"` in authorized CLI/desktop changes and regenerate
+ lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
+ preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
+ Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local
+diff --git a/docs/API.md b/docs/API.md
+index 215aea3..9d2e0dc 100644
+--- a/docs/API.md
++++ b/docs/API.md
+@@ -1,8 +1,8 @@
+ # API and host integration
+ 
+-## Optional web retrieval (unreleased)
++## Optional web retrieval (available in 0.16.0)
+ 
+-Prepared `0.15.0` (not yet published): `@ayayaq/vivi/web` defines a small
++Available in published `0.16.0`: `@ayayaq/vivi/web` defines a small
+ `WebProvider` search/fetch contract independent of
+ `ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
+ bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
+@@ -148,7 +148,7 @@ closures are available only in the final `AgentResult`. When omitted, existing c
+ ordering and scheduling are unchanged. The update does not certify host persistence or
+ external effects. See [ordered records and host commit obligations](AGENT_STREAM.md).
+ 
+-## Opt-in queued-message steering (unreleased)
++## Opt-in queued-message steering (available in 0.16.0)
+ 
+ `getSteeringMessages({ signal })` returns a FIFO array of plain-JSON user `Message`s,
+ synchronously or asynchronously. Core captures it once and polls only after a complete
+@@ -228,11 +228,11 @@ inside the host's own consistency boundary.
+ 
+ ## Shared provider factories
+ 
+-The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
++The `@ayayaq/vivi/providers/deepseek` subpath, available in published `0.16.0`, adds `createDeepSeekProvider`
+ and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
+ of web retrieval and decision review. It retains every native assistant turn's
+ reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
+-history, usage, context, and host-adoption details. This addition is not yet published.
++history, usage, context, and host-adoption details. Host adoption remains separate.
+ 
+ ```ts
+ import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
+diff --git a/package-lock.json b/package-lock.json
+index e939ba2..ba1aa5a 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1,12 +1,12 @@
+ {
+   "name": "@ayayaq/vivi",
+-  "version": "0.15.1",
++  "version": "0.17.0",
+   "lockfileVersion": 3,
+   "requires": true,
+   "packages": {
+     "": {
+       "name": "@ayayaq/vivi",
+-      "version": "0.15.1",
++      "version": "0.17.0",
+       "license": "Apache-2.0",
+       "dependencies": {
+         "yaml": "2.9.1"
+diff --git a/package.json b/package.json
+index 658bda0..1fa513f 100644
+--- a/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "@ayayaq/vivi",
+-  "version": "0.15.1",
++  "version": "0.17.0",
+   "description": "A small headless, provider-neutral tool-calling agent loop",
+   "type": "module",
+   "license": "Apache-2.0",
+-- 
+2.52.0
+

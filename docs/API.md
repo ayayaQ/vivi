@@ -1,8 +1,13 @@
 # API and host integration
 
-## Optional web retrieval (unreleased)
+The current verified npm release is `0.17.0`, including the opt-in OpenAI request
+projection and bounded provider error details described below. See the
+[release provenance](releases/0.17.0.md). Authentication, storage and approval policy
+remain host-owned; host integration is separate from core publication.
 
-Prepared `0.15.0` (not yet published): `@ayayaq/vivi/web` defines a small
+## Optional web retrieval (available in 0.16.0)
+
+Available in published `0.16.0`: `@ayayaq/vivi/web` defines a small
 `WebProvider` search/fetch contract independent of
 `ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
 bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
@@ -148,7 +153,7 @@ closures are available only in the final `AgentResult`. When omitted, existing c
 ordering and scheduling are unchanged. The update does not certify host persistence or
 external effects. See [ordered records and host commit obligations](AGENT_STREAM.md).
 
-## Opt-in queued-message steering (unreleased)
+## Opt-in queued-message steering (available in 0.16.0)
 
 `getSteeringMessages({ signal })` returns a FIFO array of plain-JSON user `Message`s,
 synchronously or asynchronously. Core captures it once and polls only after a complete
@@ -228,11 +233,11 @@ inside the host's own consistency boundary.
 
 ## Shared provider factories
 
-The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
+The `@ayayaq/vivi/providers/deepseek` subpath, available in published `0.16.0`, adds `createDeepSeekProvider`
 and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
 of web retrieval and decision review. It retains every native assistant turn's
 reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
-history, usage, context, and host-adoption details. This addition is not yet published.
+history, usage, context, and host-adoption details. Host adoption remains separate.
 
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'

@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "package": "@ayayaq/vivi",
+  "version": "0.17.0",
+  "registry_observations": [
+    {
+      "label": "registry-latest",
+      "url": "https://registry.npmjs.org/@ayayaq%2fvivi/latest",
+      "observed_utc": "2026-11-01T21:51:03.260256+00:00",
+      "version": "0.17.0",
+      "dist": {
+        "shasum": "17212d3a1fb80e4a569dc85025f032f80ddfae6c",
+        "tarball": "https://registry.npmjs.org/@ayayaq/vivi/-/vivi-0.17.0.tgz",
+        "fileCount": 430,
+        "integrity": "sha512-inMbmRN+0RGtZZKtjhq9TsmwNJHVlqo4TyKsKSGD6wtPGQUBXI18U4kTk5AV6V4ehKoWx9RD5WrBpZv8M/i/Jw==",
+        "signatures": [
+          {
+            "sig": "MEYCIQDdycy7K0mhhvX2pTvvHelzi6EElF/y54m4pOsn4BQiagIhAKgNBJLNiX8Q/AB4SiJ/gijHhxXHc/OExqGxjkGICxKz",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          },
+          {
+            "sig": "MEQCIBcTrceRfx9VNSF/jf++WOPZidEePwz7QGGv9a8uGfUMAiBU4wiLZW55MLV2f84KawmfOSvKMrnPXpx34EHUknw/kA==",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "unpackedSize": 2715513
+      },
+      "response_sha256": "ac4c193a502726a650cfe2ccfbaf850b577aacdcfb35f803bacfdf33abc0673e"
+    },
+    {
+      "label": "registry-0.17.0",
+      "url": "https://registry.npmjs.org/@ayayaq%2fvivi/0.17.0",
+      "observed_utc": "2026-11-01T21:51:03.435297+00:00",
+      "version": "0.17.0",
+      "dist": {
+        "shasum": "17212d3a1fb80e4a569dc85025f032f80ddfae6c",
+        "tarball": "https://registry.npmjs.org/@ayayaq/vivi/-/vivi-0.17.0.tgz",
+        "fileCount": 430,
+        "integrity": "sha512-inMbmRN+0RGtZZKtjhq9TsmwNJHVlqo4TyKsKSGD6wtPGQUBXI18U4kTk5AV6V4ehKoWx9RD5WrBpZv8M/i/Jw==",
+        "signatures": [
+          {
+            "sig": "MEYCIQDdycy7K0mhhvX2pTvvHelzi6EElF/y54m4pOsn4BQiagIhAKgNBJLNiX8Q/AB4SiJ/gijHhxXHc/OExqGxjkGICxKz",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          },
+          {
+            "sig": "MEQCIBcTrceRfx9VNSF/jf++WOPZidEePwz7QGGv9a8uGfUMAiBU4wiLZW55MLV2f84KawmfOSvKMrnPXpx34EHUknw/kA==",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "unpackedSize": 2715513
+      },
+      "response_sha256": "ac4c193a502726a650cfe2ccfbaf850b577aacdcfb35f803bacfdf33abc0673e"
+    }
+  ],
+  "implementation": {
+    "commit": "3c8ab12a1cd52f384f4953eb69f8e80553a49bc2",
+    "tree": "46d025d8224acdc3bd3d15dcefd7a975b1f585bf"
+  },
+  "original_metadata": {
+    "commit": "d4c4f83f61abf58340061084bcbd82315337e52a",
+    "tree": "b9f1225fd5210391198d258117d8962893eb3791",
+    "parent": "3c8ab12a1cd52f384f4953eb69f8e80553a49bc2",
+    "remote_commit_claim": false,
+    "recovery": "Original legitimate packet bundle, cross-checked against source tar and exact patch reapplication",
+    "patch": "metadata.patch",
+    "changed_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "RELEASING.md",
+      "docs/API.md",
+      "package-lock.json",
+      "package.json"
+    ]
+  },
+  "historical_packet": {
+    "status": "prepared, not published; latest observed 0.16.0",
+    "current_registry_status": "0.17.0 is published, verified by later anonymous observation",
+    "receipt": "historical-receipt.json",
+    "checks_are_historical": true,
+    "components": {
+      "artifacts/local-0.17.0-metadata.patch": {
+        "bytes": 14701,
+        "sha256": "85d570848675df63ae1887a9e53c0058afb76881e28065711b23a3f58f75982a"
+      },
+      "artifacts/source-with-local-metadata.bundle": {
+        "bytes": 766818,
+        "sha256": "2fe0db355480bb48f7aa7ae96a3dc3904d215e406f90cc10e3b930f2d2b5d487"
+      },
+      "artifacts/source-with-local-metadata.tar.gz": {
+        "bytes": 455009,
+        "sha256": "9600d9d0738d9f5ca18db678e64b90ad141364a62b407a68c7a4a14792a340a5"
+      },
+      "receipt.json": {
+        "bytes": 8039,
+        "sha256": "60823ab4edeccf0860a8cda0b48059b66fa94956d29fde62736653f622e6e20d"
+      }
+    }
+  },
+  "archive": {
+    "url": "https://registry.npmjs.org/@ayayaq/vivi/-/vivi-0.17.0.tgz",
+    "packet_filename": "ayayaq-vivi-0.17.0.tgz",
+    "bytes": 452430,
+    "files": 430,
+    "sha256": "f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0",
+    "sha1": "17212d3a1fb80e4a569dc85025f032f80ddfae6c",
+    "integrity": "sha512-inMbmRN+0RGtZZKtjhq9TsmwNJHVlqo4TyKsKSGD6wtPGQUBXI18U4kTk5AV6V4ehKoWx9RD5WrBpZv8M/i/Jw==",
+    "packet_equals_registry_bytes": true
+  },
+  "reconstruction_checks": {
+    "packet_checksums": 42,
+    "patch_reproduces_metadata_tree": true,
+    "source_tar_equals_bundle_files": 170,
+    "source_tree_equals_archive_files": 93,
+    "archive_compiled_declaration_map_files": 337,
+    "export_subpaths": 17,
+    "export_targets_present": 68,
+    "lockfile_delta": "two root version fields only",
+    "manifest_delta": "version only"
+  },
+  "limits": [
+    "Original metadata commit was local-only; no remote availability claim",
+    "Historical receipt checks and CI are not checks run by this reconciliation",
+    "No claim of current compiled-byte or archive-byte reproduction from a new build",
+    "Current documentation and new provenance files necessarily change a fresh pack",
+    "No new remote CI, native/manual UI, live provider/OAuth, registry signature validation or host readiness claim"
+  ]
+}

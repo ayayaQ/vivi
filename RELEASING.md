@@ -1,6 +1,35 @@
 # Release workflow
 
-## Prepared patch 0.15.1, not yet published
+## Published stable 0.17.0
+
+Public npm `latest` and the explicit `0.17.0` record were verified on 2026-11-01.
+The downloaded 452,430-byte archive is byte-identical to the original release packet:
+SHA-256 `f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0`.
+Do not republish, replace or create a release tag for this reconciliation.
+
+The release includes the OpenRouter reasoning-replay binding fix from PR #49, the
+opt-in generic request projection and sanitized error details from PR #50, and detached
+projection input from PR #51. Its merged source is `3c8ab12a1cd52f384f4953eb69f8e80553a49bc2`,
+tree `46d025d8224acdc3bd3d15dcefd7a975b1f585bf`. The original version/docs preparation
+commit `d4c4f83f61abf58340061084bcbd82315337e52a` was local-only, recovered from the
+legitimate packet bundle. Its tree is `b9f1225fd5210391198d258117d8962893eb3791`;
+we make no claim that this commit exists remotely. The [portable release record](docs/releases/0.17.0.md)
+includes the original patch, historical receipt, reconstruction steps and archive identity.
+Authentication, account storage, consent UI and approval modes remain host-owned; core
+neither signs users in nor adopts the separate CLI changes. Runtime dependencies remain
+unchanged. Live providers and OAuth login have not been exercised.
+
+The packet's original receipt said prepared/not published and observed `latest` at `0.16.0`.
+That remains historical evidence. The later public-registry observation above establishes
+the current published state. Current documentation differs from the immutable archive;
+packing this checkout creates a different artifact and cannot replace that archive.
+Host adoption and its installed-consumer checks remain separately scoped.
+
+## Historical preparation: patch 0.15.1
+
+The following preparation notes describe the earlier workflow. They are retained as
+historical evidence, not current installation or publication instructions. The fixes are
+included in published `0.17.0`.
 
 This patch adds a provider-aware output-reserve recommendation (including reasoning),
 uses the documented DeepSeek mode defaults within explicit host/catalog limits, and
@@ -22,7 +51,7 @@ included in this CLI bug-fix rollout.
 ## Published stable 0.15.0
 
 DeepSeek chat and standalone Search/Fetch were released on 2026-10-18, after core
-PRs #41–43. Published archive verification and the CLI/Desktop integration rollout
+PRs #41â€“43. Published archive verification and the CLI/Desktop integration rollout
 completed separately. The underlying chat, web and approval responsibilities remain
 independent; the 0.15.1 patch does not alter web-provider setup or permissions.
 
@@ -354,87 +383,55 @@ Hosts may now integrate exact registry `0.3.0`, regenerate lockfiles with npm an
 checks. This verification does not establish host integration or native platform readiness.
 The later capability normalization module is outside `0.3.0`.
 
-The commands below target the prepared `0.15.1` release. For a later release, select its
-new version in every command and repeat source, archive, registry and host verification.
-All published records and archives remain immutable.
+## Future releases
 
-## Prepare and independently review
+`0.17.0` is already published. The following workflow applies only to a separately
+reviewed, unused future version. This metadata reconciliation does not authorize a
+publication, tag, host update or replacement of existing bytes.
 
-Use Node.js 22 or newer and the locked development dependency:
+Prepare from a clean checkout with Node.js 22 or newer and locked dependencies:
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm run check
 npm pack --dry-run --json
 RELEASE_DIR="$(mktemp -d /tmp/vivi-release-XXXXXX)"
-npm pack --json --pack-destination "$RELEASE_DIR"
-sha256sum "$RELEASE_DIR/ayayaq-vivi-0.15.1.tgz"
+npm pack --ignore-scripts --json --pack-destination "$RELEASE_DIR"
 git rev-parse HEAD HEAD^{tree}
 git status --short
 ```
 
-The final source checkout must be clean. Save the commit, tree, archive SHA-256, SHA-1 and
-SHA-512 integrity in a separate release record. Inspect the archive file list and independently
-check its source, version, exports, declarations and licenses. Verify ESM, CommonJS, strict
-NodeNext consumers and the installed headless example on Node 22 and 24. Core checks use mock
-providers only; no provider credentials are needed.
+Record the final source commit/tree, exact archive SHA-256, SHA-1 and SHA-512 integrity
+outside the repository. Inspect package contents, source, version, exports, declarations,
+licenses and dependency locks. Verify packed ESM/CommonJS, strict NodeNext consumers and
+the installed headless example on Node 22 and 24 using fake transports. Preserve the
+reviewed archive outside tracked source; any changed bytes require fresh review.
 
-The pack includes builds and declarations, source/build configuration, examples, docs, README,
-changelog, this guide, LICENSE, NOTICE, attribution and audit. Exclude credentials, private data,
-node_modules, tests, old archives and development-only files. Keep the frozen archive and release
-record outside the repository; do not commit vendor tarballs or fabricated registry lock entries.
-Any source, metadata, documentation or archive change requires a new pack, hash and review.
+For an authorized future publication, the account holder uses that exact approved archive
+on a trusted computer. Check the public registry first: if the intended version exists,
+compare its bytes and stop rather than repacking or retrying a publish. Name/version pairs
+are immutable. Complete any sign-in and security challenges personally; never share
+credentials or auth configuration. Follow the [npm publication documentation](https://docs.npmjs.com/cli/v11/commands/npm-publish/).
+A client error can follow a successful upload, so inspect registry state before any retry.
 
-## Account-holder publication
+## Verify published 0.17.0 and integrate hosts
 
-Use the exact approved `ayayaq-vivi-0.15.1.tgz` and its supplied release record on your trusted
-computer. Verify the publisher is `ayayaq` or an explicitly authorized package maintainer.
-Complete sign-in and security challenges yourself. Never share passwords, tokens, recovery codes
-or `.npmrc` in chat. No separately created token or trusted-publisher setup is needed.
-
-If required, use [npm browser login](https://docs.npmjs.com/cli/v11/commands/npm-login/):
+These read-only registry commands retrieve the immutable published artifact:
 
 ```sh
-npm login --auth-type=web --registry=https://registry.npmjs.org/
-npm whoami --registry=https://registry.npmjs.org/
-npm view @ayayaq/vivi versions --json --registry=https://registry.npmjs.org/
-sha256sum ./ayayaq-vivi-0.15.1.tgz
-```
-
-Match SHA-256 to the approved release record. If `0.15.1` already exists, stop and compare registry
-integrity and bytes before taking another action. Name/version pairs are immutable even after
-unpublication. Do not change the version or archive without another review.
-
-```sh
-npm publish ./ayayaq-vivi-0.15.1.tgz --access public --tag latest --registry=https://registry.npmjs.org/
-```
-
-This publishes all archive contents and updates `latest` to `0.15.1`. See
-[npm publish](https://docs.npmjs.com/cli/v11/commands/npm-publish/) for tags and authentication.
-A client-side failure can follow a successful upload; inspect the registry before retrying,
-and never substitute a newly packed working directory for the reviewed archive.
-
-## Verify registry bytes and integrate hosts
-
-```sh
-npm view @ayayaq/vivi@0.15.1 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
+npm view @ayayaq/vivi@0.17.0 name version dist.integrity dist.shasum --json --registry=https://registry.npmjs.org/
 npm view @ayayaq/vivi dist-tags --json --registry=https://registry.npmjs.org/
 REGISTRY_DIR="$(mktemp -d /tmp/vivi-registry-XXXXXX)"
-npm pack @ayayaq/vivi@0.15.1 --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
-cmp ./ayayaq-vivi-0.15.1.tgz "$REGISTRY_DIR/ayayaq-vivi-0.15.1.tgz"
+npm pack @ayayaq/vivi@0.17.0 --ignore-scripts --json --pack-destination "$REGISTRY_DIR" --registry=https://registry.npmjs.org/
+sha256sum "$REGISTRY_DIR/ayayaq-vivi-0.17.0.tgz"
 ```
 
-Verify name/version, SHA-512 integrity, SHA-1, exact archive bytes, and `latest`. Install exact
-`@ayayaq/vivi@0.15.1` into clean registry consumers and repeat ESM/CommonJS runtime, strict
-NodeNext declaration, extension/cache and headless-example checks. Record the verified release
-without repacking or replacing published bytes.
-
-Only then set exact `"@ayayaq/vivi": "0.15.1"` in authorized CLI/desktop changes and regenerate
-lockfiles with npm from the real registry. Remove obsolete tracked vendor archives/provenance,
-preserve dependency license/notice/attribution, and rerun each host's final integrated checks.
-Local prototypes may temporarily install a pack with `--no-save --package-lock=false`, but local
-packs do not establish release or clean registry integration. Publishing core does not publish
-or upgrade either host.
+Compare against the [portable provenance](docs/releases/0.17.0.md), including exact bytes
+when the original packet is available. Host adoption is separately authorized: install
+exact `@ayayaq/vivi@0.17.0` from the real registry, regenerate the npm lock, and repeat
+ESM/CommonJS, strict TypeScript, offline contract and headless checks in each host.
+Preserve licenses, notices and attribution. A local pack does not establish registry
+identity or host readiness; core publication does not publish or upgrade either host.
 
 ## Immutable earlier release records
 
@@ -455,4 +452,4 @@ The existing reviewed `0.2.0` record is unchanged:
 Its registry archive and all 96 installed files matched the frozen archive, with clean runtime
 and declaration checks. The published immutable `0.1.0` reviewed archive SHA-256 is
 `9f5faecf9959f722bfa799efa8b0610b383b3d888bc13659b73be37306b6e2f6`.
-Never publish this candidate's new bytes as any earlier version.
+Never replace any published version with newly packed bytes.
