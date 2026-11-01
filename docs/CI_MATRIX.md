@@ -79,6 +79,7 @@ Paths are relative to that directory, with no absolute paths or parent traversal
 The full harness copies the fixture directory to the installed consumer and
 runs each runtime with Node and each type fixture with strict, no-emit NodeNext,
 ES2022/DOM settings. Fixtures resolve the installed tarball, not source imports.
-An absent manifest is reported and leaves all existing assertions enabled;
-a present malformed manifest or failed fixture fails the package check. A2 owns
+An absent fixture directory is reported and leaves all existing assertions enabled;
+once that directory exists, a missing/malformed manifest or failed fixture fails
+the package check. A2 owns
 fixture assertions and coverage; the bounded smoke retains its existing scope.

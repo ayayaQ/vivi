@@ -1,5 +1,6 @@
 // A2 owns the assertions under test/package-contracts; A3 owns their execution.
 import assert from 'node:assert/strict'
+import { existsSync } from 'node:fs'
 import { cp, readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 
@@ -9,7 +10,7 @@ export async function runPackageContracts({ root, temporary, run }) {
   try {
     manifest = JSON.parse(await readFile(join(source, 'manifest.json'), 'utf8'))
   } catch (error) {
-    if (error.code !== 'ENOENT') throw error
+    if (error.code !== 'ENOENT' || existsSync(source)) throw error
     console.log('Additional package contracts: manifest absent (A2 fixtures not supplied)')
     return { runtime: 0, types: 0 }
   }

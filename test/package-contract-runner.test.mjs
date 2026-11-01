@@ -24,9 +24,16 @@ async function fixture(t) {
 }
 
 test('absent A2 manifest leaves existing package checks usable', async t => {
-  const { root, temporary } = await fixture(t)
+  const { root, source, temporary } = await fixture(t)
+  await rm(source, { recursive: true })
   assert.deepEqual(await runPackageContracts({ root, temporary, run() { assert.fail('unexpected spawn') } }),
     { runtime: 0, types: 0 })
+})
+
+test('present A2 fixture directory requires its manifest', async t => {
+  const { root, temporary } = await fixture(t)
+  await assert.rejects(runPackageContracts({ root, temporary, run() { assert.fail('unexpected spawn') } }),
+    error => error.code === 'ENOENT')
 })
 
 test('copies fixtures into installed consumer and registers explicit runtime and strict declaration modes', async t => {
