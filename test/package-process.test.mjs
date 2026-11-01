@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,7 +9,7 @@ import test from 'node:test'
 import { npmInvocation, ProcessFailure, runProcess } from '../scripts/package-process.mjs'
 
 async function fixture(t) {
-  const directory = await mkdtemp(join(tmpdir(), 'vivi process fixture '))
+  const directory = await realpath(await mkdtemp(join(tmpdir(), 'vivi process fixture ')))
   t.after(() => rm(directory, { recursive: true, force: true }))
   const cli = join(directory, 'npm-cli.js')
   await writeFile(cli, `
