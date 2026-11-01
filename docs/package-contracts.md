@@ -62,34 +62,40 @@ expected-error expressions must never be executed as runtime fixtures.
 ## A3 registration contract and integration status
 
 A2 accepts the coordinator-approved version 1 entry point
-`test/package-contracts/manifest.json`. A3 owns that manifest and both harness
-registration sites; this fixture-only candidate supplies its exact proposed
-content in the external A2 integration proposal. The proposed runtime entries are
+`test/package-contracts/manifest.json`. A2 owns this fixture manifest; A3 owns the
+shared runner registration. The manifest is included in this candidate, with an
+external A2 integration proposal recording the handoff. Its runtime entries are
 `runtime.mjs` and `runtime.cjs`; type entries are `types.mts` and `types.cts`.
 The whole directory must be copied into the clean installed consumer, including
 the sibling `contracts.cjs` support file, before running the entries.
 
-After registration, the A3 portable full command `npm run test:package:built`
-and direct smoke command `node scripts/test-package-smoke.mjs` must both execute
-these runtime entries and strict declaration consumers against the actual packed
-candidate installed in a fresh temporary consumer. `npm run test:package` first
+The A3 portable full command `npm run test:package:built` executes these runtime
+entries and strict declaration consumers against the actual packed candidate
+installed in a fresh temporary consumer. The bounded smoke command
+`node scripts/test-package-smoke.mjs` preserves its existing 17-export checks
+only; it does not execute the A2 fixtures. `npm run test:package` first
 builds and then uses the full installed harness. Existing public export checks and
 consumer assertions remain in place. A3 owns lifecycle, portable argv spawning,
 timeouts, propagation of fixture failures and exact archive SHA256 capture.
-Type compilation uses the consumer-local compiler with:
+The approved A3 runner invokes TypeScript from repository tooling against each
+type fixture copied into the clean consumer; package declarations resolve from
+that consumer's installed package. Each file is compiled separately with:
 
 ```text
---strict --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM types.mts types.cts
+--strict --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM <consumer>/package-contracts/types.mts
+--strict --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM <consumer>/package-contracts/types.cts
 ```
 
 Runtime entries use Node's `node:test` registration and fail the process on any
 failed assertion, whether invoked directly or through `node --test`. A3's full
-and smoke call sites must propagate nonzero exit status. A missing manifest is
-tolerated only before integration; a present malformed manifest must fail. Once
-integrated, coverage must not silently disappear if registration is missing.
+harness propagates nonzero fixture exit status. The final A3 dependency
+`5aa574347eab2cb444ed287b4d8e621167d0aff2` requires the manifest whenever the
+fixture directory exists, and a malformed present manifest fails. Only absence
+of the entire fixture directory permits the pre-integration skip.
 
-This bounded candidate does not create or edit manifests, harnesses, CI, package
-exports or release records. It has no new installed pass until A3 integrates the
-proposal and a leased validation records the packed candidate hash. Historical
+This bounded candidate adds only fixtures, their fixture manifest and this map;
+it does not edit harnesses, CI, package manifests/lockfiles, exports or release
+records. It has no new installed pass until a leased validation records the
+packed candidate hash. Historical
 packet passes and A3's harness-only passes do not establish that these fixture
 bytes have run. Mac native smoke remains separately assigned.

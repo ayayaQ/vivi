@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "runtime": ["runtime.mjs", "runtime.cjs"],
+  "types": ["types.mts", "types.cts"],
+  "coverage": {
+    "projection-estimate-wire": ["runtime.mjs", "runtime.cjs"],
+    "input-isolation": ["runtime.mjs", "runtime.cjs"],
+    "rejected-projections": ["runtime.mjs", "runtime.cjs", "types.mts", "types.cts"],
+    "default-request-encoding": ["runtime.mjs", "runtime.cjs"],
+    "opt-in-error-details": ["runtime.mjs", "runtime.cjs", "types.mts", "types.cts"],
+    "bounded-sanitized-diagnostics": ["runtime.mjs", "runtime.cjs"],
+    "strict-public-declarations": ["types.mts", "types.cts"]
+  }
+}
