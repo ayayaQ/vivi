@@ -51,7 +51,7 @@ included in this CLI bug-fix rollout.
 ## Published stable 0.15.0
 
 DeepSeek chat and standalone Search/Fetch were released on 2026-10-18, after core
-PRs #41â€“43. Published archive verification and the CLI/Desktop integration rollout
+PRs #41–43. Published archive verification and the CLI/Desktop integration rollout
 completed separately. The underlying chat, web and approval responsibilities remain
 independent; the 0.15.1 patch does not alter web-provider setup or permissions.
 

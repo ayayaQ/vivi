@@ -123,5 +123,22 @@
     "No claim of current compiled-byte or archive-byte reproduction from a new build",
     "Current documentation and new provenance files necessarily change a fresh pack",
     "No new remote CI, native/manual UI, live provider/OAuth, registry signature validation or host readiness claim"
-  ]
+  ],
+  "current_checkout": {
+    "documentation_reconciliation": [
+      "README.md",
+      "CHANGELOG.md",
+      "RELEASING.md",
+      "docs/API.md",
+      "docs/STEERING.md",
+      "docs/IMAGES.md",
+      "docs/CONTEXT.md",
+      "docs/QUESTIONS.md",
+      "docs/WEB.md",
+      "docs/DEEPSEEK.md"
+    ],
+    "historical_patch_and_receipt": "Preserved verbatim; current availability corrections are not applied to historical records",
+    "pack_distinction": "Current guides and new provenance files differ from immutable published archive contents. Any fresh pack has different bytes and must not replace that archive.",
+    "legacy_heading_anchors": "Preserved as explicit IDs when availability headings change; existing README/API links remain valid"
+  }
 }

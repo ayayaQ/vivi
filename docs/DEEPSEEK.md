@@ -2,7 +2,9 @@
 
 The optional `@ayayaq/vivi/providers/deepseek` subpath implements the ordinary
 `ModelProvider` interface using DeepSeek Chat Completions. It is independent of web
-retrieval and approval-decision providers. Available since `0.15.0`; output-budget and diagnostic fixes are prepared for `0.15.1`.
+retrieval and approval-decision providers. Available since published `0.15.0`; the
+output-budget and diagnostic fixes described below are included in published `0.17.0`.
+Production host adoption remains a separate reviewed integration.
 
 ```js
 import { createDeepSeekProvider } from '@ayayaq/vivi/providers/deepseek'
