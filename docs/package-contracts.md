@@ -89,7 +89,7 @@ that consumer's installed package. Each file is compiled separately with:
 Runtime entries use Node's `node:test` registration and fail the process on any
 failed assertion, whether invoked directly or through `node --test`. A3's full
 harness propagates nonzero fixture exit status. The final A3 dependency
-`5aa574347eab2cb444ed287b4d8e621167d0aff2` requires the manifest whenever the
+`632acaad2ebcebbd9f88d90fbf08d72f1460ed55` requires the manifest whenever the
 fixture directory exists, and a malformed present manifest fails. Only absence
 of the entire fixture directory permits the pre-integration skip.
 
