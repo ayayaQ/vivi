@@ -61,7 +61,7 @@ function requestBody(
   if (!transform) return body
   let projected: JsonObject
   try {
-    projected = transform(body)
+    projected = transform(structuredClone(body))
     assertJson(projected)
     if (!isRecord(projected) || projected.model !== config.model || projected.stream !== config.stream) throw new Error()
     return structuredClone(projected)

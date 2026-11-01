@@ -255,7 +255,8 @@ host attribution; no Discord branding, desktop settings or moderation key is bui
 OpenAI also accepts an optional trusted, pure `transformRequest(body)` compatibility projection.
 It runs after ordinary Responses encoding for both estimation and generation, including context
 summaries. Return JSON data retaining the configured `model` and `stream`; the adapter captures
-the callback at creation and copies its output. Credentials never enter it. The host owns any
+the callback at creation, supplies a detached body, and copies its output. Nested tool schemas
+and captured reasoning cannot be changed through that body. Credentials never enter it. The host owns any
 route-specific role, tool namespace or unsupported-field rules; the default wire format is unchanged.
 
 `errorDetails: true` opts into bounded `ProviderRequestError.details` containing an upstream
