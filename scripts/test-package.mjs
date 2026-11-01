@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { runPackageContracts } from './test-package-contracts.mjs'
+import { runProcess, reportProcessFailure } from './package-process.mjs'
 import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,20 +9,16 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const sourceManifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-const temporary = await mkdtemp(join(tmpdir(), 'vivi-consumer-'))
+const temporary = await mkdtemp(join(tmpdir(), 'vivi consumer '))
 const cache = process.env.VIVI_TEST_NPM_CACHE ?? join(tmpdir(), 'vivi-npm-cache')
 
 function run(command, arguments_, cwd = root) {
-  const result = spawnSync(command, arguments_, {
-    cwd, encoding: 'utf8',
-    env: { ...process.env, npm_config_cache: cache, npm_config_update_notifier: 'false' }
+  return runProcess(command, arguments_, {
+    cwd, env: { ...process.env, npm_config_cache: cache, npm_config_update_notifier: 'false' }
   })
-  if (result.error || result.status !== 0) {
-    throw new Error(`${command} failed: ${result.error?.message ?? ''}\n${result.stdout}\n${result.stderr}`)
-  }
-  return result.stdout
 }
 
+let failure
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary, '--cache', cache]))
   const paths = new Set(packed.files.map((file) => file.path))
@@ -668,7 +665,9 @@ const { createMemoryService, createMemoryExtension, decodeMemories, encodeMemori
   const skillsConsumer = `
 assert.equal(Object.hasOwn(core,'createSkillCatalog'),false)
 assert.equal(skillCreatorSource.readOnly,true)
-assert.equal(skillCreatorSource.content,await readFile(new URL('./node_modules/@ayayaq/vivi/skills/skill-creator/SKILL.md',importUrl),'utf8'))
+// TypeScript template literals use LF; a Windows checkout can package CRLF Markdown.
+const normalizeLines = text => text.replaceAll('\\r\\n','\\n')
+assert.equal(normalizeLines(skillCreatorSource.content),normalizeLines(await readFile(new URL('./node_modules/@ayayaq/vivi/skills/skill-creator/SKILL.md',importUrl),'utf8')))
 const parsed = parseSkillDocument(skillCreatorSource.content,'skill-creator')
 assert.equal(parsed.metadata.name,'skill-creator')
 assert(Object.isFrozen(parsed.metadata))
@@ -1120,10 +1119,15 @@ void prefix;void result;void createOpenAIProvider(options);void version;void inv
 `)
     run(process.execPath,[join(root,'node_modules/typescript/bin/tsc'),'--strict','--noEmit','--module','NodeNext','--target','ES2022','--lib','ES2022,DOM',`image-prefix-types.${extension}`],temporary)
   }
+  await runPackageContracts({ root, temporary, run })
   console.log(`Packaged ESM/CommonJS runtime and TypeScript consumers passed (${packed.filename})`)
   console.log(`All ${specifiers.length} public subpaths resolved in both runtimes and declaration modes`)
   console.log(`sha256 ${sha256}`)
   console.log(`integrity ${packed.integrity}`)
+} catch (error) {
+  failure = error
 } finally {
   await rm(temporary, { recursive: true, force: true })
 }
+
+if (failure) reportProcessFailure(failure)

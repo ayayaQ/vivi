@@ -1,7 +1,8 @@
 // Focused additional-Node compatibility check, not a replacement for test-package.mjs.
 // Build once before invoking. Exercise installed public boundaries, not the full suite.
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
+import { runProcess, reportProcessFailure } from './package-process.mjs'
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,22 +10,19 @@ import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const source = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-const temporary = await mkdtemp(join(tmpdir(), 'vivi-smoke-'))
+const temporary = await mkdtemp(join(tmpdir(), 'vivi smoke consumer '))
 const cache = process.env.VIVI_TEST_NPM_CACHE ?? join(tmpdir(), 'vivi-npm-cache')
 
 function run(command, args, cwd = temporary) {
-  const result = spawnSync(command, args, {
-    cwd, encoding: 'utf8',
-    env: { ...process.env, npm_config_cache: cache, npm_config_update_notifier: 'false' }
+  return runProcess(command, args, {
+    cwd, env: { ...process.env, npm_config_cache: cache, npm_config_update_notifier: 'false' }
   })
-  if (result.error || result.status !== 0) {
-    throw new Error(`${command} failed: ${result.error?.message ?? ''}\n${result.stdout}\n${result.stderr}`)
-  }
-  return result.stdout
 }
 
+let failure
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temporary], root))
+  const sha256 = createHash('sha256').update(await readFile(join(temporary, packed.filename))).digest('hex')
   await writeFile(join(temporary, 'package.json'), JSON.stringify({ private: true, type: 'module' }))
   run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', join(temporary, packed.filename)])
   const installed = JSON.parse(await readFile(join(temporary, 'node_modules', source.name, 'package.json'), 'utf8'))
@@ -59,7 +57,13 @@ assert.equal(result.status, 'completed')
       '--strict', '--noEmit', '--module', 'NodeNext', '--target', 'ES2022',
       '--lib', 'ES2022,DOM', `consumer.${extension}`])
   }
+  console.log(`sha256 ${sha256}`)
+  console.log(`integrity ${packed.integrity}`)
   console.log(`Package smoke passed: ${specifiers.length} public ESM/CJS runtime and declaration boundaries`)
+} catch (error) {
+  failure = error
 } finally {
   await rm(temporary, { recursive: true, force: true })
 }
+
+if (failure) reportProcessFailure(failure)
