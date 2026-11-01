@@ -67,3 +67,54 @@ test('upstream diagnostics remain opt-in and bearer-shaped identifiers are omitt
     })
   }
 })
+
+test('projection receives detached nested tool schemas and captured reasoning on every call', async () => {
+  const original = {
+    messages: [{ kind: 'message', role: 'user', content: 'Use the fixture tool' }],
+    tools: [{ name: 'fixture', description: 'Fixture', parameters: {
+      type: 'object', properties: { value: { type: 'string' } }
+    } }]
+  }
+  const before = structuredClone(original), seenEfforts = [], requests = []
+  const options = { model: 'fixture', apiKey: 'fixture-key', reasoning: { mode: 'effort', effort: 'low' },
+    supportedReasoningEfforts: ['low'], transformRequest(body) {
+      seenEfforts.push(body.reasoning.effort)
+      body.reasoning.effort = 'high'
+      body.tools[0].parameters.properties.value.description = 'projection-only schema'
+      return body
+    }, fetch: async (_url, init) => { requests.push(JSON.parse(init.body)); return new Response(JSON.stringify({ status: 'completed', output: [] })) } }
+  const provider = createOpenAIProvider(options)
+  provider.estimateContext(original)
+  assert.deepEqual(original, before)
+  await provider.generate(original, signal())
+  provider.estimateContext(original)
+  assert.deepEqual(original, before)
+  assert.deepEqual(options.reasoning, { mode: 'effort', effort: 'low' })
+  assert.deepEqual(seenEfforts, ['low', 'low', 'low'])
+  assert.equal(requests[0].reasoning.effort, 'high')
+  assert.equal(requests[0].tools[0].parameters.properties.value.description, 'projection-only schema')
+})
+
+test('rejected projections cannot mutate nested caller schemas or captured reasoning', async () => {
+  for (const rejection of ['throw', 'identity']) {
+    const original = { messages: [{ kind: 'message', role: 'user', content: 'Fixture' }],
+      tools: [{ name: 'fixture', description: 'Fixture', parameters: { type: 'object', properties: { value: { type: 'string' } } } }] }
+    const before = structuredClone(original), seen = []
+    let requests = 0
+    const provider = createOpenAIProvider({ model: 'fixture', apiKey: 'fixture-key',
+      reasoning: { mode: 'effort', effort: 'low' }, supportedReasoningEfforts: ['low'],
+      transformRequest(body) {
+        seen.push(body.reasoning.effort)
+        body.reasoning.effort = 'high'
+        body.tools[0].parameters.properties.value.description = 'projection-only'
+        if (rejection === 'throw') throw new Error('Fixture rejection')
+        return { ...body, model: 'invalid-model' }
+      }, fetch: async () => { requests++; throw new Error('Must not send') } })
+    assert.throws(() => provider.estimateContext(original), /projection/)
+    assert.deepEqual(original, before)
+    await assert.rejects(provider.generate(original, signal()), /projection/)
+    assert.deepEqual(original, before)
+    assert.deepEqual(seen, ['low', 'low'])
+    assert.equal(requests, 0)
+  }
+})
