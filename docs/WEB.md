@@ -1,6 +1,7 @@
 # Optional web retrieval
 
-Prepared for `0.15.0`, not yet published. Production host adoption follows verified registry bytes.
+Available since published `0.15.0` and included in `0.17.0`. Production host adoption remains
+a separate reviewed integration using verified registry bytes.
 
 `@ayayaq/vivi/web` defines `WebProvider`, typed search/fetch requests and bounded normalized
 responses, provenance and `WebProviderError`. `@ayayaq/vivi/web/deepseek` provides
@@ -127,4 +128,5 @@ must obtain paid-provider consent and coordinate limits across keys and processe
 adapter includes no account-wide scheduler, retry queue or billing meter.
 
 Tests use only mock transports and packaged ESM/CommonJS/type consumers. No live key,
-provider billing, host credential storage, CLI/Desktop adoption or npm publication is included.
+provider billing, host credential storage or CLI/Desktop adoption is exercised by those checks.
+Published availability is separate from live-provider qualification and host adoption.

@@ -1,10 +1,12 @@
-# Optional queued-message steering (unreleased)
+<a id="optional-queued-message-steering-unreleased"></a>
+
+# Optional queued-message steering (available in 0.16.0)
 
 `runAgent` accepts an optional `getSteeringMessages({ signal })` callback returning
 `readonly Message[]` or a promise of that array. Each returned message must have
-`kind: 'message'`, `role: 'user'`, and string `content`. This additive API is prepared
-for review separately from the current published foundation. No package version or
-publication is changed by this work.
+`kind: 'message'`, `role: 'user'`, and string `content`. This additive API is available
+in published `0.16.0` and `0.17.0`. Host queue/UI adoption remains a separate reviewed
+integration; core publication does not update a host.
 
 ## Admission boundary
 
