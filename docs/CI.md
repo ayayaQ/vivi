@@ -53,6 +53,13 @@ for trusted Vivi releases and was released on 2026-06-11. This contributor/CI
 requirement does not raise the published package's Node runtime requirement;
 the selected CI Node versions satisfy npm's own engine requirement.
 
+Core deliberately leaves `actions/setup-node`'s npm cache disabled. Cache discovery
+runs the bundled `npm config get cache` before the bootstrap; Node 22's older npm
+is correctly rejected by the contributor guard at that point. For core's small
+dependency graph, an uncached setup is simpler and portable across Linux/Windows.
+This preserves the guard rather than bypassing it, and the CI regression test
+rejects reintroducing an npm cache query before the supported-npm bootstrap.
+
 The bootstrap changes the CI runner's npm tool only; it does not update project
 dependencies or the lockfile. It does not lower the project's seven-day window.
 `npm ci` remains a locked install, **not** a retrospective release-age audit of

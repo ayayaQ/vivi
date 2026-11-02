@@ -36,11 +36,16 @@ def check_dependency_policy(source):
     for name, body in installing:
         assert required in body, f'{name}: supported npm and passing policy fixture must precede npm ci'
         assert body.count('      - run: npm ci\n') == 1
+        before_bootstrap = body.split('      - name: Install policy-aware npm\n', 1)[0]
+        assert not re.search(r"^\s+cache:\s*['\"]?npm['\"]?\s*(?:#.*)?$",
+                             before_bootstrap, re.MULTILINE), f'{name}: cache discovery must not invoke old npm before bootstrap'
         assert 'continue-on-error:' not in body, f'{name}: dependency policy must be required'
 
 check_dependency_policy(workflow)
 for old, new in [
     ('npm@11.17.0', 'npm@11.9.0'),
+    ('      # Pinned mature npm supports the cooldown and exact trusted-package exception.\n',
+     '          cache: npm\n      # Pinned mature npm supports the cooldown and exact trusted-package exception.\n'),
     ('        run: node scripts/verify-dependency-policy.mjs npm\n', ''),
     ('      - name: Verify dependency resolution policy\n',
      '      - name: Verify dependency resolution policy\n        if: false\n'),
