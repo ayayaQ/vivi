@@ -3,6 +3,7 @@ import itertools
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import textwrap
@@ -10,6 +11,15 @@ import textwrap
 workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/ci.yml').read_text()
 gate = textwrap.dedent(workflow.split("          python3 - <<'PYTHON'\n", 1)[1].split("          PYTHON", 1)[0])
 jobs = ['check', 'compatibility', 'mcp-windows', 'prepared-action']
+summary_needs = re.search(r'^    needs: \[(.+)\]$', workflow, re.MULTILINE)
+assert summary_needs and summary_needs.group(1).split(', ') == jobs, 'Summary dependencies changed'
+windows = workflow.split('  mcp-windows:\n', 1)[1].split('\n  prepared-action:', 1)[0]
+assert '    runs-on: windows-latest\n' in windows
+assert "node: ${{ fromJSON(github.event_name == 'pull_request' && '[22]' || '[22, 24]') }}" in windows
+assert '      - run: node --test test/package-process.test.mjs test/package-contract-runner.test.mjs\n' in windows
+assert '      - run: node scripts/test-package-smoke.mjs\n' in windows
+assert windows.count('      - run: npm run build\n') == 1
+assert 'continue-on-error:' not in windows and 'if:' not in windows, 'Windows package gate must be required'
 count = 0
 
 def check(event, needs, accepted):
