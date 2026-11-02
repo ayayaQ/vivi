@@ -29,7 +29,7 @@ def check_dependency_policy(source):
     installing = [(name, body) for name, body in blocks if '      - run: npm ci\n' in body]
     assert [name for name, _ in installing] == jobs, 'Dependency-install job inventory changed'
     required = ('      - name: Install policy-aware npm\n'
-                '        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund\n'
+                '        run: node scripts/bootstrap-ci-npm.mjs\n'
                 '      - name: Verify dependency resolution policy\n'
                 '        run: node scripts/verify-dependency-policy.mjs npm\n'
                 '      - run: npm ci\n')
@@ -43,7 +43,7 @@ def check_dependency_policy(source):
 
 check_dependency_policy(workflow)
 for old, new in [
-    ('npm@11.17.0', 'npm@11.9.0'),
+    ('node scripts/bootstrap-ci-npm.mjs', 'echo skipped-bootstrap'),
     ('      # Pinned mature npm supports the cooldown and exact trusted-package exception.\n',
      '          cache: npm\n      # Pinned mature npm supports the cooldown and exact trusted-package exception.\n'),
     ('        run: node scripts/verify-dependency-policy.mjs npm\n', ''),
