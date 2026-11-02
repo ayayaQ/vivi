@@ -15,6 +15,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # setup-node cache discovery invokes bundled npm before our supported-npm bootstrap.
+  # Keep setup uncached so Node 22's older npm cannot trip the contributor guard.
   check:
     name: Linux correctness and package (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
@@ -27,7 +29,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: node scripts/bootstrap-ci-npm.mjs
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run check
 
@@ -40,7 +46,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: node scripts/bootstrap-ci-npm.mjs
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run build
       - run: node --test test/package-process.test.mjs test/package-contract-runner.test.mjs
@@ -60,7 +70,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: node scripts/bootstrap-ci-npm.mjs
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run build
       - run: node --test test/package-process.test.mjs test/package-contract-runner.test.mjs
@@ -89,7 +103,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-          cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: node scripts/bootstrap-ci-npm.mjs
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - name: Install checksum-pinned Lean 4.34.0
         run: bash verification/prepared-action/install-lean.sh "$RUNNER_TEMP/vivi-lean"

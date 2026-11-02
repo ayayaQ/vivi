@@ -41,3 +41,33 @@ alter repository settings or enforce merge rules. Job display names have become
 more descriptive; maintainers using required-check settings should review the
 names separately before requiring the summary. CODEOWNERS routes review of the
 consolidated workflow to the same owner as the former Lean workflow.
+
+
+## Dependency resolution policy
+
+Before each `npm ci`, `node scripts/bootstrap-ci-npm.mjs` installs exact mature
+npm **11.17.0** into a runner-temporary prefix with lifecycle scripts disabled,
+verifies its exact version, and selects its bin path/CLI identity for later steps.
+CI then runs `node scripts/verify-dependency-policy.mjs npm`.
+The verifier is a required pre-install step: unsupported npm or failed cooldown
+fixtures stop the job. npm 11.17.0 introduced the exact-package exclusion needed
+for trusted Vivi releases and was released on 2026-06-11. This contributor/CI
+requirement does not raise the published package's Node runtime requirement;
+the selected CI Node versions satisfy npm's own engine requirement.
+
+Core deliberately leaves `actions/setup-node`'s npm cache disabled. Cache discovery
+runs the bundled `npm config get cache` before the bootstrap; Node 22's older npm
+is correctly rejected by the contributor guard at that point. For core's small
+dependency graph, an uncached setup is simpler and portable across Linux/Windows.
+This preserves the guard rather than bypassing it, and the CI regression test
+rejects reintroducing an npm cache query before the supported-npm bootstrap.
+
+The bootstrap selects an isolated CI runner npm tool only; it does not update project
+dependencies or the lockfile. It does not lower the project's seven-day window.
+`npm ci` remains a locked install, **not** a retrospective release-age audit of
+already-locked versions. See [the dependency policy](DEPENDENCY_POLICY.md) for
+new-resolution scope, supported tools, trusted-package scope, and lockfile limits.
+
+Core CI continues to use npm, not Bun, as its installer. The existing CI policy
+regression test checks the pinned bootstrap and mandatory verifier ordering in
+all four dependency-installing jobs without changing matrices or summary needs.
