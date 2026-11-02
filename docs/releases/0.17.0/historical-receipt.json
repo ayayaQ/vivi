@@ -1,0 +1,217 @@
+{
+  "status": "PREPARED AND INDEPENDENTLY REVIEWED \u2014 NOT PUBLISHED",
+  "prepared_at_utc": "2026-11-01T00:24:28Z",
+  "package": {
+    "name": "@ayayaq/vivi",
+    "version": "0.17.0",
+    "archive": {
+      "filename": "ayayaq-vivi-0.17.0.tgz",
+      "bytes": 452430,
+      "file_count": 430,
+      "sha256": "f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0",
+      "sha1": "17212d3a1fb80e4a569dc85025f032f80ddfae6c",
+      "integrity": "sha512-inMbmRN+0RGtZZKtjhq9TsmwNJHVlqo4TyKsKSGD6wtPGQUBXI18U4kTk5AV6V4ehKoWx9RD5WrBpZv8M/i/Jw=="
+    },
+    "exports": [
+      ".",
+      "./providers/openai",
+      "./providers/openrouter",
+      "./providers/deepseek",
+      "./extensions",
+      "./extensions/calculator",
+      "./providers/models",
+      "./extensions/memory",
+      "./extensions/skills",
+      "./decisions",
+      "./extensions/mcp",
+      "./events",
+      "./events/stream",
+      "./extensions/questions",
+      "./presentation",
+      "./web",
+      "./web/deepseek"
+    ],
+    "runtime_dependencies": {
+      "yaml": {
+        "version": "2.9.1",
+        "resolved": "https://registry.npmjs.org/yaml/-/yaml-2.9.1.tgz",
+        "integrity": "sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==",
+        "license": "ISC"
+      }
+    }
+  },
+  "merged_source": {
+    "pr": "https://github.com/ayayaQ/vivi/pull/51",
+    "commit": "3c8ab12a1cd52f384f4953eb69f8e80553a49bc2",
+    "tree": "46d025d8224acdc3bd3d15dcefd7a975b1f585bf",
+    "parents": [
+      "76ba396869681127bb6ffc74e99580950a268f5d",
+      "ab72e0e2e036214130ceb1233691ba4a961a041a"
+    ],
+    "main_verified_same_at_utc": "2026-11-01T00:23:04Z",
+    "head_guarded_merge": true
+  },
+  "local_metadata": {
+    "commit": "d4c4f83f61abf58340061084bcbd82315337e52a",
+    "tree": "b9f1225fd5210391198d258117d8962893eb3791",
+    "parent": "3c8ab12a1cd52f384f4953eb69f8e80553a49bc2",
+    "files": [
+      "CHANGELOG.md",
+      "README.md",
+      "RELEASING.md",
+      "docs/API.md",
+      "package-lock.json",
+      "package.json"
+    ],
+    "remote_published": false,
+    "runtime_source_delta": "none",
+    "compiled_files_unchanged": 337,
+    "root_versions": {
+      "package.json": "0.17.0",
+      "package-lock.json": "0.17.0",
+      "lock.packages.root": "0.17.0"
+    }
+  },
+  "version_selection": {
+    "reason": "Additive release above actual immutable npm latest0.16.0; repository0.15.1 metadata lagged. Includes unpublished49 reasoning replay and50/51 generic APIs/fix.",
+    "registry_url": "https://registry.npmjs.org/@ayayaq%2fvivi",
+    "final_observation_utc": "2026-11-01T00:23:28Z",
+    "latest": "0.16.0",
+    "dist_tags": {
+      "latest": "0.16.0"
+    },
+    "proposed_0_17_0_unused": true,
+    "immutable_0_16_repacked_or_replaced": false
+  },
+  "changes": [
+    "OpenRouter reasoning replay bound to request context/tools/reasoning settings, with shared estimate/dispatch projection.",
+    "Optional trusted synchronous OpenAI Responses request projection with detached JSON input/output and validation; default no-hook path unchanged.",
+    "Optional bounded sanitized provider diagnostic details.",
+    "Core stays generic; authentication, account storage, UI and approvals remain host-owned."
+  ],
+  "validation": {
+    "build": "pass; exact locked development dependencies installed with lifecycle scripts disabled",
+    "compiled_declaration_files_identical_to_merged_implementation": 337,
+    "node22_23_4": {
+      "ordinary_tests": 922,
+      "pass": 922,
+      "fail": 0,
+      "skip": 0,
+      "offline_examples": "pass",
+      "packaged_17_ESM_CJS_TypeScript_exports": "pass",
+      "built_in_pack_sha256": "f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0",
+      "exact_tar_clean_consumer": {
+        "installed_file_hashes": 430,
+        "ESM_CJS_exports": 17,
+        "strict_mts_cts": "pass",
+        "new_mocked_contracts": 14,
+        "headless_example": "pass"
+      }
+    },
+    "node24_22_1": {
+      "ordinary_tests": 922,
+      "pass": 922,
+      "fail": 0,
+      "skip": 0,
+      "offline_examples": "pass",
+      "packaged_17_ESM_CJS_TypeScript_exports": "pass",
+      "built_in_pack_sha256": "f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0",
+      "exact_tar_clean_consumer": {
+        "installed_file_hashes": 430,
+        "ESM_CJS_exports": 17,
+        "strict_mts_cts": "pass",
+        "new_mocked_contracts": 14,
+        "headless_example": "pass"
+      }
+    },
+    "source_reconstruction": "fresh bundle clone and source tar match170tracked files; patch reapplied to exact merge reproduces exact localmetadata tree",
+    "archive_audit": "430 regular safe-path files; no tests/node_modules/credentials/vendor archives; all archive bytes match source/build; manifest/checksums verified",
+    "independent": {
+      "findings": "none remaining",
+      "exact_source_commit": "d4c4f83f61abf58340061084bcbd82315337e52a",
+      "exact_archive_sha256": "f709f18cc262f0b6c56170cb4d5fa47ab196b1039833aa0795e61598b55b49a0",
+      "node22_full_tests": 922,
+      "node24_full_tests": 922,
+      "both_exact_tar_consumers": "430file hashes/17ESM-CJS/stricttypes/14contracts/headless pass",
+      "metadata_instructions_and_artifact": "pass"
+    }
+  },
+  "post_merge_ci": {
+    "url": "https://github.com/ayayaQ/vivi/actions/runs/41255892156",
+    "id": 41255892156,
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "3c8ab12a1cd52f384f4953eb69f8e80553a49bc2",
+    "success_jobs": 6,
+    "expected_PR_only_smoke_skip": 1,
+    "jobs": [
+      {
+        "id": 124698853162,
+        "name": "Windows compatibility (Node 22)",
+        "conclusion": "success"
+      },
+      {
+        "id": 124698853256,
+        "name": "Linux correctness and package (Node 22)",
+        "conclusion": "success"
+      },
+      {
+        "id": 124698853294,
+        "name": "Windows compatibility (Node 24)",
+        "conclusion": "success"
+      },
+      {
+        "id": 124698853365,
+        "name": "Linux correctness and package (Node 24)",
+        "conclusion": "success"
+      },
+      {
+        "id": 124698853431,
+        "name": "Prepared-action Lean verification",
+        "conclusion": "success"
+      },
+      {
+        "id": 124698854468,
+        "name": "Linux package smoke (Node 24)",
+        "conclusion": "skipped"
+      },
+      {
+        "id": 124699161254,
+        "name": "CI summary",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "release_workflow": {
+    "remote_workflows": [
+      ".github/workflows/ci.yml"
+    ],
+    "automatic_npm_publish_workflow": false,
+    "instructions": "PUBLISHING.md",
+    "publication_actor": "Account holder on trusted computer; assistant does not log in or publish",
+    "registry_verification_required": "After user publication, compare actual public tar bytes/hashes and tags, then clean exact-name Node22/24 consumers before separately authorized host adoption"
+  },
+  "scope": {
+    "npm_publish_or_login": false,
+    "credentials_or_OAuth_grants_used": false,
+    "live_provider_requests": false,
+    "desktop_or_manual_UI": false,
+    "release_tag_pushed": false,
+    "local_metadata_commit_pushed": false,
+    "CLI80": {
+      "head": "db724ef1563f38bce9052f6dac0738a861f42b52",
+      "draft": true,
+      "merged": false,
+      "core_dependency": "0.16.0 unchanged",
+      "changes_by_this_task": false
+    },
+    "historical_CLI_skills_assessments": "seven exact exclusions unchanged and unrun; no CLI tests reconstructed or run in this release task"
+  },
+  "limitations": [
+    "Prepared archive is not a registry release; no publication or real-registry0.17 consumers yet.",
+    "Hosted Windows compatibility passed on merged code; final archive consumers were LinuxNode22/24. No manual/nativeWindowsOAuth/TUI/live account testing.",
+    "Metadata/docs commit is local-only, with explicit included patch/bundle; merged behavioral source is independently CI-verified."
+  ],
+  "evidence_directory": "evidence/",
+  "file_hashes_manifest": "SHA256SUMS"
+}

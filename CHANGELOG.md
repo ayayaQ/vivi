@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Reconcile repository version and installation guidance with published `0.17.0`; preserve
+  its original metadata patch and historical receipt with portable verification instructions.
+  This documentation/metadata reconciliation adds no runtime or dependency changes.
+
+## 0.17.0 (published; registry verified 2026-11-01)
+
+- Add an opt-in trusted synchronous OpenAI Responses request projection, shared by estimation
+  and dispatch, with detached JSON input/output and fail-closed validation. Default API-key
+  behavior is unchanged.
+- Add optional bounded, sanitized provider error details for host-side recovery; raw provider
+  messages and bodies are not exposed. Authentication, account storage and approval policy
+  remain host-owned; this core release does not add ChatGPT sign-in or Skip permissions UI.
+
+
 - Validate Claude reasoning replay against persisted hashes of the preceding request context,
   tools and reasoning settings. Preserve valid native continuation across provider recreation
   and JSON persistence; omit stale or legacy unbound reasoning from request views after context
@@ -10,7 +24,16 @@
   dispatch. Other providers retain their existing replay behavior; no automatic retries or
   additional network requests are introduced.
 
-## 0.15.1 (prepared 2026-10-21, not yet published)
+## 0.16.0 (published)
+
+- Include fresh host-owned dispatch context prefixes, image-bearing tool observations and
+  optional queued-message steering. Hosts retain permissions, storage, queue acknowledgement
+  and force-send cancellation. These features are also included in published `0.17.0`.
+
+## Historical 0.15.1 preparation (2026-10-21)
+
+This heading preserves the earlier preparation record, not a claim about a separate
+`0.15.1` publication. The fixes below are included in published `0.17.0`.
 
 - Honor provider-aware output reservations, including DeepSeek thinking and summary budgets, while preserving explicit host bounds and catalog ceilings
 - Report sanitized DeepSeek incomplete finish reasons without accepting partial tool calls or retrying failed output

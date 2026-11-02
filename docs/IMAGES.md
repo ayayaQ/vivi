@@ -1,4 +1,9 @@
-# Tool image observations (unreleased)
+<a id="tool-image-observations-unreleased"></a>
+
+# Tool image observations (available in 0.16.0)
+
+Available in published `0.16.0` and `0.17.0`. Host snapshot storage, permissions and
+image-capable UI adoption remain separate integration decisions.
 
 Images are optional tool-result data, not a new attachment command. Core never reads
 paths or grants file access. A host may expose `read_image({path})` under its existing
