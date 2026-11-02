@@ -170,3 +170,7 @@ runs no build script.
 - [Runnable headless example](examples/headless.mjs) and [inventory policy example](examples/inventory.mjs)
 - [Changelog](CHANGELOG.md), [release status and workflow](RELEASING.md), [shared-use audit](REUSE_AUDIT.md)
 - Apache-2.0: [LICENSE](LICENSE), [NOTICE](NOTICE), [origin and attribution](ATTRIBUTION.md)
+
+## Dependency policy
+
+Source development requires npm >=11.17.0. Read the [seven-day dependency cooldown](docs/DEPENDENCY_POLICY.md) before installing or updating dependencies.
