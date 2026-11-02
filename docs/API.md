@@ -1,8 +1,13 @@
 # API and host integration
 
-## Optional web retrieval (unreleased)
+The current verified npm release is `0.17.0`, including the opt-in OpenAI request
+projection and bounded provider error details described below. See the
+[release provenance](releases/0.17.0.md). Authentication, storage and approval policy
+remain host-owned; host integration is separate from core publication.
 
-Prepared `0.15.0` (not yet published): `@ayayaq/vivi/web` defines a small
+## Optional web retrieval (available in 0.16.0)
+
+Available in published `0.16.0`: `@ayayaq/vivi/web` defines a small
 `WebProvider` search/fetch contract independent of
 `ModelProvider`. `@ayayaq/vivi/web/deepseek` adds a fixed-endpoint DeepSeek adapter with
 bounded untrusted results, local truncation metadata, cancellation and sanitized errors.
@@ -81,7 +86,9 @@ A `ToolExtension` has an `id`, `apiVersion: 1`, and `tools`. Each tool contains 
 
 See [the registry tests](https://github.com/ayayaQ/vivi/blob/main/test/extensions.test.mjs) for snapshot and cancellation behavior.
 
-### Opt-in owned scopes (prepared 0.10.0)
+<a id="opt-in-owned-scopes-prepared-0100"></a>
+
+### Opt-in owned scopes (since 0.10.0)
 
 `createExtensionScope({ reservedNames? })` on the same subpath adds an explicit lifetime for
 trusted tools and host cleanup. It exposes `signal`, `state`, `register`, `defer`, `snapshot`
@@ -139,7 +146,9 @@ Advertising a tool enables dispatch; it does not authorize an action. Core is no
 system or security sandbox. The host must enforce authorization, approval, data-sharing boundaries,
 and any isolation required by its tools.
 
-## Opt-in canonical acceptance (prepared 0.10.0)
+<a id="opt-in-canonical-acceptance-prepared-0100"></a>
+
+## Opt-in canonical acceptance (since 0.10.0)
 
 `onAccepted(update)` observes a frozen detached assistant or tool result after canonical
 history/round/usage acceptance and before its existing `onEvent` notification. It is awaited;
@@ -148,7 +157,7 @@ closures are available only in the final `AgentResult`. When omitted, existing c
 ordering and scheduling are unchanged. The update does not certify host persistence or
 external effects. See [ordered records and host commit obligations](AGENT_STREAM.md).
 
-## Opt-in queued-message steering (unreleased)
+## Opt-in queued-message steering (available in 0.16.0)
 
 `getSteeringMessages({ signal })` returns a FIFO array of plain-JSON user `Message`s,
 synchronously or asynchronously. Core captures it once and polls only after a complete
@@ -228,11 +237,11 @@ inside the host's own consistency boundary.
 
 ## Shared provider factories
 
-The prepared `0.15.0` `@ayayaq/vivi/providers/deepseek` subpath adds `createDeepSeekProvider`
+The `@ayayaq/vivi/providers/deepseek` subpath, available in published `0.16.0`, adds `createDeepSeekProvider`
 and `projectDeepSeekHistory` for ordinary DeepSeek Chat Completions, independently
 of web retrieval and decision review. It retains every native assistant turn's
 reasoning for tool continuation. See [DEEPSEEK.md](DEEPSEEK.md) for capability,
-history, usage, context, and host-adoption details. This addition is not yet published.
+history, usage, context, and host-adoption details. Host adoption remains separate.
 
 ```ts
 import { createOpenAIProvider } from '@ayayaq/vivi/providers/openai'
@@ -350,7 +359,9 @@ This extraction originates from Bot Commander Desktop at source commit
 `943e3f84f67e4415a899da8921db84639843c625`. The copyright owner authorized this separate Apache
 release; the upstream desktop application's GPLv3 license is unchanged.
 
-## Session records (prepared 0.10.0)
+<a id="session-records-prepared-0100"></a>
+
+## Session records (since 0.10.0)
 
 The optional `@ayayaq/vivi/events` subpath exports `decodeAgentRecord`,
 `createRunSettlement`, `createAgentProjection`, `applyAgentRecord`, `projectAgentRecords`,
@@ -373,8 +384,11 @@ canonical history. Model providers can implement `estimateContext`; generate opt
 metadata is excluded from canonical settlements. See [CONTEXT.md](CONTEXT.md) for the contract,
 unknown-limit behavior, persistence, failures, billing and host integration.
 
-## Unreleased dispatch prefixes and image observations
+<a id="unreleased-dispatch-prefixes-and-image-observations"></a>
+
+## Dispatch prefixes and image observations (available in 0.16.0)
 
 See [CONTEXT.md](CONTEXT.md#fresh-dispatch-prefixes-unreleased) for `getContextPrefix`,
 and [IMAGES.md](IMAGES.md) for `ToolImageReference`, adapter resolution/capabilities and
-explicit v2 durable-record adoption. Both are opt-in; host permissions remain authoritative.
+explicit v2 durable-record adoption. Both are available in published `0.16.0` and `0.17.0`
+and remain opt-in; host adoption is separate and host permissions remain authoritative.

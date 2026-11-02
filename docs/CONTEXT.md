@@ -163,7 +163,12 @@ Reviewed 2026-10-15; independently implemented, with no copied source code:
 
 The existing CORE-14 hierarchical experiment remains offline and is not this implementation.
 
-## Fresh dispatch prefixes (unreleased)
+<a id="fresh-dispatch-prefixes-unreleased"></a>
+
+## Fresh dispatch prefixes (available in 0.16.0)
+
+Available in published `0.16.0` and `0.17.0`. Hosts separately adopt the callback and
+retain ownership of instruction scope, file access and UI.
 
 `runAgent({ getContextPrefix({signal}) { return messages } })` optionally pulls fresh
 ordinary canonical `Message` shapes (`kind: 'message'`, `role: 'system' | 'user'`, string

@@ -5,10 +5,11 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Published `0.15.0` includes portable context management, clarification questions, MCP
-resource-template reads, independent DeepSeek chat and optional web search/fetch.
-Prepared `0.15.1` fixes DeepSeek output reservations and incomplete-response diagnostics;
-production host adoption follows verified publication.
+Public npm `latest` was verified as `0.17.0` on 2026-11-01. Published `0.17.0`
+adds generic OpenAI request projection and safe error details, plus the OpenRouter
+reasoning-replay fix. Hosts still own authentication, storage and approval policy; core does
+not add ChatGPT sign-in or Skip permissions UI. See the
+[release provenance](docs/releases/0.17.0.md) and [RELEASING.md](RELEASING.md).
 
 ## Optional context management (since 0.14.0)
 
@@ -18,13 +19,13 @@ and one classified-overflow retry. Canonical raw history and tool/approval evide
 unchanged. Hosts own durable checkpoint storage and UI; extra summary usage is separate.
 See [CONTEXT.md](docs/CONTEXT.md). This feature is available in published `0.14.0`.
 
-## Workspace instructions and tool images (unreleased)
+## Workspace instructions and tool images (available in 0.16.0)
 
 Fresh host-owned `getContextPrefix` messages are measured before each dispatch without
 entering canonical history. Optional image-bearing tool results carry immutable snapshot
 references to vision-capable provider adapters; hosts retain file permissions and storage.
 See [fresh prefixes](docs/CONTEXT.md#fresh-dispatch-prefixes-unreleased) and
-[tool image observations](docs/IMAGES.md). No attachment command or publication is included.
+[tool image observations](docs/IMAGES.md). No attachment command or host adoption is included.
 
 ## Optional clarification questions (since 0.12.0)
 
@@ -36,8 +37,8 @@ Plan-mode hosts can use the extension under their own tool policy. See the
 [question host contract](docs/QUESTIONS.md) and [offline example](examples/questions.mjs).
 This addition is available from published `0.12.0`; hosts adopt it under their own policy.
 
-Unreleased optional queued-message steering is prepared separately for review. Hosts own
-queue acknowledgement and force-send cancellation; see [STEERING.md](docs/STEERING.md).
+Optional queued-message steering is available in `0.16.0`. Hosts own queue acknowledgement
+and force-send cancellation; see [STEERING.md](docs/STEERING.md).
 
 ## Optional decision review
 
@@ -56,16 +57,17 @@ same subpath. Host adoption remains separately reviewed; see
 
 ## Install
 
-The latest verified npm release is `0.14.0`:
+The latest verified public npm release is `0.17.0`:
 
 ```sh
-npm install --save-exact @ayayaq/vivi@0.14.0
+npm install --save-exact @ayayaq/vivi@0.17.0
 ```
 
-`0.14.0` includes context management, clarification questions, the optional MCP bridge
-with prepared-action review, trusted extensions, cache usage, model capabilities, memory
-and skills. Hosts retain connections, processes,
-credentials, actual sends and UI. See [MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
+The registry archive matches the preserved release packet exactly. Its source, metadata
+patch, hashes and reproducibility limits are recorded in the [release provenance](docs/releases/0.17.0.md).
+Host adoption remains a separate integration decision.
+Hosts retain connections, processes, credentials, actual sends and UI. See
+[MCP.md](docs/MCP.md) and [RELEASING.md](RELEASING.md).
 
 `0.10.0` also adds owned scopes, `/events` session snapshots and `/events/stream`
 ordered accepted-message replay. Its registry bytes are verified and unchanged. See
