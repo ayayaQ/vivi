@@ -28,6 +28,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run check
 
@@ -41,6 +46,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run build
       - run: node --test test/package-process.test.mjs test/package-contract-runner.test.mjs
@@ -61,6 +71,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - run: npm run build
       - run: node --test test/package-process.test.mjs test/package-contract-runner.test.mjs
@@ -90,6 +105,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # Pinned mature npm supports the cooldown and exact trusted-package exception.
+      - name: Install policy-aware npm
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+      - name: Verify dependency resolution policy
+        run: node scripts/verify-dependency-policy.mjs npm
       - run: npm ci
       - name: Install checksum-pinned Lean 4.34.0
         run: bash verification/prepared-action/install-lean.sh "$RUNNER_TEMP/vivi-lean"

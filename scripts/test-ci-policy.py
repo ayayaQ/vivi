@@ -20,6 +20,38 @@ assert '      - run: node --test test/package-process.test.mjs test/package-cont
 assert '      - run: node scripts/test-package-smoke.mjs\n' in windows
 assert windows.count('      - run: npm run build\n') == 1
 assert 'continue-on-error:' not in windows and 'if:' not in windows, 'Windows package gate must be required'
+# Every dependency-installing job must establish and exercise the supported npm first.
+# This deliberately checks ordered, unconditional steps rather than just the presence
+# of a version string somewhere in the workflow. Existing job topology stays intact.
+def check_dependency_policy(source):
+    blocks = re.findall(r'^  ([a-z][a-z0-9-]*):\n(.*?)(?=^  [a-z][a-z0-9-]*:\n|\Z)',
+                        source, re.MULTILINE | re.DOTALL)
+    installing = [(name, body) for name, body in blocks if '      - run: npm ci\n' in body]
+    assert [name for name, _ in installing] == jobs, 'Dependency-install job inventory changed'
+    required = ('      - name: Install policy-aware npm\n'
+                '        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund\n'
+                '      - name: Verify dependency resolution policy\n'
+                '        run: node scripts/verify-dependency-policy.mjs npm\n'
+                '      - run: npm ci\n')
+    for name, body in installing:
+        assert required in body, f'{name}: supported npm and passing policy fixture must precede npm ci'
+        assert body.count('      - run: npm ci\n') == 1
+        assert 'continue-on-error:' not in body, f'{name}: dependency policy must be required'
+
+check_dependency_policy(workflow)
+for old, new in [
+    ('npm@11.17.0', 'npm@11.9.0'),
+    ('        run: node scripts/verify-dependency-policy.mjs npm\n', ''),
+    ('      - name: Verify dependency resolution policy\n',
+     '      - name: Verify dependency resolution policy\n        if: false\n'),
+]:
+    try:
+        check_dependency_policy(workflow.replace(old, new, 1))
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('Dependency policy regression was not rejected')
+
 count = 0
 
 def check(event, needs, accepted):
