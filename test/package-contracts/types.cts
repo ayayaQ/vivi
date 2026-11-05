@@ -9,7 +9,8 @@ const projection: NonNullable<openai.OpenAIProviderOptions['transformRequest']> 
 const options: openai.OpenAIProviderOptions = { model: 'offline', apiKey: async () => 'offline-key', stream: true,
   transformRequest: projection, errorDetails: true, fetch: async () => new Response('offline') }
 const provider: core.ModelProvider = openai.createOpenAIProvider(options)
-const details: openai.ProviderErrorDetails = { bodyShape: 'detail', code: 'safe_code', param: 'model', requestId: 'req_offline' }
+const details: openai.ProviderErrorDetails = { bodyShape: 'detail', code: 'safe_code', param: 'model', requestId: 'req_offline', contentType: 'application/json' }
+const mediaType: string | undefined = details.contentType
 const shape: 'error' | 'detail' | 'other' | 'unreadable' = details.bodyShape
 function inspect(error: openai.ProviderRequestError): void {
   const status: number | undefined = error.status
@@ -24,7 +25,7 @@ const asyncProjection: openai.OpenAIProviderOptions['transformRequest'] = async 
 const invalidOptions: openai.OpenAIProviderOptions = { model: 'offline', apiKey: 'offline', errorDetails: 1 }
 // @ts-expect-error body shape is a closed discriminator
 const invalidShape: openai.ProviderErrorDetails = { bodyShape: 'raw-provider-body' }
-void [provider, details, shape, inspect, asyncProjection, invalidOptions, invalidShape]
+void [provider, details, shape, mediaType, inspect, asyncProjection, invalidOptions, invalidShape]
 
 // Compile-only public consumer: input, options, estimate, send and progress stay typed.
 function consume(input: Parameters<core.ModelProvider['generate']>[0]): void {

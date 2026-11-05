@@ -87,7 +87,7 @@ export function createOpenAIProvider(options: OpenAIProviderOptions): ModelProvi
         const body = requestBody(config, images, input, progress, false, transform)
         const response = await post(config, context, key, body)
         if (!config.stream) return result(await readJson(response, context, 'OpenAI'), config, key, input.messages, reservedIds, response.headers.get('x-request-id') ?? undefined, response.status)
-        return readSse(response, context, 'OpenAI', async (frame) => {
+        return readSse(response, context, config, key, async (frame) => {
           const event = eventJson(frame, 'OpenAI')
           if (event.error || event.type === 'error' || frame.event === 'error' ||
               event.type === 'response.failed' || event.type === 'response.incomplete') {

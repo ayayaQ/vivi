@@ -33,6 +33,8 @@ export interface ProviderErrorDetails {
   code?: string
   param?: string
   requestId?: string
+  /** Normalized media type only; parameters and unsafe header values are omitted. */
+  contentType?: string
   /** Shape of the received JSON body, not its potentially sensitive values. */
   bodyShape: 'error' | 'detail' | 'other' | 'unreadable'
 }
@@ -303,7 +305,8 @@ export async function post(
   extraHeaders: Record<string, string> = {}
 ): Promise<Response> {
   context.check()
-  const headers = { ...extraHeaders, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
+  const headers = { Accept: config.stream ? 'text/event-stream' : 'application/json',
+    ...extraHeaders, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }
   const serializedBody = JSON.stringify(body)
   context.check()
   const response = await config.fetch(config.endpoint, {
@@ -326,6 +329,13 @@ export async function post(
 /** Optional diagnostics contain only bounded protocol identifiers; no raw message, body or cause. */
 export function responseFailure(config: Config, value: unknown, key: string, status?: number,
   requestId?: string, code: 'http' | 'invalid_response' = 'invalid_response'): ProviderRequestError {
+  return new ProviderRequestError(config.provider, code,
+    code === 'http' ? `${config.provider} request failed (HTTP ${status})` : `Invalid ${config.provider} agent output: agent response was not completed`,
+    status, responseDiagnostics(config, value, key, requestId))
+}
+
+function responseDiagnostics(config: Config, value: unknown, key: string,
+  requestId?: string, contentType?: string): Readonly<ProviderErrorDetails> | undefined {
   let details: ProviderErrorDetails | undefined
   if (config.errorDetails) {
     const nested = dataField(dataField(value, 'response'), 'error')
@@ -340,11 +350,10 @@ export function responseFailure(config: Config, value: unknown, key: string, sta
       bodyShape: error !== undefined ? 'error' : dataField(value, 'detail') !== undefined ? 'detail'
         : value === undefined ? 'unreadable' : 'other',
       ...(upstreamCode ? { code: upstreamCode } : {}), ...(param ? { param } : {}),
-      ...(id ? { requestId: id } : {})
+      ...(id ? { requestId: id } : {}), ...(contentType ? { contentType } : {})
     })
   }
-  return new ProviderRequestError(config.provider, code,
-    code === 'http' ? `${config.provider} request failed (HTTP ${status})` : `Invalid ${config.provider} agent output: agent response was not completed`, status, details)
+  return details
 }
 
 export const MAX_BODY_BYTES = 16_777_216
@@ -435,14 +444,35 @@ export async function readJson(response: Response, context: RequestContext, prov
 
 export interface ServerEvent { event: string; data: string }
 
-/** WHATWG SSE framing: UTF-8 fragments, CR/LF/CRLF, BOM, comments, and multiline data. */
+/** Retain no raw header parameters, credentials, or unbounded media-type text. */
+function mediaType(response: Response, key: string): string | undefined {
+  const type = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+  return type && type.length <= 127 && /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/.test(type) &&
+    !type.includes(key.toLowerCase()) ? type : undefined
+}
+
+class SseFramingFailure {}
+
+/** WHATWG SSE framing, with bounded strict recognition when MIME metadata is missing or incorrect.
+ * Recognition never accepts JSON/HTML as a result: provider terminal-event validation still applies.
+ */
 export async function readSse<T>(
-  response: Response, context: RequestContext, provider: Provider,
+  response: Response, context: RequestContext, config: Config, key: string,
   onEvent: (event: ServerEvent) => Promise<T | undefined>
 ): Promise<T> {
-  if (!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')) {
-    throw new ProviderRequestError(provider, 'invalid_response', `${provider} streaming response was not event-stream`)
+  const provider = config.provider, contentType = mediaType(response, key)
+  const recognize = contentType !== 'text/event-stream'
+  const diagnostic = recognize && config.errorDetails ? new Uint8Array(MAX_ERROR_BODY_BYTES) : undefined
+  let diagnosticBytes = 0, diagnosticTruncated = false, prefixBytes = 0, dataPrefix = false, framed = false, framingRejected = false
+  const framingFailure = (): ProviderRequestError => {
+    let value: unknown
+    if (diagnostic && !diagnosticTruncated) {
+      try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(diagnostic.subarray(0, diagnosticBytes))) } catch { /* Shape stays unreadable. */ }
+    }
+    return new ProviderRequestError(provider, 'invalid_response', `${provider} streaming response was not event-stream`, response.status,
+      responseDiagnostics(config, value, key, response.headers.get('x-request-id') ?? undefined, contentType))
   }
+  if (recognize && !response.body) throw framingFailure()
   const decoder = new TextDecoder('utf-8', { fatal: true })
   let line = ''
   let event = ''
@@ -457,6 +487,7 @@ export async function readSse<T>(
       if (!hasData) { event = ''; return undefined }
       const frame = { event: event || 'message', data: data.slice(0, -1) }
       event = ''; data = ''; hasData = false
+      framed = true
       const terminal = await onEvent(frame)
       context.check()
       return terminal
@@ -466,6 +497,7 @@ export async function readSse<T>(
     const field = colon === -1 ? value : value.slice(0, colon)
     let payload = colon === -1 ? '' : value.slice(colon + 1)
     if (payload.startsWith(' ')) payload = payload.slice(1)
+    if (recognize && !['data', 'event', 'id', 'retry'].includes(field)) throw new SseFramingFailure()
     if (field === 'data') { data += `${payload}\n`; hasData = true }
     else if (field === 'event') event = payload
     // id/retry are irrelevant to this single POST stream; no reconnect or retry occurs.
@@ -474,27 +506,61 @@ export async function readSse<T>(
     }
     return undefined
   }
-  const terminal = await bodyReader(response, context, provider, async (bytes) => {
-    const text = decoder.decode(bytes, { stream: true })
-    for (const char of text) {
-      if (precedingCR && char === '\n') { precedingCR = false; continue }
-      precedingCR = false
-      if (char === '\r' || char === '\n') {
-        precedingCR = char === '\r'
-        const value = await processLine()
-        if (value !== undefined) return value
-      } else {
-        line += char
-        if (line.length > MAX_EVENT_CHARS) {
-          throw new ProviderRequestError(provider, 'invalid_response', `${provider} stream line exceeded the size limit`)
+  const processBytes = async (bytes: Uint8Array): Promise<T | undefined> => {
+    if (diagnostic && !diagnosticTruncated) {
+      if (bytes.byteLength > MAX_ERROR_BODY_BYTES - diagnosticBytes) diagnosticTruncated = true
+      else { diagnostic.set(bytes, diagnosticBytes); diagnosticBytes += bytes.byteLength }
+    }
+    // Finish only the bounded diagnostic body after rejecting framing. Packet boundaries
+    // must not change JSON error classification; request cancellation/deadlines still apply.
+    if (framingRejected) {
+      if (diagnosticTruncated) throw new SseFramingFailure()
+      return undefined
+    }
+    let text: string
+    try { text = decoder.decode(bytes, { stream: true }) } catch (error) {
+      if (recognize) throw new SseFramingFailure()
+      throw error
+    }
+    try {
+      for (const char of text) {
+        if (recognize && !dataPrefix) {
+          const point = char.codePointAt(0)!
+          prefixBytes += point <= 0x7f ? 1 : point <= 0x7ff ? 2 : point <= 0xffff ? 3 : 4
+          if (prefixBytes > MAX_ERROR_BODY_BYTES) throw new SseFramingFailure()
+        }
+        if (precedingCR && char === '\n') { precedingCR = false; continue }
+        precedingCR = false
+        if (char === '\r' || char === '\n') {
+          precedingCR = char === '\r'
+          const value = await processLine()
+          if (value !== undefined) return value
+        } else {
+          line += char
+          if (recognize && line === 'data:') dataPrefix = true
+          if (line.length > MAX_EVENT_CHARS) {
+            throw new ProviderRequestError(provider, 'invalid_response', `${provider} stream line exceeded the size limit`)
+          }
         }
       }
+    } catch (error) {
+      if (!(error instanceof SseFramingFailure) || !diagnostic || diagnosticTruncated) throw error
+      framingRejected = true
     }
     return undefined
-  })
+  }
+  let terminal: T | undefined
+  try { terminal = await bodyReader(response, context, provider, processBytes) } catch (error) {
+    if (error instanceof SseFramingFailure) throw framingFailure()
+    throw error
+  }
   // SSE discards an unterminated frame at EOF. A provider must have sent its terminal frame.
-  decoder.decode()
+  try { decoder.decode() } catch (error) {
+    if (recognize) throw framingFailure()
+    throw error
+  }
   context.check()
+  if (recognize && (framingRejected || !framed)) throw framingFailure()
   if (terminal === undefined) {
     throw new ProviderRequestError(provider, 'invalid_response', `${provider} stream ended before completion`)
   }

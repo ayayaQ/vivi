@@ -279,4 +279,20 @@ module.exports = function register({ createOpenAIProvider, ProviderRequestError 
     assert.equal(canceled, 1)
     assert.equal(h.requests.length, 1)
   })
+
+  testCase('mislabeled SSE still requires complete framing and non-SSE errors retain safe media metadata', async () => {
+    const h = harness([new Response(frame(completed), { headers: { 'content-type': 'application/json' } })], { stream: true })
+    await h.provider.generate(seed(), signal())
+    assert.equal(h.requests.length, 1)
+    assert.equal(h.requests[0].headers.get('accept'), 'text/event-stream')
+    const rejected = harness([jsonResponse({ error: { code: 'safe_code', message: privateDetail } }, 200,
+      { 'x-request-id': 'req_mime', 'content-type': 'application/json; private=omitted' })], { stream: true, errorDetails: true })
+    await assert.rejects(rejected.provider.generate(seed(), signal()), error => {
+      assert(error instanceof ProviderRequestError); assert.equal(error.code, 'invalid_response'); assert.equal(error.status, 200)
+      assert.deepEqual(error.details, { bodyShape: 'error', code: 'safe_code', requestId: 'req_mime', contentType: 'application/json' })
+      assert(Object.isFrozen(error.details)); assert(!JSON.stringify(error).includes(privateDetail)); assert(!JSON.stringify(error).includes(key)); return true
+    })
+    const partial = harness([new Response(frame({ type: 'response.output_text.delta', delta: 'partial' }))], { stream: true })
+    await assert.rejects(partial.provider.generate(seed(), signal()), error => error.code === 'invalid_response')
+  })
 }

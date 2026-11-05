@@ -289,7 +289,7 @@ export function createDeepSeekProvider(options: DeepSeekProviderOptions): ModelP
         const finish = (value: unknown): ProviderResult => result(value, config.model, input.messages, reservedIds, allowTools, requireReasoning)
         if (!config.stream) return finish(await readJson(response, context, 'DeepSeek'))
         const stream = new ChatStream()
-        return readSse(response, context, 'DeepSeek', async (frame) => {
+        return readSse(response, context, config, key, async (frame) => {
           if (frame.event === 'error') {
             const event = eventJson(frame, 'DeepSeek')
             throwIfContextOverflow(event, 'DeepSeek')

@@ -7,6 +7,11 @@ same assertions from `contracts.cjs`, using injected synthetic HTTP/SSE response
 and a fake credential. No source or `dist` paths are imported and there is no
 live transport fallback. Unexpected synthetic requests are recorded and fail.
 
+The installed consumers also verify that a mislabeled genuine SSE body still needs
+a completed terminal event, partial output never becomes a successful turn, SSE is
+explicitly requested, and rejected non-SSE JSON retains safe status/media metadata.
+Both declaration modes include the optional `ProviderErrorDetails.contentType` field.
+
 ## Historical coverage map
 
 The release packet `vivi-core-0.17.0-release-packet-d4c4f83` contains seven behavior
