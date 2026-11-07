@@ -5,11 +5,17 @@ adapters, agent turns, and optional trusted tools. Your host owns approvals, cre
 storage, filesystem policy, and UI. Node.js 22+, ESM and CommonJS. Only the optional skills
 module loads the maintained YAML parser dependency.
 
-Public npm `latest` was verified as `0.17.0` on 2026-11-01. Published `0.17.0`
-adds generic OpenAI request projection and safe error details, plus the OpenRouter
-reasoning-replay fix. Hosts still own authentication, storage and approval policy; core does
-not add ChatGPT sign-in or Skip permissions UI. See the
-[release provenance](docs/releases/0.17.0.md) and [RELEASING.md](RELEASING.md).
+Public npm `latest` was verified as `0.17.1` on 2026-11-07. Published `0.17.1`
+recognizes valid bounded SSE with missing/incorrect media types and improves safe diagnostics
+for other responses. It includes `0.17.0`'s generic OpenAI request projection, safe error
+details and OpenRouter reasoning-replay fix. Hosts still own authentication, storage and
+approval policy; core does not add ChatGPT sign-in or Skip permissions UI. The actual
+reported ChatGPT session remains unverified.
+
+The published archive matches the reviewed frozen package exactly. Preparation-era wording
+inside that immutable archive remains historical; do not repack or republish it. See the
+[0.17.1 release provenance](docs/releases/0.17.1.md),
+[0.17.0 release provenance](docs/releases/0.17.0.md) and [RELEASING.md](RELEASING.md).
 
 ## Optional context management (since 0.14.0)
 
