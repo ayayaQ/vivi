@@ -272,6 +272,13 @@ route-specific role, tool namespace or unsupported-field rules; the default wire
 `code`, `param`, `requestId` when safe identifiers are supplied, and a `bodyShape` discriminator
 (`error`, `detail`, `other`, `unreadable`). Raw error text and credential values remain excluded.
 OpenAI terminal SSE failures retain the same diagnostics as HTTP admission failures.
+Streaming requests explicitly request `text/event-stream`. If a successful response has
+missing or incorrect MIME metadata, the adapters recognize only bounded, strict SSE
+framing and still require their validated terminal event. JSON/HTML responses are never
+accepted as completed inference. A rejected non-SSE response retains its HTTP status;
+opt-in diagnostics also retain its safe media type (without header parameters), request
+ID, JSON body shape and safe error identifiers, never raw response text. MIME recognition
+does not retry requests or change billing, credentials, or the selected endpoint.
 
 Reasoning has three explicit modes: `default` omits the provider setting, `disabled` requests
 reasoning off, and `effort` supplies a named effort. Nondefault choices require the host to declare

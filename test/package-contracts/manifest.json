@@ -9,6 +9,7 @@
     "default-request-encoding": ["runtime.mjs", "runtime.cjs"],
     "opt-in-error-details": ["runtime.mjs", "runtime.cjs", "types.mts", "types.cts"],
     "bounded-sanitized-diagnostics": ["runtime.mjs", "runtime.cjs"],
+    "strict-sse-mime-recognition": ["runtime.mjs", "runtime.cjs"],
     "strict-public-declarations": ["types.mts", "types.cts"]
   }
 }

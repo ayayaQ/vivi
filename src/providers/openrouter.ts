@@ -223,7 +223,7 @@ export function createOpenRouterProvider(options: OpenRouterProviderOptions): Mo
         const response = await post(config, context, key, body, headers)
         if (!config.stream) return complete(await readJson(response, context, 'OpenRouter'))
         const stream = new ChatStream()
-        return readSse(response, context, 'OpenRouter', async (frame) => {
+        return readSse(response, context, config, key, async (frame) => {
           if (frame.data === '[DONE]') return complete(stream.completed())
           const event = eventJson(frame, 'OpenRouter')
           if (frame.event === 'error') {
