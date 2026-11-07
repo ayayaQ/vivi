@@ -1,29 +1,33 @@
 # Release workflow
 
-## Prepared patch 0.17.1 (not published)
+## Published patch 0.17.1
 
-This candidate includes the bounded SSE recognition and safe diagnostic improvements from
+Public npm lists `@ayayaq/vivi@0.17.1`, published `2026-11-07T10:33:55.400Z`, with
+`latest` verified at `0.17.1` on 2026-11-07. The downloaded 483,563-byte archive is
+byte-identical to the reviewed frozen package: SHA-256
+`32c51fbbc39a8b51e631abeb92776c8642069e0844387413321eb95f7c3782f6`.
+Do not republish, replace or create a release tag for this reconciliation.
+
+This patch includes the bounded SSE recognition and safe diagnostic improvements from
 [PR #56](https://github.com/ayayaQ/vivi/pull/56), merged at
 `9d680858f0bf46e85394feb758070b05013f4d79`, runtime source tree
-`ade6c7cb89ec105a9311422e6d51219307043982`. The final release metadata commit/tree,
-exact frozen archive identity, full file manifest, independent review and Node 22/24
-verification belong in the accompanying release receipt, outside the archive.
+`ade6c7cb89ec105a9311422e6d51219307043982`. The frozen preparation commit is
+`7d4de763e49024e1446805d98358b0503d1a90bc`, tree
+`94def72fb32f01685e574469e4502252751213fd`. See the
+[portable release record](docs/releases/0.17.1.md) for archive identity and verification.
 
-The candidate explicitly requests SSE and accepts only validated bounded event framing
+The patch explicitly requests SSE and accepts only validated bounded event framing
 when media type metadata is absent or incorrect. Provider terminal checks and all existing
 limits remain. JSON, HTML, unframed prefixes and partial output still fail safely, with
 bounded opt-in sanitized diagnostics. Dependencies, authentication, public API endpoint,
 account selection and billing are unchanged. No live sign-in or paid inference was used;
 the user's actual response body and root cause remain unknown.
 
-Public npm `latest` was observed at `0.17.0` on 2026-11-07; `0.17.1` did not exist.
-Recheck versions and tags immediately before publication. The account holder publishes
-only the exact independently reviewed frozen `ayayaq-vivi-0.17.1.tgz` from the packet.
-Do not repack, publish from the source directory, move tags backward or overwrite an
-existing version. No npm authentication, upload, release tag or publication is performed
-by this preparation. CLI dependency adoption requires subsequent registry-byte verification
-and its own reviewed integration change. See the account-holder workflow below.
-
+The original preparation observed `latest` at `0.17.0` and no `0.17.1`. That observation
+and the preparation-era wording inside the published archive remain historical evidence,
+not current publication instructions. Documentation in this checkout now differs from
+that immutable archive; any test pack is a separate disposable artifact and must not
+replace it. CLI dependency adoption and installed-consumer checks are separate work.
 
 ## Published stable 0.17.0
 
