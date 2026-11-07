@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.17.1 (prepared; not yet published)
+
+- Recognize genuine bounded SSE when the response media type is missing or incorrect,
+  while retaining provider terminal-event validation, cancellation and size limits.
+- Request SSE explicitly and retain HTTP status plus opt-in sanitized media type,
+  request ID, JSON shape and error identifiers for non-SSE responses. Diagnostic
+  collection is bounded and independent of network fragmentation.
+- Add transport regressions and installed ESM/CommonJS runtime and declaration contracts.
+  No authentication, endpoint, account-selection, billing or runtime dependency change.
+  The reported ChatGPT session has not been reproduced with live credentials.
 
 - Reconcile repository version and installation guidance with published `0.17.0`; preserve
   its original metadata patch and historical receipt with portable verification instructions.

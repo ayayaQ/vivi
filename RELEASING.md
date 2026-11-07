@@ -1,5 +1,30 @@
 # Release workflow
 
+## Prepared patch 0.17.1 (not published)
+
+This candidate includes the bounded SSE recognition and safe diagnostic improvements from
+[PR #56](https://github.com/ayayaQ/vivi/pull/56), merged at
+`9d680858f0bf46e85394feb758070b05013f4d79`, runtime source tree
+`ade6c7cb89ec105a9311422e6d51219307043982`. The final release metadata commit/tree,
+exact frozen archive identity, full file manifest, independent review and Node 22/24
+verification belong in the accompanying release receipt, outside the archive.
+
+The candidate explicitly requests SSE and accepts only validated bounded event framing
+when media type metadata is absent or incorrect. Provider terminal checks and all existing
+limits remain. JSON, HTML, unframed prefixes and partial output still fail safely, with
+bounded opt-in sanitized diagnostics. Dependencies, authentication, public API endpoint,
+account selection and billing are unchanged. No live sign-in or paid inference was used;
+the user's actual response body and root cause remain unknown.
+
+Public npm `latest` was observed at `0.17.0` on 2026-11-07; `0.17.1` did not exist.
+Recheck versions and tags immediately before publication. The account holder publishes
+only the exact independently reviewed frozen `ayayaq-vivi-0.17.1.tgz` from the packet.
+Do not repack, publish from the source directory, move tags backward or overwrite an
+existing version. No npm authentication, upload, release tag or publication is performed
+by this preparation. CLI dependency adoption requires subsequent registry-byte verification
+and its own reviewed integration change. See the account-holder workflow below.
+
+
 ## Published stable 0.17.0
 
 Public npm `latest` and the explicit `0.17.0` record were verified on 2026-11-01.

@@ -11,6 +11,12 @@ reasoning-replay fix. Hosts still own authentication, storage and approval polic
 not add ChatGPT sign-in or Skip permissions UI. See the
 [release provenance](docs/releases/0.17.0.md) and [RELEASING.md](RELEASING.md).
 
+Patch `0.17.1` is prepared separately and is not yet published. It recognizes valid SSE
+with missing/incorrect media types and improves safe diagnostics for other responses.
+Authentication stays host-owned; the actual reported ChatGPT session remains unverified.
+Use the frozen reviewed archive and receipt for publication, not a repack of this checkout.
+See [RELEASING.md](RELEASING.md).
+
 ## Optional context management (since 0.14.0)
 
 The root API adds full projected-request occupancy, explicit known/unknown capacities,
