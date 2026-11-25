@@ -84,6 +84,10 @@ async function readDecisionJson(response: Response, context: RequestContext, con
   }
 }
 
+function nonnegativeCost(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
 function usage(value: unknown, config: Config): DecisionUsage {
   if (!record(value)) fail(config)
   let normalized: DecisionUsage
@@ -96,9 +100,25 @@ function usage(value: unknown, config: Config): DecisionUsage {
       cacheWriteTokens: value.input_tokens_details.cache_write_tokens as number,
       reasoningTokens: value.output_tokens_details.reasoning_tokens as number }
   } else {
-    if (!keys(value, ['input_tokens', 'output_tokens', 'cost'])) fail(config)
+    if (!keys(value, ['input_tokens', 'output_tokens', 'cost'], ['is_byok', 'cost_details', 'input_tokens_details']) ||
+        (value.is_byok !== undefined && typeof value.is_byok !== 'boolean')) fail(config)
+    const costDetails = value.cost_details
+    if (costDetails !== undefined && costDetails !== null && (
+      !record(costDetails) ||
+      !keys(costDetails, ['upstream_inference_prompt_cost', 'upstream_inference_completions_cost'],
+        ['upstream_inference_cost', 'server_tool_cost']) ||
+      !nonnegativeCost(costDetails.upstream_inference_prompt_cost) || !nonnegativeCost(costDetails.upstream_inference_completions_cost) ||
+      (costDetails.upstream_inference_cost != null && !nonnegativeCost(costDetails.upstream_inference_cost)) ||
+      (costDetails.server_tool_cost != null && !nonnegativeCost(costDetails.server_tool_cost))
+    )) fail(config)
+    const inputDetails = value.input_tokens_details
+    let cachedTokens: number | undefined
+    if (inputDetails !== undefined) {
+      if (!record(inputDetails) || !keys(inputDetails, ['cached_tokens']) || typeof inputDetails.cached_tokens !== 'number') fail(config)
+      cachedTokens = inputDetails.cached_tokens
+    }
     normalized = { inputTokens: value.input_tokens as number, outputTokens: value.output_tokens as number,
-      costUsd: value.cost as number }
+      costUsd: value.cost as number, ...(cachedTokens === undefined ? {} : { cachedTokens }) }
   }
   if (!validUsage(normalized)) fail(config)
   return Object.freeze(normalized)
@@ -134,7 +154,8 @@ function normalize(value: unknown, input: DecisionRequest, config: Config, provi
       if (!record(answer)) fail(config)
       if (answer.type === 'refusal' && keys(answer, ['type'])) {
         answers.push(Object.freeze({ name, type: 'refusal' }))
-      } else if (answer.type === 'noul' && keys(answer, ['type', 'noul']) && probability(answer.noul)) {
+      } else if (answer.type === 'noul' && keys(answer, ['type', 'noul'], ['confidence']) && probability(answer.noul) &&
+          (answer.confidence === undefined || probability(answer.confidence))) {
         answers.push(Object.freeze({ name, type: 'predicate', probability: answer.noul }))
       } else fail(config)
     }

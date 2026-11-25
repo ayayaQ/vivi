@@ -55,9 +55,12 @@ Object-key order is immaterial; array order and every JSON value remain signific
 It does not check external state by itself, detect changes absent from the snapshot,
 expire or consume results, or grant permission. The host must avoid replay by tracking the
 pending call's lifecycle, marking it consumed after execution, and atomically rechecking
-current state plus committing under its own lock or compare-and-swap. Any policy/question/
-threshold change must update `policyRevision`; relevant account/toolset/resource changes
-must update the corresponding snapshot revisions.
+current state plus committing under its own lock or compare-and-swap. Update
+`policyRevision` whenever the policy, questions, thresholds, reviewer model, accepted
+canonical response IDs, or evidence recipients change. If a configured alias resolves
+to a new canonical target, invalidate outstanding recommendations and verify the target
+before sending evidence. Relevant account, toolset, and resource changes must update
+the corresponding snapshot revisions.
 Results have process-local binding: serializing, cloning, or reconstructing a result removes
 that binding. Do not persist a recommendation and later treat it as an approval token.
 
@@ -168,7 +171,11 @@ and are never retained in result/error objects or logs. There is no credential p
 OpenRouter additionally accepts `model?: string` and `responseModels?: readonly string[]`.
 The model must be a namespaced text Decisions model ID, not a general chat model. The host
 must verify endpoint/text support and calibrate thresholds for each model separately.
-A model choice does not grant permission to transmit evidence to that model's provider.
+Text support alone does not qualify a model for action approval. Prefer models that judge
+only the supplied evidence and do not fetch web sources or invoke external tools. Hosts
+must explicitly approve the reviewer’s evidence sources, upstream recipients, and data
+handling; otherwise keep approval manual. A model choice does not grant permission to
+transmit evidence to its provider.
 OpenAI remains fixed; configurable base URLs and other unknown options are rejected.
 
 By default, the returned model must exactly equal the requested model. For backward
@@ -189,7 +196,10 @@ The adapter uses the same text-state/noul protocol, rejects unsupported response
 and normalizes a strict `{ type: 'refusal' }` answer to a non-executing `ask` result.
 Optional OpenRouter request-wide `annotations` must be an array of objects within the
 response byte limit. They are ignored entirely, never used as approval evidence or
-retained in normalized results. Required model, answers, and usage validation is unchanged.
+retained in normalized results. OpenRouter's optional `noul.confidence` is validated but
+not used as approval evidence. Optional BYOK and upstream cost breakdowns are validated,
+not retained, while the documented input cache count is normalized when present.
+The returned model, all requested answers, and required token counts/cost are still checked.
 There are no retries, cross-provider fallbacks, streaming callbacks, or generated reasons.
 Redirects are rejected so credentials cannot follow a redirected destination.
 

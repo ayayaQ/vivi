@@ -554,3 +554,56 @@ test('OpenRouter request annotations are bounded inert source metadata, never de
   const value = wire('openai'); value.annotations = []
   failure(await evaluateDecision(request('openai'), createOpenAIDecisionProvider({ apiKey: 'key', fetch: async () => json(value) })), 'invalid_response')
 })
+
+test('OpenRouter accepts documented Jev 1.14 metadata without using confidence for admission', async () => {
+  // Synthetic copies of response shapes in the OpenRouter Decisions guide:
+  // https://openrouter.ai/docs/guides/features/decisions#response-example
+  const model = 'typesafe/jev-1.14'
+  const canonical = 'typesafe/jev-1.14-20261014'
+  for (const actualUsage of [
+    { input_tokens: 87, output_tokens: 12, cost: 0.001, is_byok: false, cost_details: {
+      upstream_inference_cost: 0.001, upstream_inference_prompt_cost: 0.001, upstream_inference_completions_cost: 0 } },
+    { input_tokens: 87, output_tokens: 12, cost: 0.001, input_tokens_details: { cached_tokens: 16 } },
+    { input_tokens: 87, output_tokens: 12, cost: 0.001, is_byok: true, cost_details: {
+      upstream_inference_cost: null, upstream_inference_prompt_cost: 0.001, upstream_inference_completions_cost: 0,
+      server_tool_cost: 0 } },
+    { input_tokens: 87, output_tokens: 12, cost: 0.001, cost_details: null }
+  ]) {
+    const response = { model: canonical, usage: actualUsage,
+      answers: { scope: { type: 'noul', noul: 0.02, confidence: 0.99 }, resource: { type: 'noul', noul: 0.98 } } }
+    const provider = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', model, responseModels: [canonical],
+      fetch: async () => json(response) })
+    const result = await evaluateDecision(request('openrouter'), provider)
+    assert.equal(result.outcome, 'deny')
+    assert.equal(result.model, canonical)
+    assert.equal(result.checks[0].probability, 0.02)
+    assert.deepEqual(result.usage, { inputTokens: 87, outputTokens: 12, costUsd: 0.001,
+      ...(actualUsage.input_tokens_details ? { cachedTokens: 16 } : {}) })
+    response.answers.scope = { type: 'noul', noul: 0.98, confidence: 0 }
+    assert.equal((await evaluateDecision(request('openrouter'), provider)).outcome, 'allow')
+    response.answers.scope = { type: 'refusal' }
+    failure(await evaluateDecision(request('openrouter'), provider), 'refusal')
+  }
+})
+
+test('OpenRouter rejects malformed decision metadata rather than inferring an approval', async () => {
+  const captured = request('openrouter')
+  for (const mutate of [
+    (value) => { value.answers.scope.confidence = 1.01 },
+    (value) => { value.answers.scope.confidence = '1' },
+    (value) => { value.usage.is_byok = 0 },
+    (value) => { value.usage.cost_details = [] },
+    (value) => { value.usage.cost_details = { upstream_inference_prompt_cost: -0.01, upstream_inference_completions_cost: 0 } },
+    (value) => { value.usage.cost_details = { upstream_inference_prompt_cost: null, upstream_inference_completions_cost: 0 } },
+    (value) => { value.usage.cost_details = { reason: 'HIDDEN_REASONING' } },
+    (value) => { value.usage.input_tokens_details = { cached_tokens: value.usage.input_tokens + 1 } },
+    (value) => { value.usage.input_tokens_details = { cached_tokens: '0' } }
+  ]) {
+    const value = wire('openrouter')
+    mutate(value)
+    const provider = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', fetch: async () => json(value) })
+    const result = await evaluateDecision(captured, provider)
+    failure(result, 'invalid_response')
+    sanitized(result)
+  }
+})
