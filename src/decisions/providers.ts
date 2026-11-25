@@ -4,22 +4,26 @@
 import type { JsonObject } from '../types.js'
 import { configure, post, ProviderRequestError, request } from '../providers/transport.js'
 import type { Config, RequestContext } from '../providers/transport.js'
-import { supportedModel, validUsage } from './evaluate.js'
+import { validUsage } from './evaluate.js'
+import { responseModels } from './models.js'
 import { invalid, keys, MAX_DECISION_BYTES, parseUnambiguousJson, probability, record, text } from './validation.js'
-import type { DecisionAnswer, DecisionProvider, DecisionProviderId, DecisionProviderOptions, DecisionRequest, DecisionUsage } from './types.js'
+import type { DecisionAnswer, DecisionProvider, DecisionProviderId, DecisionProviderOptions, DecisionRequest, DecisionUsage, OpenRouterDecisionProviderOptions } from './types.js'
 
 function fail(config: Config): never {
   throw new ProviderRequestError(config.provider, 'invalid_response', 'Invalid decision provider response')
 }
 
-function configureDecision(options: DecisionProviderOptions, provider: DecisionProviderId): Config {
+function configureDecision(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): { config: Config; expectedModels: readonly string[] } {
   try {
-    if (!record(options) || !keys(options, ['apiKey'], ['timeoutMs', 'fetch']) ||
+    if (!record(options) || !keys(options, ['apiKey'], provider === 'openai' ? ['timeoutMs', 'fetch'] : ['timeoutMs', 'fetch', 'model', 'responseModels']) ||
         Reflect.ownKeys(options).some((key) => typeof key !== 'string' ||
           !Object.hasOwn(Object.getOwnPropertyDescriptor(options, key)!, 'value'))) invalid()
-    return configure({ ...options, model: provider === 'openai' ? 'gpt-6-luna' : 'typesafe/jev-1.13',
+    const model = provider === 'openai' ? 'gpt-6-luna' : options.model === undefined ? 'typesafe/jev-1.13' : options.model
+    const expectedModels = responseModels(provider, model, options.responseModels)
+    const config = configure({ apiKey: options.apiKey, ...(options.fetch === undefined ? {} : { fetch: options.fetch }), model,
       timeoutMs: options.timeoutMs === undefined ? 10_000 : options.timeoutMs }, provider === 'openai' ? 'OpenAI' : 'OpenRouter',
     provider === 'openai' ? 'https://api.openai.com/v1' : 'https://openrouter.ai/api/alpha', 'decisions', [])
+    return { config, expectedModels }
   } catch { invalid() }
 }
 
@@ -100,11 +104,11 @@ function usage(value: unknown, config: Config): DecisionUsage {
   return Object.freeze(normalized)
 }
 
-function normalize(value: unknown, input: DecisionRequest, config: Config, provider: DecisionProviderId): {
+function normalize(value: unknown, input: DecisionRequest, config: Config, provider: DecisionProviderId, expectedModels: readonly string[]): {
   model: string; answers: readonly DecisionAnswer[]; usage: DecisionUsage
 } {
-  if (!record(value) || !keys(value, ['model', 'answers', 'usage'], provider === 'openrouter' ? ['id', 'provider'] : []) ||
-      !supportedModel(provider, value.model)) fail(config)
+  if (!record(value) || !keys(value, ['model', 'answers', 'usage'], provider === 'openrouter' ? ['id', 'provider', 'annotations'] : []) ||
+      (typeof value.model !== 'string' || !expectedModels.includes(value.model))) fail(config)
   const normalizedUsage = usage(value.usage, config)
   const expected = input.policy.checks.map((item) => item.name)
   const answers: DecisionAnswer[] = []
@@ -121,21 +125,28 @@ function normalize(value: unknown, input: DecisionRequest, config: Config, provi
       } else fail(config)
     }
   } else {
+    // Request-wide source metadata is bounded by readDecisionJson, never approval evidence.
+    if (value.annotations !== undefined && (!Array.isArray(value.annotations) || !value.annotations.every(record))) fail(config)
     if ((value.id !== undefined && !text(value.id, 256)) || (value.provider !== undefined && !text(value.provider, 256)) ||
         !record(value.answers) || !keys(value.answers, expected)) fail(config)
     for (const name of expected) {
       const answer = value.answers[name]
-      if (!record(answer) || !keys(answer, ['type', 'noul']) || answer.type !== 'noul' || !probability(answer.noul)) fail(config)
-      answers.push(Object.freeze({ name, type: 'predicate', probability: answer.noul }))
+      if (!record(answer)) fail(config)
+      if (answer.type === 'refusal' && keys(answer, ['type'])) {
+        answers.push(Object.freeze({ name, type: 'refusal' }))
+      } else if (answer.type === 'noul' && keys(answer, ['type', 'noul']) && probability(answer.noul)) {
+        answers.push(Object.freeze({ name, type: 'predicate', probability: answer.noul }))
+      } else fail(config)
     }
   }
   return Object.freeze({ model: value.model, answers: Object.freeze(answers), usage: normalizedUsage })
 }
 
-function createProvider(options: DecisionProviderOptions, provider: DecisionProviderId): DecisionProvider {
-  const config = configureDecision(options, provider)
+function createProvider(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): DecisionProvider {
+  const { config, expectedModels } = configureDecision(options, provider)
   return Object.freeze({
     id: provider, model: config.model,
+    ...(provider === 'openrouter' ? { responseModels: expectedModels } : {}),
     async evaluate(input: DecisionRequest, signal: AbortSignal) {
       return request(config, signal, undefined, async (context, key) => {
         const state = evidence(input)
@@ -154,7 +165,7 @@ function createProvider(options: DecisionProviderOptions, provider: DecisionProv
           throw new ProviderRequestError(config.provider, 'configuration', 'Decision wire request exceeded the size limit')
         }
         const response = await post(config, context, key, body)
-        const normalized = normalize(await readDecisionJson(response, context, config), input, config, provider)
+        const normalized = normalize(await readDecisionJson(response, context, config), input, config, provider, expectedModels)
         context.check()
         return normalized
       })
@@ -167,7 +178,7 @@ export function createOpenAIDecisionProvider(options: DecisionProviderOptions): 
   return createProvider(options, 'openai')
 }
 
-/** Dedicated OpenRouter alpha Decisions endpoint, using Jev noul predicates with routing fallbacks disabled. */
-export function createOpenRouterDecisionProvider(options: DecisionProviderOptions): DecisionProvider {
+/** Dedicated OpenRouter alpha Decisions endpoint, using text noul predicates with routing fallbacks disabled. */
+export function createOpenRouterDecisionProvider(options: OpenRouterDecisionProviderOptions): DecisionProvider {
   return createProvider(options, 'openrouter')
 }

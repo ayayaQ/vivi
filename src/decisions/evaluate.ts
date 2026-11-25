@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 ayayaQ
+import { responseModels, supportedModel } from './models.js'
 import { ProviderRequestError } from '../providers/transport.js'
 import { canonical, copyJson, invalid, keys, MAX_DECISION_CHECKS, probability, record, text, validateSnapshot } from './validation.js'
 import type {
@@ -9,11 +10,6 @@ import type {
 
 const requests = new WeakMap<DecisionRequest, string>()
 const results = new WeakMap<DecisionResult, string>()
-
-export function supportedModel(provider: DecisionProviderId, model: unknown): model is string {
-  return provider === 'openai' ? model === 'gpt-6-luna' :
-    model === 'typesafe/jev-1.13' || model === 'typesafe/jev-1.13-20260917'
-}
 
 /** Validate and freeze immediately, before key resolution, network work, or model evaluation. */
 export function createDecisionRequest(snapshot: DecisionSnapshot, policy: DecisionPolicy): DecisionRequest {
@@ -80,12 +76,14 @@ export async function evaluateDecision(
   if (!requests.has(request)) return fallback(request, 'invalid_request')
   let providerId: DecisionProviderId
   let model: string
+  let expectedModels: readonly string[]
   try {
     providerId = provider.id
     model = provider.model
     if (providerId !== 'openai' && providerId !== 'openrouter') return fallback(request, 'provider_mismatch')
     if (request.policy.provider !== providerId) return fallback(request, 'provider_mismatch', providerId)
     if (!supportedModel(providerId, model)) return fallback(request, 'unsupported_model', providerId)
+    expectedModels = responseModels(providerId, model, provider.responseModels)
     if (typeof provider.evaluate !== 'function') return fallback(request, 'configuration', providerId, model)
   } catch { return fallback(request, 'configuration') }
   let signal: AbortSignal | undefined
@@ -153,9 +151,8 @@ export async function evaluateDecision(
     // Copy before reading so accessors and external mutation never bypass validation.
     let data: unknown
     try { data = copyJson(response) } catch { return guardedFallback('invalid_response') }
-    if (!record(data) || !keys(data, ['model', 'answers', 'usage']) || !supportedModel(providerId, data.model) ||
+    if (!record(data) || !keys(data, ['model', 'answers', 'usage']) || (typeof data.model !== 'string' || !expectedModels.includes(data.model)) ||
         provider.id !== providerId || provider.model !== model) return guardedFallback('invalid_response')
-    if (providerId === 'openai' && data.model !== model) return guardedFallback('unsupported_model')
     if (!Array.isArray(data.answers) || data.answers.length !== request.policy.checks.length || !validUsage(data.usage)) {
       return guardedFallback('invalid_response')
     }

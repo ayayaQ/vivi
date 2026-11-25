@@ -139,7 +139,7 @@ The adapters keep a structured evidence envelope separate from the question inst
 
 The module supplies no default approval thresholds. Calibrate each provider separately
 against the host's labeled examples and failure costs. Matching numeric thresholds across
-OpenAI and Jev do not establish equivalent behavior or safety. Probability is a model
+different providers and decision models do not establish equivalent behavior or safety. Probability is a model
 estimate; it is not proof of authorization or discovery of hidden effects.
 
 All answers must be present, unique, named as requested, correctly typed, and finite within
@@ -163,11 +163,33 @@ and are never retained in result/error objects or logs. There is no credential p
 
 - `createOpenAIDecisionProvider`: fixed `https://api.openai.com/v1/decisions`, `gpt-6-luna`
 - `createOpenRouterDecisionProvider`: fixed `https://openrouter.ai/api/alpha/decisions`,
-  `typesafe/jev-1.13`, with routing `allow_fallbacks: false`
+  defaults to `typesafe/jev-1.13`, with routing `allow_fallbacks: false`
 
-Unknown options, including configurable model or base URL, are rejected. The documented
-OpenRouter response identity `typesafe/jev-1.13-20260917` is also recognized; unknown model
-identities fail closed. Model capability changes require a reviewed adapter update.
+OpenRouter additionally accepts `model?: string` and `responseModels?: readonly string[]`.
+The model must be a namespaced text Decisions model ID, not a general chat model. The host
+must verify endpoint/text support and calibrate thresholds for each model separately.
+A model choice does not grant permission to transmit evidence to that model's provider.
+OpenAI remains fixed; configurable base URLs and other unknown options are rejected.
+
+By default, the returned model must exactly equal the requested model. For backward
+compatibility, the rolling `typesafe/jev-1.13` default also recognizes its documented
+`typesafe/jev-1.13-20260917` response identity. Selecting a dated model does not accept its
+rolling alias or other snapshots. An explicit `responseModels` list replaces these defaults.
+Hosts may provide up to 16 unique exact response IDs, verified from OpenRouter's model
+catalog `canonical_slug` or resolved `alias_target.slug`. Never derive this list from
+model output, action evidence, or a prefix match. The list is copied and frozen before
+network work. Unknown response identities fail closed, even if they name another valid
+Decisions model. Custom `DecisionProvider` implementations can expose the same optional
+`responseModels` property; the evaluator captures it before evaluating.
+
+Example: `createOpenRouterDecisionProvider({ apiKey, model: selected.id,
+responseModels: [selected.canonical_slug] })`, where `selected` is verified host metadata.
+Catalog discovery and caching are host responsibilities; core performs no catalog fetch.
+The adapter uses the same text-state/noul protocol, rejects unsupported response shapes,
+and normalizes a strict `{ type: 'refusal' }` answer to a non-executing `ask` result.
+Optional OpenRouter request-wide `annotations` must be an array of objects within the
+response byte limit. They are ignored entirely, never used as approval evidence or
+retained in normalized results. Required model, answers, and usage validation is unchanged.
 There are no retries, cross-provider fallbacks, streaming callbacks, or generated reasons.
 Redirects are rejected so credentials cannot follow a redirected destination.
 
@@ -192,7 +214,7 @@ Provider usage is mandatory; the module never synthesizes absent accounting as z
 
 ## Privacy and testing
 
-The exact snapshot is sent to the selected provider. OpenRouter also routes it to TypeSafe.
+The exact snapshot is sent to the selected provider. OpenRouter also routes it to the selected model's provider (TypeSafe for the default Jev model).
 The host must authorize the destination/data, minimize evidence, and exclude secrets,
 unnecessary private content, and hidden reasoning before creating a review request. If exact
 arguments contain data that cannot be shared, keep the call in the manual path; do not redact

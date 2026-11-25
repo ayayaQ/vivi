@@ -60,7 +60,7 @@ try {
     assert(paths.has(required), `Package is missing ${required}`)
   }
   for (const required of ['docs/DECISIONS.md', 'src/decisions.ts', 'src/decisions/evaluate.ts',
-    'src/decisions/providers.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts', 'src/decisions/actions.ts',
+    'src/decisions/providers.ts', 'src/decisions/models.ts', 'src/decisions/types.ts', 'src/decisions/validation.ts', 'src/decisions/actions.ts',
     'examples/decisions.mjs', 'dist/decisions.js', 'dist/decisions.d.ts',
     'dist/cjs/decisions.js', 'dist/cjs/decisions.d.ts', 'dist/decisions/actions.js', 'dist/cjs/decisions/actions.js']) {
     assert(paths.has(required), `Package is missing ${required}`)
@@ -1075,8 +1075,12 @@ request.snapshot.runId = 'changed'
 decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scope',instructions:'Matches?',trueDescription:'Matches',falseDescription:'Does not'}]})
 // @ts-expect-error requests cannot select authentication destinations
 decisions.createOpenAIDecisionProvider({apiKey:'fake',baseURL:'https://example.test'})
-// @ts-expect-error generation is a separate protocol
-decisions.createOpenRouterDecisionProvider({apiKey:'fake',model:'chat-model'})
+// @ts-expect-error OpenAI Decisions model remains fixed
+decisions.createOpenAIDecisionProvider({apiKey:'fake',model:'gpt-6-luna'})
+const routerOptions: decisions.OpenRouterDecisionProviderOptions = {apiKey:'fake',model:'example/reviewer',responseModels:['example/canonical']}
+const router: decisions.DecisionProvider = decisions.createOpenRouterDecisionProvider(routerOptions)
+const responseModels: readonly string[] | undefined = router.responseModels
+void responseModels
 const provider: decisions.DecisionProvider = decisions.createOpenAIDecisionProvider({apiKey:async()=> 'fake',timeoutMs:1000,fetch:globalThis.fetch})
 const result: Promise<decisions.DecisionResult> = decisions.evaluateDecision(request, provider, {signal:new AbortController().signal})
 void result.then(result => { const outcome: decisions.DecisionOutcome = result.outcome; const current: boolean = decisions.isDecisionCurrent(result,snapshot); void outcome;void current })

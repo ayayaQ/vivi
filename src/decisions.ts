@@ -7,6 +7,6 @@ export { DecisionConfigurationError, MAX_DECISION_BYTES, MAX_DECISION_CHECKS } f
 export type {
   DecisionAnswer, DecisionCheck, DecisionCheckResult, DecisionOutcome, DecisionPolicy, DecisionProvider,
   DecisionProviderId, DecisionProviderOptions, DecisionReasonCode, DecisionRequest, DecisionResult,
-  DecisionSnapshot, DecisionUsage, EvaluateDecisionOptions, PreparedActionEffect, PreparedActionMetadata,
+  DecisionSnapshot, DecisionUsage, EvaluateDecisionOptions, OpenRouterDecisionProviderOptions, PreparedActionEffect, PreparedActionMetadata,
   PreparedActionRoute, ReadonlyJson, ReadonlyJsonObject
 } from './decisions/types.js'
