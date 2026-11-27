@@ -4,22 +4,41 @@
 import type { JsonObject } from '../types.js'
 import { configure, post, ProviderRequestError, request } from '../providers/transport.js'
 import type { Config, RequestContext } from '../providers/transport.js'
-import { supportedModel, validUsage } from './evaluate.js'
+import { validUsage } from './evaluate.js'
+import { DEFAULT_OPENROUTER_DECISION_MODEL, responseModels } from './models.js'
 import { invalid, keys, MAX_DECISION_BYTES, parseUnambiguousJson, probability, record, text } from './validation.js'
-import type { DecisionAnswer, DecisionProvider, DecisionProviderId, DecisionProviderOptions, DecisionRequest, DecisionUsage } from './types.js'
+import type { DecisionAnswer, DecisionProvider, DecisionProviderId, DecisionProviderOptions, DecisionRequest, DecisionUsage, OpenRouterDecisionProviderOptions } from './types.js'
 
 function fail(config: Config): never {
   throw new ProviderRequestError(config.provider, 'invalid_response', 'Invalid decision provider response')
 }
 
-function configureDecision(options: DecisionProviderOptions, provider: DecisionProviderId): Config {
+function openRouterRouting(model: string, supplied: unknown): JsonObject {
+  const slug = supplied === undefined && model === DEFAULT_OPENROUTER_DECISION_MODEL ? 'typesafe' : supplied
+  if (typeof slug !== 'string' || slug.length > 256 || slug !== slug.trim() ||
+      !/^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*){0,3}$/.test(slug)) invalid()
+  // OpenRouter can merge 'only' with account settings. A single ordered provider and disabled
+  // fallbacks keep routing inside the approved provider even with broader account settings.
+  return { only: [slug], order: [slug], allow_fallbacks: false }
+}
+
+function configureDecision(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): {
+  config: Config; expectedModels: readonly string[]; routing: JsonObject | undefined
+} {
   try {
-    if (!record(options) || !keys(options, ['apiKey'], ['timeoutMs', 'fetch']) ||
+    const optionalKeys = provider === 'openai' ? ['timeoutMs', 'fetch'] :
+      ['timeoutMs', 'fetch', 'model', 'providerSlug', 'responseModels']
+    if (!record(options) || !keys(options, ['apiKey'], optionalKeys) ||
         Reflect.ownKeys(options).some((key) => typeof key !== 'string' ||
           !Object.hasOwn(Object.getOwnPropertyDescriptor(options, key)!, 'value'))) invalid()
-    return configure({ ...options, model: provider === 'openai' ? 'gpt-6-luna' : 'typesafe/jev-1.13',
+    const model = provider === 'openai' ? 'gpt-6-luna' :
+      options.model === undefined ? DEFAULT_OPENROUTER_DECISION_MODEL : options.model
+    const expectedModels = responseModels(provider, model, options.responseModels)
+    const routing = provider === 'openrouter' ? openRouterRouting(model, options.providerSlug) : undefined
+    const config = configure({ apiKey: options.apiKey, ...(options.fetch === undefined ? {} : { fetch: options.fetch }), model,
       timeoutMs: options.timeoutMs === undefined ? 10_000 : options.timeoutMs }, provider === 'openai' ? 'OpenAI' : 'OpenRouter',
     provider === 'openai' ? 'https://api.openai.com/v1' : 'https://openrouter.ai/api/alpha', 'decisions', [])
+    return { config, expectedModels, routing }
   } catch { invalid() }
 }
 
@@ -80,6 +99,10 @@ async function readDecisionJson(response: Response, context: RequestContext, con
   }
 }
 
+function nonnegativeCost(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
 function usage(value: unknown, config: Config): DecisionUsage {
   if (!record(value)) fail(config)
   let normalized: DecisionUsage
@@ -92,19 +115,35 @@ function usage(value: unknown, config: Config): DecisionUsage {
       cacheWriteTokens: value.input_tokens_details.cache_write_tokens as number,
       reasoningTokens: value.output_tokens_details.reasoning_tokens as number }
   } else {
-    if (!keys(value, ['input_tokens', 'output_tokens', 'cost'])) fail(config)
+    if (!keys(value, ['input_tokens', 'output_tokens', 'cost'], ['is_byok', 'cost_details', 'input_tokens_details']) ||
+        (value.is_byok !== undefined && typeof value.is_byok !== 'boolean')) fail(config)
+    const costDetails = value.cost_details
+    if (costDetails !== undefined && costDetails !== null && (
+      !record(costDetails) ||
+      !keys(costDetails, ['upstream_inference_prompt_cost', 'upstream_inference_completions_cost'],
+        ['upstream_inference_cost', 'server_tool_cost']) ||
+      !nonnegativeCost(costDetails.upstream_inference_prompt_cost) || !nonnegativeCost(costDetails.upstream_inference_completions_cost) ||
+      (costDetails.upstream_inference_cost != null && !nonnegativeCost(costDetails.upstream_inference_cost)) ||
+      (costDetails.server_tool_cost != null && !nonnegativeCost(costDetails.server_tool_cost))
+    )) fail(config)
+    const inputDetails = value.input_tokens_details
+    let cachedTokens: number | undefined
+    if (inputDetails !== undefined) {
+      if (!record(inputDetails) || !keys(inputDetails, ['cached_tokens']) || typeof inputDetails.cached_tokens !== 'number') fail(config)
+      cachedTokens = inputDetails.cached_tokens
+    }
     normalized = { inputTokens: value.input_tokens as number, outputTokens: value.output_tokens as number,
-      costUsd: value.cost as number }
+      costUsd: value.cost as number, ...(cachedTokens === undefined ? {} : { cachedTokens }) }
   }
   if (!validUsage(normalized)) fail(config)
   return Object.freeze(normalized)
 }
 
-function normalize(value: unknown, input: DecisionRequest, config: Config, provider: DecisionProviderId): {
+function normalize(value: unknown, input: DecisionRequest, config: Config, provider: DecisionProviderId, expectedModels: readonly string[]): {
   model: string; answers: readonly DecisionAnswer[]; usage: DecisionUsage
 } {
-  if (!record(value) || !keys(value, ['model', 'answers', 'usage'], provider === 'openrouter' ? ['id', 'provider'] : []) ||
-      !supportedModel(provider, value.model)) fail(config)
+  if (!record(value) || !keys(value, ['model', 'answers', 'usage'], provider === 'openrouter' ? ['id', 'provider', 'annotations'] : []) ||
+      (typeof value.model !== 'string' || !expectedModels.includes(value.model))) fail(config)
   const normalizedUsage = usage(value.usage, config)
   const expected = input.policy.checks.map((item) => item.name)
   const answers: DecisionAnswer[] = []
@@ -121,25 +160,33 @@ function normalize(value: unknown, input: DecisionRequest, config: Config, provi
       } else fail(config)
     }
   } else {
+    // Request-wide source metadata is bounded by readDecisionJson, never approval evidence.
+    if (value.annotations !== undefined && (!Array.isArray(value.annotations) || !value.annotations.every(record))) fail(config)
     if ((value.id !== undefined && !text(value.id, 256)) || (value.provider !== undefined && !text(value.provider, 256)) ||
         !record(value.answers) || !keys(value.answers, expected)) fail(config)
     for (const name of expected) {
       const answer = value.answers[name]
-      if (!record(answer) || !keys(answer, ['type', 'noul']) || answer.type !== 'noul' || !probability(answer.noul)) fail(config)
-      answers.push(Object.freeze({ name, type: 'predicate', probability: answer.noul }))
+      if (!record(answer)) fail(config)
+      if (answer.type === 'refusal' && keys(answer, ['type'])) {
+        answers.push(Object.freeze({ name, type: 'refusal' }))
+      } else if (answer.type === 'noul' && keys(answer, ['type', 'noul'], ['confidence']) && probability(answer.noul) &&
+          (answer.confidence === undefined || probability(answer.confidence))) {
+        answers.push(Object.freeze({ name, type: 'predicate', probability: answer.noul }))
+      } else fail(config)
     }
   }
   return Object.freeze({ model: value.model, answers: Object.freeze(answers), usage: normalizedUsage })
 }
 
-function createProvider(options: DecisionProviderOptions, provider: DecisionProviderId): DecisionProvider {
-  const config = configureDecision(options, provider)
+function createProvider(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): DecisionProvider {
+  const { config, expectedModels, routing } = configureDecision(options, provider)
   return Object.freeze({
     id: provider, model: config.model,
+    ...(provider === 'openrouter' ? { responseModels: expectedModels } : {}),
     async evaluate(input: DecisionRequest, signal: AbortSignal) {
       return request(config, signal, undefined, async (context, key) => {
         const state = evidence(input)
-        const body: JsonObject = provider === 'openai' ? {
+        const body: JsonObject = routing === undefined ? {
           model: config.model, input: JSON.stringify(state), questions: input.policy.checks.map((item, index) => ({
             type: 'predicate', name: item.name, instructions: instructions(input, index)
           }))
@@ -148,13 +195,13 @@ function createProvider(options: DecisionProviderOptions, provider: DecisionProv
           questions: Object.fromEntries(input.policy.checks.map((item, index) => [item.name, {
             type: 'noul', instructions: instructions(input, index),
             criteria: { true: item.trueDescription, false: item.falseDescription }
-          }])), provider: { allow_fallbacks: false }
+          }])), provider: routing
         }
         if (new TextEncoder().encode(JSON.stringify(body)).byteLength > MAX_DECISION_BYTES) {
           throw new ProviderRequestError(config.provider, 'configuration', 'Decision wire request exceeded the size limit')
         }
         const response = await post(config, context, key, body)
-        const normalized = normalize(await readDecisionJson(response, context, config), input, config, provider)
+        const normalized = normalize(await readDecisionJson(response, context, config), input, config, provider, expectedModels)
         context.check()
         return normalized
       })
@@ -167,7 +214,7 @@ export function createOpenAIDecisionProvider(options: DecisionProviderOptions): 
   return createProvider(options, 'openai')
 }
 
-/** Dedicated OpenRouter alpha Decisions endpoint, using Jev noul predicates with routing fallbacks disabled. */
-export function createOpenRouterDecisionProvider(options: DecisionProviderOptions): DecisionProvider {
+/** Dedicated OpenRouter alpha Decisions endpoint, using text noul predicates with routing fallbacks disabled. */
+export function createOpenRouterDecisionProvider(options: OpenRouterDecisionProviderOptions): DecisionProvider {
   return createProvider(options, 'openrouter')
 }

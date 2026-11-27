@@ -534,3 +534,37 @@ test('pre-abort does not call the provider and mid-flight abort wins ignored can
   sanitized(result)
   release()
 })
+
+
+test('custom OpenRouter providers bind results to captured exact response model identities', async () => {
+  const captured = createDecisionRequest(snapshot(), policy('openrouter'))
+  for (const selected of ['example/reviewer', 'typesafe/jev-1.13-20260917']) {
+    for (const returned of [selected, `${selected}-extra`, 'typesafe/jev-1.13']) {
+      const adapter = { id: 'openrouter', model: selected, async evaluate() {
+        return { model: returned, answers: answers(), usage: usage() }
+      } }
+      const result = await evaluateDecision(captured, adapter)
+      if (returned === selected) assert.equal(result.outcome, 'allow')
+      else failure(result, 'invalid_response')
+    }
+  }
+  const models = ['example/canonical']
+  const adapter = { id: 'openrouter', model: 'example/alias', responseModels: models, async evaluate() {
+    models.push('example/attacker')
+    return { model: 'example/attacker', answers: answers(), usage: usage() }
+  } }
+  failure(await evaluateDecision(captured, adapter), 'invalid_response')
+  adapter.responseModels = ['example/canonical']
+  adapter.evaluate = async () => ({ model: 'example/canonical', answers: answers(), usage: usage() })
+  assert.equal((await evaluateDecision(captured, adapter)).outcome, 'allow')
+})
+
+test('invalid custom provider response identities fail before provider execution', async () => {
+  let calls = 0
+  for (const responseModels of [[], ['example/a', 'example/a'], ['not-namespaced'], Array(17).fill('example/a')]) {
+    const adapter = { id: 'openrouter', model: 'example/reviewer', responseModels, async evaluate() { calls++; throw Error('not called') } }
+    failure(await evaluateDecision(createDecisionRequest(snapshot(), policy('openrouter')), adapter), 'configuration')
+  }
+  failure(await evaluateDecision(request(), { ...provider(), responseModels: ['gpt-6-luna'] }), 'configuration')
+  assert.equal(calls, 0)
+})

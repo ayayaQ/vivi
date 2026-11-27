@@ -96,6 +96,8 @@ export type DecisionAnswer =
 export interface DecisionProvider {
   readonly id: DecisionProviderId
   readonly model: string
+  /** Exact host-declared response identities. OpenRouter only; copied before evaluation. */
+  readonly responseModels?: readonly string[]
   evaluate(request: DecisionRequest, signal: AbortSignal): Promise<{
     readonly model: string
     readonly answers: readonly DecisionAnswer[]
@@ -136,4 +138,21 @@ export interface DecisionProviderOptions {
   timeoutMs?: number
   /** Offline transport injection. No retries or cross-provider fallbacks are performed. */
   fetch?: typeof fetch
+}
+
+/** Host-selected text Decisions model; changing models requires separate threshold calibration. */
+export interface OpenRouterDecisionProviderOptions extends DecisionProviderOptions {
+  /** Defaults to typesafe/jev-1.13. Must be a namespaced OpenRouter model ID. */
+  model?: string
+  /**
+   * Host-approved OpenRouter provider slug. Required unless using the default Jev model,
+   * which defaults to 'typesafe'. Use the full slug to restrict the region or variant.
+   */
+  providerSlug?: string
+  /**
+   * Exact response IDs verified by the host (for example catalog canonical_slug/alias_target).
+   * Defaults to the requested model only, except the legacy Jev alias also accepts its dated ID.
+   * Never derive these from review output or untrusted action evidence. No wildcard matching.
+   */
+  responseModels?: readonly string[]
 }
