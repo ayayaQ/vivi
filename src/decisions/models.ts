@@ -3,6 +3,8 @@
 import { copyJson, invalid } from './validation.js'
 import type { DecisionProviderId } from './types.js'
 
+export const DEFAULT_OPENROUTER_DECISION_MODEL = 'typesafe/jev-1.13'
+
 export function supportedModel(provider: DecisionProviderId, model: unknown): model is string {
   return provider === 'openai' ? model === 'gpt-6-luna' : typeof model === 'string' && model.length <= 200 && model === model.trim() &&
     /^[~A-Za-z0-9][A-Za-z0-9._~-]*\/[~A-Za-z0-9][A-Za-z0-9._~:/-]*$/.test(model)
@@ -15,7 +17,7 @@ export function responseModels(provider: DecisionProviderId, model: string, supp
     if (supplied !== undefined) invalid()
     return Object.freeze([model])
   }
-  if (supplied === undefined) return Object.freeze(model === 'typesafe/jev-1.13' ?
+  if (supplied === undefined) return Object.freeze(model === DEFAULT_OPENROUTER_DECISION_MODEL ?
     [model, 'typesafe/jev-1.13-20260917'] : [model])
   const copied = copyJson(supplied)
   if (!Array.isArray(copied) || copied.length < 1 || copied.length > 16 ||

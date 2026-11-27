@@ -1077,7 +1077,7 @@ decisions.createDecisionRequest(snapshot, {provider:'openai',checks:[{name:'scop
 decisions.createOpenAIDecisionProvider({apiKey:'fake',baseURL:'https://example.test'})
 // @ts-expect-error OpenAI Decisions model remains fixed
 decisions.createOpenAIDecisionProvider({apiKey:'fake',model:'gpt-6-luna'})
-const routerOptions: decisions.OpenRouterDecisionProviderOptions = {apiKey:'fake',model:'example/reviewer',responseModels:['example/canonical']}
+const routerOptions: decisions.OpenRouterDecisionProviderOptions = {apiKey:'fake',model:'example/reviewer',providerSlug:'example-host',responseModels:['example/canonical']}
 const router: decisions.DecisionProvider = decisions.createOpenRouterDecisionProvider(routerOptions)
 const responseModels: readonly string[] | undefined = router.responseModels
 void responseModels

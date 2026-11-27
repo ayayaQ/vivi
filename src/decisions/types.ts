@@ -145,6 +145,11 @@ export interface OpenRouterDecisionProviderOptions extends DecisionProviderOptio
   /** Defaults to typesafe/jev-1.13. Must be a namespaced OpenRouter model ID. */
   model?: string
   /**
+   * Host-approved OpenRouter provider slug. Required unless using the default Jev model,
+   * which defaults to 'typesafe'. Use the full slug to restrict the region or variant.
+   */
+  providerSlug?: string
+  /**
    * Exact response IDs verified by the host (for example catalog canonical_slug/alias_target).
    * Defaults to the requested model only, except the legacy Jev alias also accepts its dated ID.
    * Never derive these from review output or untrusted action evidence. No wildcard matching.

@@ -166,17 +166,21 @@ and are never retained in result/error objects or logs. There is no credential p
 
 - `createOpenAIDecisionProvider`: fixed `https://api.openai.com/v1/decisions`, `gpt-6-luna`
 - `createOpenRouterDecisionProvider`: fixed `https://openrouter.ai/api/alpha/decisions`,
-  defaults to `typesafe/jev-1.13`, with routing `allow_fallbacks: false`
+  defaults to `typesafe/jev-1.13` on TypeSafe, with provider fallbacks disabled
 
-OpenRouter additionally accepts `model?: string` and `responseModels?: readonly string[]`.
-The model must be a namespaced text Decisions model ID, not a general chat model. The host
-must verify endpoint/text support and calibrate thresholds for each model separately.
+OpenRouter additionally accepts `model`, `providerSlug`, and `responseModels`.
+Choose a namespaced model ID that supports text input and noul questions on the Decisions
+endpoint. Verify that support and calibrate thresholds for each model separately.
 Text support alone does not qualify a model for action approval. Prefer models that judge
 only the supplied evidence and do not fetch web sources or invoke external tools. Hosts
 must explicitly approve the reviewer’s evidence sources, upstream recipients, and data
 handling; otherwise keep approval manual. A model choice does not grant permission to
 transmit evidence to its provider.
-OpenAI remains fixed; configurable base URLs and other unknown options are rejected.
+Specify the host-approved OpenRouter provider slug as `providerSlug` when selecting a
+model other than the default Jev model. The adapter sends that slug in both `provider.only`
+and `provider.order` with fallbacks disabled. A base provider slug permits its eligible
+variants and regions. Use the full endpoint slug when approval covers a specific variant
+or region. OpenAI accepts only the common factory options.
 
 By default, the returned model must exactly equal the requested model. For backward
 compatibility, the rolling `typesafe/jev-1.13` default also recognizes its documented
@@ -189,9 +193,21 @@ network work. Unknown response identities fail closed, even if they name another
 Decisions model. Custom `DecisionProvider` implementations can expose the same optional
 `responseModels` property; the evaluator captures it before evaluating.
 
-Example: `createOpenRouterDecisionProvider({ apiKey, model: selected.id,
-responseModels: [selected.canonical_slug] })`, where `selected` is verified host metadata.
-Catalog discovery and caching are host responsibilities; core performs no catalog fetch.
+Use a concrete, verified model ID in the request when approval applies to a specific
+version. This example pins Jev 1.14 to TypeSafe.
+
+```ts
+createOpenRouterDecisionProvider({
+  apiKey,
+  model: 'typesafe/jev-1.14-20261014',
+  providerSlug: 'typesafe',
+})
+```
+
+Use a rolling alias only if the host authorizes sending evidence to future targets of
+that alias. OpenRouter resolves it at dispatch, and `responseModels` checks the identity
+after the evidence has been sent. Catalog discovery and caching are host responsibilities.
+
 The adapter uses the same text-state/noul protocol, rejects unsupported response shapes,
 and normalizes a strict `{ type: 'refusal' }` answer to a non-executing `ask` result.
 Optional OpenRouter request-wide `annotations` must be an array of objects within the
@@ -224,7 +240,8 @@ Provider usage is mandatory; the module never synthesizes absent accounting as z
 
 ## Privacy and testing
 
-The exact snapshot is sent to the selected provider. OpenRouter also routes it to the selected model's provider (TypeSafe for the default Jev model).
+The selected provider receives the snapshot. For OpenRouter, the configured upstream
+provider also receives it.
 The host must authorize the destination/data, minimize evidence, and exclude secrets,
 unnecessary private content, and hidden reasoning before creating a review request. If exact
 arguments contain data that cannot be shared, keep the call in the manual path; do not redact
@@ -246,6 +263,7 @@ Wire shapes were checked on October 7, 2026 against these primary references:
 - [OpenAI Decisions guide](https://developers.openai.com/api/docs/guides/decisions)
 - [OpenAI create-decision reference](https://developers.openai.com/api/reference/resources/decisions/methods/create)
 - [OpenRouter Decisions reference](https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request)
+- [OpenRouter provider routing](https://openrouter.ai/docs/guides/routing/provider-selection)
 - [Jev on OpenRouter](https://openrouter.ai/docs/guides/community/jev)
 - [Jev tool-gating cookbook](https://openrouter.ai/docs/cookbook/building-agents/gate-tool-calls-with-jev)
 

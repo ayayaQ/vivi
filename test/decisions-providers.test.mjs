@@ -117,7 +117,7 @@ for (const { kind, factory, endpoint, model } of kinds) {
       assert.deepEqual(sent.questions.map((question) => [question.name, question.type]), [['scope', 'predicate'], ['resource', 'predicate']])
       assert.deepEqual(Object.keys(sent).sort(), ['input', 'model', 'questions'])
     } else {
-      assert.deepEqual(sent.provider, { allow_fallbacks: false })
+      assert.deepEqual(sent.provider, { only: ['typesafe'], order: ['typesafe'], allow_fallbacks: false })
       assert.deepEqual(Object.keys(sent.questions), ['scope', 'resource'])
       for (const check of captured.policy.checks) {
         assert.equal(sent.questions[check.name].type, 'noul')
@@ -472,7 +472,7 @@ test('OpenRouter model selection binds wire requests and exact host-declared can
       const source = configured?.slice()
       let sent
       const value = wire('openrouter'); value.model = expected[0]
-      const adapter = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', model: selected,
+      const adapter = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', model: selected, providerSlug: 'example-host/fp4/us',
         ...(source ? { responseModels: source } : {}), fetch: async (_url, init) => {
           sent = JSON.parse(init.body); return json(value)
         } })
@@ -483,7 +483,7 @@ test('OpenRouter model selection binds wire requests and exact host-declared can
       assert.equal(result.outcome, 'allow')
       assert.equal(result.model, expected[0])
       assert.equal(sent.model, selected)
-      assert.deepEqual(sent.provider, { allow_fallbacks: false })
+      assert.deepEqual(sent.provider, { only: ['example-host/fp4/us'], order: ['example-host/fp4/us'], allow_fallbacks: false })
       assert.equal(sent.models, undefined)
       for (const other of ['typesafe/jev-1.13', `${expected[0]}-extra`, 'example/attacker']) {
         value.model = other
@@ -493,18 +493,31 @@ test('OpenRouter model selection binds wire requests and exact host-declared can
   }
 })
 
+test('OpenRouter requires an approved provider for custom models before resolving credentials', () => {
+  const apiKey = () => assert.fail('credentials must not be resolved')
+  const fetch = () => assert.fail('evidence must not be sent')
+  for (const providerSlug of [undefined, null, [], '', '*', 'example-host/*', 'example-host//us', 'example-host ',
+    'example-host\n', '/us', 'example-host/' + 'a'.repeat(244)]) {
+    assert.throws(() => createOpenRouterDecisionProvider({ apiKey, fetch, model: 'example/reviewer', providerSlug }),
+      DecisionConfigurationError)
+  }
+  const getter = () => assert.fail('providerSlug getter must not run')
+  const options = Object.defineProperty({ apiKey, fetch, model: 'example/reviewer' }, 'providerSlug', { get: getter })
+  assert.throws(() => createOpenRouterDecisionProvider(options), DecisionConfigurationError)
+})
+
 test('OpenRouter custom identity configuration is bounded, exact and accessor-free', () => {
   let getters = 0
   const accessor = Object.defineProperty([], '0', { enumerable: true, get() { getters++; return 'example/reviewer' } })
   for (const value of ['', ' reviewer', 'example/reviewer\n', 'example/', '/reviewer', 'example/reviewer?route=bad', 'example/' + 'x'.repeat(193), null, 42]) {
-    assert.throws(() => createOpenRouterDecisionProvider({ apiKey: 'key', model: value }), DecisionConfigurationError)
+    assert.throws(() => createOpenRouterDecisionProvider({ apiKey: 'key', model: value, providerSlug: 'example-host' }), DecisionConfigurationError)
   }
   for (const responseModels of [[], ['example/reviewer', 'example/reviewer'], Array(17).fill('example/reviewer'),
     ['bad'], [null], ['example/reviewer*'], 'example/reviewer', accessor, Array(1), null]) {
-    assert.throws(() => createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', responseModels }), DecisionConfigurationError)
+    assert.throws(() => createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', providerSlug: 'example-host', responseModels }), DecisionConfigurationError)
   }
   assert.equal(getters, 0)
-  for (const options of [{ model: 'gpt-6-luna' }, { responseModels: ['gpt-6-luna'] }]) {
+  for (const options of [{ model: 'gpt-6-luna' }, { responseModels: ['gpt-6-luna'] }, { providerSlug: 'openai' }]) {
     assert.throws(() => createOpenAIDecisionProvider({ apiKey: 'key', ...options }), DecisionConfigurationError)
   }
 })
@@ -512,7 +525,7 @@ test('OpenRouter custom identity configuration is bounded, exact and accessor-fr
 test('OpenRouter refuses safely for selected models and rejects refusal prose or conflicting predicates', async () => {
   for (const answer of [{ type: 'refusal' }, { type: 'refusal', noul: 1 }, { type: 'refusal', reason: 'HIDDEN_REASONING' }]) {
     const value = wire('openrouter'); value.model = 'example/reviewer'; value.answers.scope = answer
-    const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', fetch: async () => json(value) })
+    const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', providerSlug: 'example-host', fetch: async () => json(value) })
     const result = await evaluateDecision(request('openrouter'), adapter)
     failure(result, Object.keys(answer).length === 1 ? 'refusal' : 'invalid_response')
     sanitized(result)
@@ -522,7 +535,7 @@ test('OpenRouter refuses safely for selected models and rejects refusal prose or
 test('explicit dated Jev selection does not accept its rolling alias or other snapshots', async () => {
   for (const returned of ['typesafe/jev-1.13', 'typesafe/jev-1.13-20260917', 'typesafe/jev-1.13-20261101']) {
     const value = wire('openrouter'); value.model = returned
-    const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'typesafe/jev-1.13-20260917', fetch: async () => json(value) })
+    const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'typesafe/jev-1.13-20260917', providerSlug: 'typesafe', fetch: async () => json(value) })
     const result = await evaluateDecision(request('openrouter'), adapter)
     if (returned === adapter.model) assert.equal(result.outcome, 'allow')
     else failure(result, 'invalid_response')
@@ -536,7 +549,7 @@ test('OpenRouter request annotations are bounded inert source metadata, never de
     for (const probability of [0, 1]) {
       const value = wire('openrouter'); value.model = 'example/reviewer'; value.annotations = annotations
       value.answers.scope.noul = probability
-      const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', fetch: async () => json(value) })
+      const adapter = createOpenRouterDecisionProvider({ apiKey: 'key', model: 'example/reviewer', providerSlug: 'example-host', fetch: async () => json(value) })
       const result = await evaluateDecision(request('openrouter'), adapter)
       assert.equal(result.outcome, probability === 1 ? 'allow' : 'deny')
       assert.equal(result.model, 'example/reviewer')
@@ -571,7 +584,7 @@ test('OpenRouter accepts documented Jev 1.14 metadata without using confidence f
   ]) {
     const response = { model: canonical, usage: actualUsage,
       answers: { scope: { type: 'noul', noul: 0.02, confidence: 0.99 }, resource: { type: 'noul', noul: 0.98 } } }
-    const provider = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', model, responseModels: [canonical],
+    const provider = createOpenRouterDecisionProvider({ apiKey: 'SECRET_API_KEY', model, providerSlug: 'typesafe', responseModels: [canonical],
       fetch: async () => json(response) })
     const result = await evaluateDecision(request('openrouter'), provider)
     assert.equal(result.outcome, 'deny')

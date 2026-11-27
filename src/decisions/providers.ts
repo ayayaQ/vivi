@@ -5,7 +5,7 @@ import type { JsonObject } from '../types.js'
 import { configure, post, ProviderRequestError, request } from '../providers/transport.js'
 import type { Config, RequestContext } from '../providers/transport.js'
 import { validUsage } from './evaluate.js'
-import { responseModels } from './models.js'
+import { DEFAULT_OPENROUTER_DECISION_MODEL, responseModels } from './models.js'
 import { invalid, keys, MAX_DECISION_BYTES, parseUnambiguousJson, probability, record, text } from './validation.js'
 import type { DecisionAnswer, DecisionProvider, DecisionProviderId, DecisionProviderOptions, DecisionRequest, DecisionUsage, OpenRouterDecisionProviderOptions } from './types.js'
 
@@ -13,17 +13,32 @@ function fail(config: Config): never {
   throw new ProviderRequestError(config.provider, 'invalid_response', 'Invalid decision provider response')
 }
 
-function configureDecision(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): { config: Config; expectedModels: readonly string[] } {
+function openRouterRouting(model: string, supplied: unknown): JsonObject {
+  const slug = supplied === undefined && model === DEFAULT_OPENROUTER_DECISION_MODEL ? 'typesafe' : supplied
+  if (typeof slug !== 'string' || slug.length > 256 || slug !== slug.trim() ||
+      !/^[a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*){0,3}$/.test(slug)) invalid()
+  // OpenRouter can merge 'only' with account settings. A single ordered provider and disabled
+  // fallbacks keep routing inside the approved provider even with broader account settings.
+  return { only: [slug], order: [slug], allow_fallbacks: false }
+}
+
+function configureDecision(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): {
+  config: Config; expectedModels: readonly string[]; routing: JsonObject | undefined
+} {
   try {
-    if (!record(options) || !keys(options, ['apiKey'], provider === 'openai' ? ['timeoutMs', 'fetch'] : ['timeoutMs', 'fetch', 'model', 'responseModels']) ||
+    const optionalKeys = provider === 'openai' ? ['timeoutMs', 'fetch'] :
+      ['timeoutMs', 'fetch', 'model', 'providerSlug', 'responseModels']
+    if (!record(options) || !keys(options, ['apiKey'], optionalKeys) ||
         Reflect.ownKeys(options).some((key) => typeof key !== 'string' ||
           !Object.hasOwn(Object.getOwnPropertyDescriptor(options, key)!, 'value'))) invalid()
-    const model = provider === 'openai' ? 'gpt-6-luna' : options.model === undefined ? 'typesafe/jev-1.13' : options.model
+    const model = provider === 'openai' ? 'gpt-6-luna' :
+      options.model === undefined ? DEFAULT_OPENROUTER_DECISION_MODEL : options.model
     const expectedModels = responseModels(provider, model, options.responseModels)
+    const routing = provider === 'openrouter' ? openRouterRouting(model, options.providerSlug) : undefined
     const config = configure({ apiKey: options.apiKey, ...(options.fetch === undefined ? {} : { fetch: options.fetch }), model,
       timeoutMs: options.timeoutMs === undefined ? 10_000 : options.timeoutMs }, provider === 'openai' ? 'OpenAI' : 'OpenRouter',
     provider === 'openai' ? 'https://api.openai.com/v1' : 'https://openrouter.ai/api/alpha', 'decisions', [])
-    return { config, expectedModels }
+    return { config, expectedModels, routing }
   } catch { invalid() }
 }
 
@@ -164,14 +179,14 @@ function normalize(value: unknown, input: DecisionRequest, config: Config, provi
 }
 
 function createProvider(options: OpenRouterDecisionProviderOptions, provider: DecisionProviderId): DecisionProvider {
-  const { config, expectedModels } = configureDecision(options, provider)
+  const { config, expectedModels, routing } = configureDecision(options, provider)
   return Object.freeze({
     id: provider, model: config.model,
     ...(provider === 'openrouter' ? { responseModels: expectedModels } : {}),
     async evaluate(input: DecisionRequest, signal: AbortSignal) {
       return request(config, signal, undefined, async (context, key) => {
         const state = evidence(input)
-        const body: JsonObject = provider === 'openai' ? {
+        const body: JsonObject = routing === undefined ? {
           model: config.model, input: JSON.stringify(state), questions: input.policy.checks.map((item, index) => ({
             type: 'predicate', name: item.name, instructions: instructions(input, index)
           }))
@@ -180,7 +195,7 @@ function createProvider(options: OpenRouterDecisionProviderOptions, provider: De
           questions: Object.fromEntries(input.policy.checks.map((item, index) => [item.name, {
             type: 'noul', instructions: instructions(input, index),
             criteria: { true: item.trueDescription, false: item.falseDescription }
-          }])), provider: { allow_fallbacks: false }
+          }])), provider: routing
         }
         if (new TextEncoder().encode(JSON.stringify(body)).byteLength > MAX_DECISION_BYTES) {
           throw new ProviderRequestError(config.provider, 'configuration', 'Decision wire request exceeded the size limit')
